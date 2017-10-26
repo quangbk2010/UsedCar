@@ -88,6 +88,8 @@ class Tensor_NN(Dataset):
         self.gpu_idx = args.gpu_idx
         self.epoch = args.epoch
         self.batch_size = args.batch_size
+        self.dim_data = args.dim_data
+        self.dim_label = args.dim_label
         self.no_hidden_layer = args.no_hidden_layer
         self.neuron_num = args.neuron_num
         self.k_fold = args.k_fold
@@ -171,7 +173,7 @@ class Tensor_NN(Dataset):
         X_test_set = []
         y_test_set = []
         
-        kf = KFold(self.K)
+        kf = KFold(self.k_fold)
         
         for train_index, test_index in kf.split(X_total_set):
             
