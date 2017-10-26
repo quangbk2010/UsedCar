@@ -88,15 +88,13 @@ class Tensor_NN(Dataset):
         self.gpu_idx = args.gpu_idx
         self.epoch = args.epoch
         self.batch_size = args.batch_size
-        self.hidden_layer_num = args.hidden_layer_num
+        self.no_hidden_layer = args.no_hidden_layer
         self.neuron_num = args.neuron_num
 
         Dataset.__init__(self)
         self.features = features
 
-        self.args = args
-        self.dim_label = self.train_data.shape[1]
-
+        
         self.feature_constraint = feature_constraint
         self.feature_constraint_values = feature_constraint_values
         self.dropout = dropout_h
@@ -105,7 +103,10 @@ class Tensor_NN(Dataset):
             (self.X_total_set, self.y_total_set, self.X_train_set, self.y_train_set, self.X_test_set, self.y_test_set) = self.get_data_label (self.features, output)
         else:
             (self.X_total_set, self.y_total_set, self.X_train_set, self.y_train_set, self.X_test_set, self.y_test_set) = self.get_data_label_with_constraints (self.features, output, self.feature_constraint, self.feature_constraint_values)
-    
+        
+        self.args = args
+        self.dim_label = self.X_total_set.shape[1]
+
     def get_data_label (self, features, output):
         """
             - Purpose: Devide total dataset into n_splits set.
@@ -187,7 +188,7 @@ class Tensor_NN(Dataset):
         return (X_total_set, y_total_set, X_train_set, y_train_set, X_test_set, y_test_set) 
         
 
-    def build_model (self, dim_data, dim_label, no_unit_in_a_hidden_layer, layer_num, no_epoch, batch_size):
+    def build_model (self, dim_data, dim_label, no_unit_in_a_hidden_layer, no_hidden_layer, no_epoch, batch_size):
         X = tf.placeholder(tf.float32, [None, dim_data])
         Y = tf.placeholder(tf.float32, [None, dim_label])
 
@@ -207,7 +208,7 @@ class Tensor_NN(Dataset):
 
     def train (self):
 
-        X, Y, logits = self.build_model(self.dim_data, self.dim_label, self.neuron_num, self.hidden_layer_num, self.epoch, self.batch_size)
+        X, Y, logits = self.build_model(self.dim_data, self.dim_label, self.neuron_num, self.no_hidden_layer, self.epoch, self.batch_size)
         
         print (logits.shape)
         
@@ -273,10 +274,10 @@ class Tensor_NN(Dataset):
             stop_time = time.time()
             print ("Training time (s):", stop_time - start_time)
             
-            print('accuracy (rmse):', sess.run(accuracy, feed_dict={X: self.test_data, Y: test_label, dropout:self.DROP_OUT}))
-            print ("test predicted hand:", sess.run (logits, feed_dict={X: self.test_data, dropout:self.DROP_OUT}))
+            print('accuracy (rmse):', sess.run(accuracy, feed_dict={X: test_data, Y: test_label, dropout:self.DROP_OUT}))
+            print ("test predicted hand:", sess.run (logits, feed_dict={X: test_data, dropout:self.DROP_OUT}))
             print ("test ground truth hand:", sess.run (Y, feed_dict={Y: test_label}))
-            np.savetxt (mean_rmse_error_file_name, sess.run (accuracy, feed_dict={X: self.test_data, dropout:self.DROP_OUT}), fmt = "%f")
+            np.savetxt (mean_rmse_error_file_name, sess.run (accuracy, feed_dict={X: test_data, Y: test_label, dropout:self.DROP_OUT}), fmt = "%f")
               
 
 if __name__ == '__main__':
@@ -288,13 +289,13 @@ if __name__ == '__main__':
     parser.add_argument('--test', type=bool, default=False)
 
     #hyper parameter
-    parser.add_argument('--epoch', type=int, default = 100)
+    parser.add_argument('--epoch', type=int, default = 1)
     parser.add_argument('--batch_size', type=int, default = 100)
 
     #network parameter
     parser.add_argument('--dim_data', type=int, default=10)
     parser.add_argument('--dim_label', type=int, default=1)
-    parser.add_argument('--hidden_layer_num', type=int, default = 2)
+    parser.add_argument('--no_hidden_layer', type=int, default = 2)
     parser.add_argument('--neuron_num', type=int, default = 1000)
 
     args = parser.parse_args()
