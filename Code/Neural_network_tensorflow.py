@@ -90,6 +90,7 @@ class Tensor_NN(Dataset):
         self.batch_size = args.batch_size
         self.no_hidden_layer = args.no_hidden_layer
         self.neuron_num = args.neuron_num
+        self.k_fold = args.k_fold
 
         Dataset.__init__(self)
         self.features = features
@@ -131,7 +132,7 @@ class Tensor_NN(Dataset):
         X_test_set = []
         y_test_set = []
         
-        kf = KFold(self.K)
+        kf = KFold(self.k_fold)
         
         for train_index, test_index in kf.split(X_total_set):
             
@@ -291,6 +292,7 @@ if __name__ == '__main__':
     #hyper parameter
     parser.add_argument('--epoch', type=int, default = 1)
     parser.add_argument('--batch_size', type=int, default = 100)
+    parser.add_argument('--k_fold', type=int, default=5)
 
     #network parameter
     parser.add_argument('--dim_data', type=int, default=10)
