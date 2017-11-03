@@ -86,13 +86,26 @@ class Tensor_NN(Dataset):
     def __init__(self, args):
         #from args
         self.gpu_idx = args.gpu_idx
+
         self.epoch = args.epoch
         self.batch_size = args.batch_size
+        self.k_fold = args.k_fold
+        self.dropout = args.dropout
+
+
+        self.learning_rate = args.learning_rate
+        self.decay_step = args.decay_step
+        self.decay_rate = args.decay_rate
+        self.saved_period = args.saved_period
+
         self.dim_data = args.dim_data
         self.dim_label = args.dim_label
         self.no_hidden_layer = args.no_hidden_layer
-        self.neuron_num = args.neuron_num
-        self.k_fold = args.k_fold
+        self.no_neuron = args.no_neuron
+        
+        self.model_dir = args.model_dir
+        self.model_name = args.model_name
+        self.args = args
 
         Dataset.__init__(self)
         self.features = features
@@ -100,15 +113,11 @@ class Tensor_NN(Dataset):
         
         self.feature_constraint = feature_constraint
         self.feature_constraint_values = feature_constraint_values
-        self.dropout = dropout_h
 
         if constraint_flag == 0:
             (self.X_total_set, self.y_total_set, self.X_train_set, self.y_train_set, self.X_test_set, self.y_test_set) = self.get_data_label (self.features, output)
         else:
             (self.X_total_set, self.y_total_set, self.X_train_set, self.y_train_set, self.X_test_set, self.y_test_set) = self.get_data_label_with_constraints (self.features, output, self.feature_constraint, self.feature_constraint_values)
-        
-        self.args = args
-        self.dim_label = self.X_total_set.shape[1]
 
     def get_data_label (self, features, output):
         """
@@ -128,26 +137,35 @@ class Tensor_NN(Dataset):
             y_total_set = self.get_data_array (self.total_dataset, output)
         elif output == "sale_duration":
             y_total_set = self.get_sale_duration_array (self.total_dataset)
-        print ("test:", y_total_set)
+        #print ("test:", self.total_dataset.shape, X_total_set.shape, y_total_set.shape)
+        #sys.exit (-1)
         X_train_set = []
         y_train_set = []
         X_test_set = []
         y_test_set = []
         
-        kf = KFold(self.k_fold)
-        
-        for train_index, test_index in kf.split(X_total_set):
+        if self.k_fold > 0:
+            kf = KFold(self.k_fold)
             
-            #print("TRAIN:", train_index, "TEST:", test_index)
-            X_train, X_test = X_total_set[train_index], X_total_set[test_index]
-            y_train, y_test = y_total_set[train_index], y_total_set[test_index]
-            #print ("X_train shape:", X_train.shape, "y_train type:", y_train.shape)
-            #print ("X_train:", X_train, "y_train:", y_train)
-            X_train_set.append (X_train)
-            y_train_set.append (y_train)
-            X_test_set.append (X_test)
-            y_test_set.append (y_test)
+            for train_index, test_index in kf.split(X_total_set, shuffle=True):
+                
+                #print("TRAIN:", train_index, "TEST:", test_index)
+                X_train, X_test = X_total_set[train_index], X_total_set[test_index]
+                y_train, y_test = y_total_set[train_index], y_total_set[test_index]
+                #print ("X_train shape:", X_train.shape, "y_train type:", y_train.shape)
+                #print ("X_train:", X_train, "y_train:", y_train)
+                X_train_set.append (X_train)
+                y_train_set.append (y_train)
+                X_test_set.append (X_test)
+                y_test_set.append (y_test)
             
+        else:
+            X_train_set = X_total_set[:data_training_length, :]
+            y_train_set = X_total_set[:data_training_length, :]
+
+            X_test_set = X_total_set[data_training_length:, :]
+            y_test_set = X_total_set[data_training_length:, :]
+
             
         return (X_total_set, y_total_set, X_train_set, y_train_set, X_test_set, y_test_set) 
     
@@ -173,59 +191,138 @@ class Tensor_NN(Dataset):
         X_test_set = []
         y_test_set = []
         
-        kf = KFold(self.k_fold)
-        
-        for train_index, test_index in kf.split(X_total_set):
+        if self.k_fold > 0:
+            kf = KFold(self.k_fold, shuffle=True)
             
-            #print("TRAIN:", train_index, "TEST:", test_index)
-            X_train, X_test = X_total_set[train_index], X_total_set[test_index]
-            y_train, y_test = y_total_set[train_index], y_total_set[test_index]
-            #print ("X_train shape:", X_train.shape, "y_train type:", y_train.shape)
-            #print ("X_train:", X_train, "y_train:", y_train)
-            X_train_set.append (X_train)
-            y_train_set.append (y_train)
-            X_test_set.append (X_test)
-            y_test_set.append (y_test)
-            
+            for train_index, test_index in kf.split(X_total_set):
+                
+                #print("TRAIN:", train_index, "TEST:", test_index)
+                X_train, X_test = X_total_set[train_index], X_total_set[test_index]
+                y_train, y_test = y_total_set[train_index], y_total_set[test_index]
+                #print ("X_train shape:", X_train.shape, "y_train type:", y_train.shape)
+                #print ("X_train:", X_train, "y_train:", y_train)
+                X_train_set.append (X_train)
+                y_train_set.append (y_train)
+                X_test_set.append (X_test)
+                y_test_set.append (y_test)
+                
+        else:
+            X_train_set = X_total_set[:data_training_length, :]
+            y_train_set = X_total_set[:data_training_length, :]
+
+            X_test_set = X_total_set[data_training_length:, :]
+            y_test_set = X_total_set[data_training_length:, :]
             
         return (X_total_set, y_total_set, X_train_set, y_train_set, X_test_set, y_test_set) 
-        
 
-    def build_model (self, dim_data, dim_label, no_unit_in_a_hidden_layer, no_hidden_layer, no_epoch, batch_size):
+
+    """def build_model (self, dim_data, dim_label, no_unit_in_a_hidden_layer, no_hidden_layer):#dim_label = 1x
+        weights = []
+
         X = tf.placeholder(tf.float32, [None, dim_data])
         Y = tf.placeholder(tf.float32, [None, dim_label])
 
         dropout = tf.placeholder(tf.float32, name='dropout')
 
         W1 = tf.Variable(tf.random_normal([dim_data, no_unit_in_a_hidden_layer], stddev=0.01))
-        L1 = tf.nn.relu(tf.matmul(X, W1))
+        B1 = tf.Variable(tf.random_normal([no_unit_in_a_hidden_layer], stddev=0.01))
+        L1 = tf.nn.relu(tf.nn.bias_add(tf.matmul(X, W1), B1))
 
         W2 = tf.Variable(tf.random_normal([no_unit_in_a_hidden_layer, no_unit_in_a_hidden_layer], stddev=0.01))
-        L2 = tf.nn.relu(tf.matmul(L1, W2))
+        B2 = tf.Variable(tf.random_normal([no_unit_in_a_hidden_layer], stddev=0.01))
+        L2 = tf.nn.relu(tf.nn.bias_add(tf.matmul(L1, W2), B2))
         L2_hat = tf.nn.dropout(L2, dropout, name='relu_dropout')
 
         W3 = tf.Variable(tf.random_normal([no_unit_in_a_hidden_layer, dim_label], stddev=0.01))
-        logits = tf.matmul(L2_hat, W3)
+        B3 = tf.Variable(tf.random_normal([dim_label], stddev=0.01))
+        logits = tf.nn.bias_add(tf.matmul(L2_hat, W3), B3)
 
-        return X, Y, logits
+        weights.append(W1)
+        weights.append(W2)
+        weights.append(W3)
+        weights.append(B1)
+        weights.append(B2)
+        weights.append(B3)
 
-    def train (self):
+        return X, Y, logits, weights, dropout"""
 
-        X, Y, logits = self.build_model(self.dim_data, self.dim_label, self.neuron_num, self.no_hidden_layer, self.epoch, self.batch_size)
-        
-        print (logits.shape)
-        
-        cost = tf.reduce_mean(tf.squared_difference(logits, Y)) # or can use tf.nn.l2_loss
-        optimizer = tf.train.AdamOptimizer(learning_rate = 0.001).minimize(cost)
+    def build_model (self, dim_data, dim_label, no_unit_in_a_hidden_layer, no_hidden_layer):#dim_label = 1x
+        weights = []
 
-        """ Evaluate model """
+        X = tf.placeholder(tf.float32, [None, dim_data])
+        Y = tf.placeholder(tf.float32, [None, dim_label])
+
+        dropout = tf.placeholder(tf.float32, name='dropout')
+
+        # Input layer
+        W1 = tf.Variable(tf.random_normal([dim_data, no_unit_in_a_hidden_layer], stddev=0.01))
+        B1 = tf.Variable(tf.random_normal([no_unit_in_a_hidden_layer], stddev=0.01))
+        L1 = tf.nn.relu(tf.nn.bias_add(tf.matmul(X, W1), B1))
+
+        weights.append (W1)
+        weights.append (B1)
+
+        # Hidden layers
+        L2_hat = L1
+        for i in range (no_hidden_layer):
+            W2 = tf.Variable(tf.random_normal([no_unit_in_a_hidden_layer, no_unit_in_a_hidden_layer], stddev=0.01))
+            B2 = tf.Variable(tf.random_normal([no_unit_in_a_hidden_layer], stddev=0.01))
+            L2 = tf.nn.relu(tf.nn.bias_add(tf.matmul(L2_hat, W2), B2))
+            L2_hat = tf.nn.dropout(L2, dropout, name='relu_dropout')
+            weights.append (W2)
+            weights.append (B2)
+
+        # Output layer
+        W3 = tf.Variable(tf.random_normal([no_unit_in_a_hidden_layer, dim_label], stddev=0.01))
+        B3 = tf.Variable(tf.random_normal([dim_label], stddev=0.01))
+        logits = tf.nn.bias_add(tf.matmul(L2_hat, W3), B3)
+
+        weights.append(W3)
+        weights.append(B3)
+
+        return X, Y, logits, weights, dropout
+
+
+
+    def train_nn(self, train_data, train_label, test_data, test_label, no_neuron, no_hidden_layer, dropout_val, model_path): #k_fold, 
+
+        #building model
+        X, Y, logits, weights, dropout = self.build_model(self.dim_data, self.dim_label, no_neuron, no_hidden_layer)
+
+        #evaluate model on training process
+        """cost = tf.reduce_mean(tf.squared_difference(logits, Y)) # or can use tf.nn.l2_loss
+        optimizer = tf.train.AdamOptimizer(learning_rate = 0.001).minimize(cost) #TODO: learning rate adaptive
         rmse = tf.sqrt(cost)
-        accuracy = rmse
+
+        """
+        # Try to use weights decay
+        num_batches_per_epoch = int(len(train_data) / self.batch_size)
+        decay_steps = int(num_batches_per_epoch * self.decay_step)
+        #decay_steps = num_batches_per_epoch
+        global_step = tf.Variable(0, trainable = False)
+        #learning_rate = self.learning_rate
+        learning_rate = tf.train.exponential_decay(self.learning_rate, global_step, decay_steps, self.decay_rate, staircase = True)
+
+        loss = tf.reduce_mean(tf.squared_difference(logits, Y)) # or can use tf.nn.l2_loss
+        #loss = tf.nn.l2_loss (logits - Y)
+        # Calculate loss using mean squared error
+        #loss = tf.losses.mean_squared_error(Y, logits)
+        # Calculate root mean squared error as additional eval metric
+        #eval_metric_ops = {"rmse": tf.metrics.root_mean_squared_error (tf.cast(Y, tf.float64), logits)}
+        optimizer = tf.train.AdamOptimizer(learning_rate).minimize(loss, global_step=global_step)
+    
+        #cost_function = tf.reduce_sum(tf.pow(logits - Y, 2))/(2 * train_data.shape[0])
+        #optimizer = tf.train.GradientDescentOptimizer(learning_rate).minimize(cost_function)
+        rmse = tf.sqrt(loss)#/train_data.shape[0])
+        
+        # Calculate root mean squared error as additional eval metric
+        #rmse = tf.metrics.root_mean_squared_error (Y, logits)
 
         """ Initialize the variables with default values"""
         init = tf.global_variables_initializer()
 
         with tf.Session() as sess:
+            saver = tf.train.Saver()
 
             # Run the initializer
             sess.run(init)
@@ -233,82 +330,290 @@ class Tensor_NN(Dataset):
             """ Start training, using training data"""
             # record the time when training starts
             start_time = time.time()
-            
-            train_data = self.X_train_set, 
-            train_label = self.y_train_set
-            test_data = self.X_test_set
-            test_label = self.y_test_set
-            
+
             train_set = np.concatenate ((train_data, train_label), axis = 1)
             train_set_shuffled = np.random.permutation(train_set)
             train_data_shuffled = train_set_shuffled [:, 0:train_data.shape[1]]
             train_label_shuffled = train_set_shuffled [:, train_data.shape[1]:]
 
-            total_batch = int(len(self.train_data)/self.batch_size)
+            total_batch = int((len(train_data)/self.batch_size) + 0.5)
 
             for epoch in range (self.epoch):
 
-                total_cost = 0
+                total_rmse = 0
                 index_counter = 0
-
+                left_num = len(train_data)
                 for i in range (total_batch):
                     start_index = index_counter * self.batch_size
-                    end_index = (index_counter + 1) * self.batch_size
+                    end_idex = 0
+                    if(left_num < self.batch_size):
+                        end_index = index_counter * self.batch_size + left_num
+                    else:
+                        end_index = (index_counter + 1) * self.batch_size
+
                     batch_x = train_data_shuffled [start_index : end_index]
                     batch_y = train_label_shuffled [start_index : end_index]
-                    
+                    #print ("batch_x", batch_x)
+                    #print ("batch_y", batch_y)
                     index_counter = index_counter + 1
+                    left_num = left_num - self.batch_size
 
-                    if (index_counter >= total_batch):
+                    if (left_num <= 0):
                         index_counter = 0
 
-                    _, cost_val = sess.run([optimizer, cost], feed_dict={X: batch_x, Y: batch_y})
-                    total_cost += cost_val
+                    #_, cost_val, lr = sess.run([optimizer, cost, learning_rate], feed_dict={X: batch_x, Y: batch_y})
+                    _, training_rmse_val = sess.run([optimizer, rmse], feed_dict={X: batch_x, Y: batch_y, dropout:dropout_val})
+                    total_rmse += training_rmse_val
                     #print ("cost_val:", cost_val)
 
-                print('Epoch: %04d' % (epoch + 1), 'Avg. cost = {:.3f}'.format(total_cost / total_batch))
+                #print('Epoch: %04d' % (epoch + 1), 'Avg. rmse = {:.3f}'.format(total_rmse / total_batch), 'learning_rate = {:.5f}'.format(lr))
+                print('Epoch: %04d' % (epoch + 1), 'Avg. training rmse = {:.3f}'.format(total_rmse / total_batch))
 
-                # Training data permutation
+                #TODO: training data permutation
                 train_set_shuffled = np.random.permutation(train_set)
                 train_data_shuffled = train_set_shuffled [:, 0:train_data.shape[1]]
                 train_label_shuffled = train_set_shuffled [:, train_data.shape[1]:]
+
+                if (epoch + 1) % self.saved_period == 0 and epoch != 0:
+                    #model_path = self.model_dir + '/' + self.model_name + '_' + str (k_fold) + '_' + str(epoch + 1) + '.ckpt'
+                    save_path = saver.save(sess, model_path, global_step=global_step)
+                    print('Model saved in file: %s' % save_path)
 
             print ("Training finished!")
             stop_time = time.time()
             print ("Training time (s):", stop_time - start_time)
             
-            print('accuracy (rmse):', sess.run(accuracy, feed_dict={X: test_data, Y: test_label, dropout:self.DROP_OUT}))
-            print ("test predicted hand:", sess.run (logits, feed_dict={X: test_data, dropout:self.DROP_OUT}))
-            print ("test ground truth hand:", sess.run (Y, feed_dict={Y: test_label}))
-            np.savetxt (mean_rmse_error_file_name, sess.run (accuracy, feed_dict={X: test_data, Y: test_label, dropout:self.DROP_OUT}), fmt = "%f")
-              
+            test_rmse_val = sess.run(rmse, feed_dict={X: test_data, Y: test_label, dropout:self.dropout})
+            #print('test rmse: {:.3f}'.format(test_rmse_val))
+            return test_rmse_val
+   
+    
+    def test_nn(self, test_data, test_label, no_neuron, no_hidden_layer, dropout_val, model_path):
+
+        
+        """ Start testing, using test data"""
+        print ("Start testing!")
+        # record the time when testing starts
+        start_time = time.time()
+    
+        #building model
+        X, Y, logits, weights, dropout= self.build_model(self.dim_data, self.dim_label, no_neuron, no_hidden_layer)
+
+        #evaluate model on testing process
+        cost = tf.reduce_mean(tf.squared_difference(logits, Y)) # or can use tf.nn.l2_loss
+        rmse = tf.sqrt(cost)
+        # Calculate loss using mean squared error
+        #loss = tf.losses.mean_squared_error(Y, logits)
+        # Calculate root mean squared error as additional eval metric
+        #rmse = tf.metrics.root_mean_squared_error (Y, logits)
+    
+        #print (test_data.shape, test_label.shape)
+        #sys.exit (-1)
+
+        init = tf.global_variables_initializer()
+
+
+        with tf.Session() as sess:
+            saver = tf.train.Saver()
+            #saver.restore(sess, model_file_path)
+            #model_file_path = self.model_dir + '/' + self.model_name # + '_' + str (k_fold) + '_' + str(epoch + 1) + '.ckpt'
+                                                                     # Model name in the training step may differiate with the testing step due to the argument called 
+                                                                     # then, we should use the name of graph stored in /checkpoint/ folder (created after the training step) 
+                                                                     # for self.model_name in the testing step.
+            
+            ckpt = tf.train.get_checkpoint_state(os.path.dirname(model_path))
+            
+            # if that checkpoint exists, restore from checkpoint
+            if ckpt and ckpt.model_checkpoint_path:
+                saver.restore(sess, ckpt.model_checkpoint_path)
+                print ("Found:", ckpt.model_checkpoint_path)
+            else:
+                raise ValueError ("Not found model!!!")
+            # Score accuracy
+            #test_input_fn = tf.estimator.inputs.numpy_input_fn(x=test_data, y=test_label, num_epochs=1, shuffle=False)
+            #ev = nn.evaluate(input_fn=test_input_fn)
+            test_rmse_val = sess.run(rmse, feed_dict={X: test_data, Y: test_label, dropout:dropout_val})
+            #print('test rmse: {:.3f}'.format(test_rmse_val))
+
+            print ("Testing finished!")
+            stop_time = time.time()
+            print ("Testing time (s):", stop_time - start_time)
+            return test_rmse_val
+
+    '''def choose_hyper_param (self, file): 
+        """
+            - Purpose: Based on the average test error over cross-validation, we have to select which hyper parameter
+                will be applied for our model. We will choose which one has the smallest average test error.
+            - Input:
+            - Return:
+        """
+        #building model
+        X, Y, logits, dropout, weights = self.build_model(self.dim_data, self.dim_label, self.no_neuron, self.no_hidden_layer)
+
+        #evaluate model on training process
+        cost = tf.reduce_mean(tf.squared_difference(logits, Y)) # or can use tf.nn.l2_loss
+        rmse = tf.sqrt(cost)
+
+        init = tf.global_variables_initializer()
+
+
+        with tf.Session() as sess:
+            saver = tf.train.Saver()
+            saver.restore(sess, model_file_path)
+            
+            """ Start training, using training data"""
+            # record the time when training starts
+            start_time = time.time()
+    
+            """ In each iteration, we need to store training error and test error into 2 separare lists"""
+            test_err = []
+            list_no_hidden_layer = list_no_hidden_layer_h
+            list_no_unit_in_a_layer = list_no_unit_in_a_layer_h
+
+            no_hidden_layer = list_no_hidden_layer[0]
+            no_neuron = list_no_unit_in_a_layer[0]
+            
+            train_data = self.X_total_set 
+            train_label = self.y_total_set
+            test_data = self.X_total_set
+            test_label = self.y_total_set
+
+            """model_file_path = self.model_dir + '/' + self.model_name # + '_' + str (k_fold) + '_' + str(epoch + 1) + '.ckpt'
+                                                                     # Model name in the training step may differiate with the testing step due to the argument called 
+                                                                     # then, we should use the name of graph stored in /checkpoint/ folder (created after the training step) 
+                                                                     # for self.model_name in the testing step.
+            ckpt = tf.train.get_checkpoint_state(os.path.dirname(model_file_path))
+            # if that checkpoint exists, restore from checkpoint
+            if ckpt and ckpt.model_checkpoint_path:
+                saver.restore(sess, ckpt.model_checkpoint_path)"""
+            
+            train_nn(train_data, train_label, i, no_neuron, no_hidden_layer, model_file_path)
+
+            test_rmse_val = sess.run(rmse, feed_dict={X: test_data, Y: test_label})
+            """for i in range (self.k_fold)
+                train_data = self.X_train_set[i] 
+                train_label = self.y_train_set[i]
+                test_data = self.X_test_set[i]
+                test_label = self.y_test_set[i]
+
+                model_file_path = self.model_dir + '/' + self.model_name # + '_' + str (k_fold) + '_' + str(epoch + 1) + '.ckpt'
+                                                                         # Model name in the training step may differiate with the testing step due to the argument called 
+                                                                         # then, we should use the name of graph stored in /checkpoint/ folder (created after the training step) 
+                                                                         # for self.model_name in the testing step.
+                ckpt = tf.train.get_checkpoint_state(os.path.dirname(model_file_path))
+                # if that checkpoint exists, restore from checkpoint
+                if ckpt and ckpt.model_checkpoint_path:
+                    saver.restore(sess, ckpt.model_checkpoint_path)
+                
+                train_nn(train_data, train_label, i, no_neuron, no_hidden_layer, model_file_path)
+
+                test_rmse_val = sess.run(rmse, feed_dict={X: test_data, Y: test_label})
+            """
+            #print test output result'''
+    
+    
+    def test_CV (self, no_neuron, no_hidden_layer, dropout_val, model_path):
+        
+        with tf.Session() as sess:
+            """ In each iteration, we need to store training error and test error into 2 separare lists"""
+            test_err = []
+
+            for i in range (self.k_fold):
+                print ("fold:", i)
+                train_data = self.X_train_set[i] 
+                train_label = self.y_train_set[i]
+                test_data = self.X_test_set[i]
+                test_label = self.y_test_set[i]
+                #print (train_data)
+                #print (train_label)
+                #print (test_data)
+                #print (test_label)
+                #sys.exit(-1)
+                
+                train_set = np.concatenate ((train_data, train_label), axis = 1)
+                train_set_shuffled = np.random.permutation(train_set)
+                train_data_shuffled = train_set_shuffled [:, 0:train_data.shape[1]]
+                train_label_shuffled = train_set_shuffled [:, train_data.shape[1]:]
+
+                total_batch = int(train_data.shape[0]/self.batch_size)
+                test_rmse_val = self.train_nn(train_data_shuffled, train_label_shuffled, test_data, test_label, no_neuron, no_hidden_layer, dropout_val, model_path)
+                test_err.append (test_rmse_val) 
+                #print ("---", test_rmse_val)
+        print ("---Mean rmse:", np.mean (test_err))
+        return np.mean (test_err)
+            
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
 
     #configuration
     parser.add_argument('--gpu_idx', type=str, default = '0')
-    parser.add_argument('--mode_name', type=str)
-    parser.add_argument('--test', type=bool, default=False)
+    parser.add_argument('--model_dir', type=str, default = '../checkpoint')
+    parser.add_argument('--model_name', type=str, default = 'usedCar')
+    parser.add_argument('--mode', type=str, default='train')
+    parser.add_argument('--saved_period', type=int, default=100, help='save checkpoint per X epoch') # 200
+    parser.add_argument('--output_dir', type=str, default = '../Results')
 
     #hyper parameter
-    parser.add_argument('--epoch', type=int, default = 1)
-    parser.add_argument('--batch_size', type=int, default = 100)
-    parser.add_argument('--k_fold', type=int, default=5)
+    parser.add_argument('--epoch', type=int, default = 100) #2000
+    parser.add_argument('--dropout', type=int, default = 1)
+    parser.add_argument('--batch_size', type=int, default = 128) # 128
+    parser.add_argument('--learning_rate', type=float, default=0.00125)
+    parser.add_argument('--decay_rate', type=float, default=0.5)
+    parser.add_argument('--decay_step', type=int, default=100) #if decay_step > epoch, no exponential decay
 
     #network parameter
-    parser.add_argument('--dim_data', type=int, default=10)
+    parser.add_argument('--dim_data', type=int, default=24)
     parser.add_argument('--dim_label', type=int, default=1)
-    parser.add_argument('--no_hidden_layer', type=int, default = 2)
-    parser.add_argument('--neuron_num', type=int, default = 1000)
+    parser.add_argument('--no_hidden_layer', type=int, default = 1) #not implement variabel network layer
+    parser.add_argument('--no_neuron', type=int, default = 1000)
+    parser.add_argument('--k_fold', type=int, default = 5)
 
     args = parser.parse_args()
 
+    if not os.path.exists(args.model_dir):
+        os.makedirs(args.model_dir)
+
+    if not os.path.exists(args.output_dir):
+        os.makedirs(args.output_dir)
+
     os.environ['CUDA_VISIBLE_DEVICES'] = args.gpu_idx
 
-    task1 = Tensor_NN (args)
+    # record the time when training starts
+    start_time = time.time()
 
-    if args.test:
-        print('test')
-    else:
-        task1.train()
+    
+    #print (data_training_length)
+    #sys.exit (-1)
+    nn = Tensor_NN (args)
+    model_path = nn.model_dir + '/' + nn.model_name
+
+    total_set = np.concatenate ((nn.X_total_set, nn.y_total_set), axis = 1)
+    total_set_shuffled = np.random.permutation(total_set)
+    total_data_shuffled = total_set_shuffled [:, 0:total_set.shape[1]-1]
+    total_label_shuffled = total_set_shuffled [:, total_set.shape[1]-1:]
+
+    train_data  = total_data_shuffled[:data_training_length, :]
+    train_label = total_label_shuffled[:data_training_length, :]
+
+    
+    test_data  = total_data_shuffled[data_training_length:, :]
+    test_label = total_label_shuffled[data_training_length:, :]
+
+    txt = []
+    for no_hidden_layer in list_no_hidden_layer_h:  
+        for no_neuron in list_no_unit_in_a_layer_h:  
+            for dropout in list_dropout_h:
+                print ("no_hidden_layer: %d, no_neuron: %d, dropout: %.2f" % (no_hidden_layer, no_neuron, dropout))
+                if args.mode ==  'train':
+                    #test_rmse = nn.train_nn(train_data, train_label, test_data, test_label, no_neuron, no_hidden_layer, dropout, model_path)
+                    test_rmse = nn.test_CV (no_neuron, no_hidden_layer, dropout, model_path)
+                #elif args.mode == 'test':
+                    #test_rmse = nn.test_nn(test_data, test_label, no_neuron, no_hidden_layer, model_path)
+                    txt.append ((no_hidden_layer, no_neuron, dropout, test_rmse))
+                else:
+                    print('mode input is wrong')
+    np.savetxt (mean_rmse_error_file_name, txt, fmt="%d\t%d\t%.2f\t%f")
+    stop_time = time.time()
+    print ("Total time (s):", stop_time - start_time)
+

@@ -26,6 +26,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.model_selection import KFold, cross_val_score
 from sklearn import tree
 from os import system
+import sys
 import subprocess
 from datetime import datetime
 
@@ -36,12 +37,12 @@ from datetime import datetime
 machine = "Server" #"Ubuntu" # or "Mac" or "Windows" or "Server"
 
 """ Features"""
-output = "sale_duration" #"price"
+output = "price"#"sale_duration" #"price"
 features = ["manufacture_code","rep_model_code","car_code","model_code","vehicle_mile","no_severe_accident","no_severe_water_accident","no_moderate_water_accident","total_no_accident","recovery_fee","no_click","no_message_contact","no_call_contact", "option_navigation","option_sunLoop","option_smartKey","option_xenonLight","option_heatLineSheet","option_ventilationSheet","option_rearSensor","option_curtainAirbag","no_cover_side_recovery","no_cover_side_exchange","no_corrosive_part"]#,"rep_model_code","car_code","model_code",
 #features = ["manufacture_code","rep_model_code","vehicle_mile","no_severe_accident","total_no_accident","no_click","option_sunLoop","option_smartKey","option_xenonLight","option_ventilationSheet","option_rearSensor","option_curtainAirbag","no_cover_side_exchange"]#,,"rep_model_code","car_code","model_code","option_heatLineSheet","no_corrosive_part"
 
 """ What type of dataset we will use"""
-dataset = "Full dataset" # "Full dataset" #or "Partial dataset" # or "Partial dataset_testing"
+dataset =  "Full dataset" # "Full dataset" #or "Partial dataset" # or "Partial dataset_testing"
 
 
 """ Using onehot or not"""
@@ -66,7 +67,7 @@ learning_rate_h = 'adaptive'
 max_iter_h = 1000
 random_state_h = 0
 verbose_h = False
-dropout_h = 1
+dropout_h = 1.0
 
 """ Neural Network parameters"""
 """ tuple (the number of neurons in the ith hidden layer), keep the no. units is constant and try to find the no. layers"""
@@ -76,8 +77,9 @@ l2_regularization_flag = 1
 no_penalties_h = 15
 list_alpha_h = np.logspace (-10, 4, num = no_penalties_h) #[10**(-4)]
 
-list_no_hidden_layer_h = [9] # [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 15, 20, 25, 30, 40, 50] # it equals to n_layers - 2 #[60, 100, 150]
-list_no_unit_in_a_layer_h = [10] #,100]
+list_no_hidden_layer_h = [2]#1, 2, 3, 4, 5]#, 6, 7, 8, 9, 10, 15, 20]#, 25, 30, 40, 50] # it equals to n_layers - 2 #[60, 100, 150]
+list_no_unit_in_a_layer_h = [1000]#10, 100, 500, 1000]
+list_dropout_h = [1]#0.2, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1]
 
 
 list_hidden_layer_sizes_h = []
@@ -94,15 +96,15 @@ K_fold = 5
 constraint_flag = 1 # 1-yes, 0-no
 
 """ Name of feature to limit the data, label"""
-feature_constraint = "sale_state" #"manufacture_code"
+feature_constraint = "manufacture_code"#"sale_state" #
 
 """ Choose if want the target value is in constraint_values or not"""
 is_in_range_constraint = 1 # 1-yes, 0-no
 
 """ Popular Manufacture codes"""
-popular_manufacture_codes = [101, 102, 103, 104, 105] #[101]#
+popular_manufacture_codes = [101, 102, 103, 104, 105, 107] #[101]#
 sale_state = ["Sold-out"] 
-feature_constraint_values = sale_state #popular_manufacture_codes
+feature_constraint_values = popular_manufacture_codes#sale_state #
 
 """ How to choose hyper parameters"""
 choose_hyperparam = 0 # 0-choosing by min (err), 1-choosing by significant improvement
@@ -133,7 +135,7 @@ if machine == "Ubuntu":
 elif machine in ["Mac", "Windows"]:
     directory_h = "D:/Projects/Car Price Estimation Project/Results/Simple case/" + sub_directory1
 elif machine == "Server":
-    directory_h = "Results/" + sub_directory1
+    directory_h = "../Results/" + sub_directory1
 
 if dataset == "Full dataset":
     dataset_excel_file = '../Data/used_car_Eng_2.xlsx'
@@ -141,7 +143,7 @@ if dataset == "Full dataset":
     input_no = 239472
 elif dataset == "Partial dataset":
     dataset_excel_file = '../Data/used_car_Eng_small dataset.xlsx'
-    input_no = 25458
+    input_no = 5458
 elif dataset == "Partial dataset_testing":
     dataset_excel_file = '../Data/used_car_Eng_small dataset_for testing.xlsx'
     input_no = 14
@@ -154,11 +156,11 @@ data_training_percentage = 0.8
 data_training_length     = int (0.5 + input_no * data_training_percentage)
 #print ('data_training_length', data_training_length)
 
-data_validation_percentage = 0.1
+data_validation_percentage = 0.0
 data_validation_length     = int (0.5 + input_no * data_validation_percentage)
 #print ('data_validation_length', data_validation_length)
 
-data_test_percentage = 0.1
+data_test_percentage = 0.2
 data_test_length     = int (0.5 + input_no * data_test_percentage)
 #print ('data_test_length', data_test_length)
 
@@ -192,7 +194,7 @@ else:
     constraint_name = "Constraint." + feature_constraint + " = " + str (feature_constraint_values)
 
 """ Result file name"""
-pre_file_name = directory_h + dataset + " results/" + feature_coding + sub_directory2 + "/[" + dataset + "][" + feature_coding + "][K = " + str(K_fold) + "][" + constraint_name + "]"
+pre_file_name = directory_h + dataset + " results/" + feature_coding + sub_directory2 + "/"# + "/[" + dataset + "][" + feature_coding + "][K = " + str(K_fold) + "][" + constraint_name + "]"
 
 textfile_result = pre_file_name + "All results.txt" # " Result " + list_regression_model[0] + "_testing.txt"
 

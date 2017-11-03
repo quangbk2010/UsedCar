@@ -14,7 +14,7 @@ Created on Wed Sep 13 11:09:55 2017
 """
 
 from Header_lib import *
-from Neural_network import *
+#from Neural_network import *
 """
     LOAD DATA:
      - Load data from csv file, and store as narrays
