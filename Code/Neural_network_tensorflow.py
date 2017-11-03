@@ -132,7 +132,13 @@ class Tensor_NN(Dataset):
         
         
         # Due to the notes -> need to comment these 2 lines
-        X_total_set = self.get_data_matrix (self.total_dataset, features)
+        X_total_set = self.get_data_matrix (self.total_dataset, features) 
+
+        scaler = StandardScaler()  
+        scaler.fit(X_total_set)  
+        X_total_set = scaler.transform(X_total_set)  
+            
+
         if output == "price":
             y_total_set = self.get_data_array (self.total_dataset, output)
         elif output == "sale_duration":
@@ -145,20 +151,21 @@ class Tensor_NN(Dataset):
         y_test_set = []
         
         if self.k_fold > 0:
-            kf = KFold(self.k_fold)
+            kf = KFold(self.k_fold, shuffle=True)
             
-            for train_index, test_index in kf.split(X_total_set, shuffle=True):
+            for train_index, test_index in kf.split(X_total_set):
                 
                 #print("TRAIN:", train_index, "TEST:", test_index)
                 X_train, X_test = X_total_set[train_index], X_total_set[test_index]
                 y_train, y_test = y_total_set[train_index], y_total_set[test_index]
                 #print ("X_train shape:", X_train.shape, "y_train type:", y_train.shape)
                 #print ("X_train:", X_train, "y_train:", y_train)
+               
                 X_train_set.append (X_train)
                 y_train_set.append (y_train)
                 X_test_set.append (X_test)
                 y_test_set.append (y_test)
-            
+
         else:
             X_train_set = X_total_set[:data_training_length, :]
             y_train_set = X_total_set[:data_training_length, :]
@@ -186,6 +193,10 @@ class Tensor_NN(Dataset):
         X_total_set = self.get_data_matrix_with_constraints (self.total_dataset, features, feature_constraint, feature_constraint_values)
         y_total_set = self.get_data_array_with_constraints (self.total_dataset, output, feature_constraint, feature_constraint_values)
         
+        scaler = StandardScaler()  
+        scaler.fit(X_total_set)  
+        X_total_set = scaler.transform(X_total_set)  
+           
         X_train_set = []
         y_train_set = []
         X_test_set = []

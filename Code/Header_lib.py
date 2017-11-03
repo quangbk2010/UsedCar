@@ -12,7 +12,7 @@ import numpy as np
 import pandas as pd
 import time
 from sklearn import linear_model, ensemble
-from sklearn.preprocessing import OneHotEncoder, StandardScaler  
+from sklearn.preprocessing import OneHotEncoder, StandardScaler, Imputer, LabelEncoder  
 import matplotlib.pyplot as plt
 from scipy.stats.stats import pearsonr
 from scipy import stats
@@ -38,15 +38,15 @@ machine = "Server" #"Ubuntu" # or "Mac" or "Windows" or "Server"
 
 """ Features"""
 output = "price"#"sale_duration" #"price"
-features = ["manufacture_code","rep_model_code","car_code","model_code","vehicle_mile","no_severe_accident","no_severe_water_accident","no_moderate_water_accident","total_no_accident","recovery_fee","no_click","no_message_contact","no_call_contact", "option_navigation","option_sunLoop","option_smartKey","option_xenonLight","option_heatLineSheet","option_ventilationSheet","option_rearSensor","option_curtainAirbag","no_cover_side_recovery","no_cover_side_exchange","no_corrosive_part"]#,"rep_model_code","car_code","model_code",
-#features = ["manufacture_code","rep_model_code","vehicle_mile","no_severe_accident","total_no_accident","no_click","option_sunLoop","option_smartKey","option_xenonLight","option_ventilationSheet","option_rearSensor","option_curtainAirbag","no_cover_side_exchange"]#,,"rep_model_code","car_code","model_code","option_heatLineSheet","no_corrosive_part"
+#features = ["manufacture_code","rep_model_code","car_code","model_code","vehicle_mile","no_severe_accident","no_severe_water_accident","no_moderate_water_accident","total_no_accident","recovery_fee","no_click","no_message_contact","no_call_contact", "option_navigation","option_sunLoop","option_smartKey","option_xenonLight","option_heatLineSheet","option_ventilationSheet","option_rearSensor","option_curtainAirbag","no_cover_side_recovery","no_cover_side_exchange","no_corrosive_part"]#,"rep_model_code","car_code","model_code",
+features = ["manufacture_code","rep_model_code","car_code","model_code","rating_code","car_type","trans_mode","fuel_type","vehicle_mile","cylinder_disp","tolerance_history","sale_history","rental_history","no_severe_accident","no_severe_water_accident","no_moderate_water_accident","total_no_accident","recovery_fee","no_click","no_message_contact","no_call_contact", "option_navigation","option_sunLoop","option_smartKey","option_xenonLight","option_heatLineSheet","option_ventilationSheet","option_rearSensor","option_curtainAirbag","no_cover_side_recovery","no_cover_side_exchange","no_corrosive_part"]
 
 """ What type of dataset we will use"""
-dataset =  "Full dataset" # "Full dataset" #or "Partial dataset" # or "Partial dataset_testing"
+dataset =  "small" # "full", or "partial", or "small"
 
 
 """ Using onehot or not"""
-using_one_hot_flag = 0 # 1-yes, 0-no
+using_one_hot_flag = 1 # 1-yes, 0-no
 
 """ Regression model will be used"""
 list_regression_model = ["neural_network"] #["ridge", "lasso"]#, "basic_tree"]#["basic_tree"] 
@@ -93,7 +93,7 @@ for i in range (len(list_no_hidden_layer_h)):
 K_fold = 5
 
 """ Constraint when get data, label"""
-constraint_flag = 1 # 1-yes, 0-no
+constraint_flag = 0 # 1-yes, 0-no 
 
 """ Name of feature to limit the data, label"""
 feature_constraint = "manufacture_code"#"sale_state" #
@@ -114,8 +114,9 @@ significant_value_h = 0.22
 
 """ ------------------------------------------------ What to not change frequently ------------------------------------ """
 
-full_features = ["manufacture_name","representative_name","car_name","model_name","rating_name","manufacture_code","rep_model_code","car_code","model_code","rating_code","car_type","init_advertising_reg_date","actual_advertising_date","sale_date","year","trans_mode","fuel_type","vehicle_mile","price","sale_state","city","district","dealer_name","cylinder_disp","tolerance_history","sale_history","rental_history","no_severe_accident","no_severe_water_accident","no_moderate_water_accident","total_no_accident","recovery_fee","no_click","online_registration_date","no_message_contact","no_call_contact","option_navigation","option_sunLoop","option_smartKey","option_xenonLight","option_heatLineSheet","option_ventilationSheet","option_rearSensor","option_curtainAirbag","no_cover_side_recovery","no_cover_side_exchange","no_corrosive_part","gbn_code1","accident_day1","insurance_amt1","component_amt1","wage_amt1","painting_amt1","gbn_code2","accident_day2","insurance_amt2","component_amt2","wage_amt2","painting_amt2","gbn_code3","accident_day3","insurance_amt3","component_amt3","wage_amt3","painting_amt3","gbn_code4","accident_day4","insurance_amt4","component_amt4","wage_amt4","painting_amt4","gbn_code5","accident_day5","insurance_amt5","component_amt5","wage_amt5","painting_amt5","gbn_code6","accident_day6","insurance_amt6","component_amt6","wage_amt6","painting_amt6","gbn_code7","accident_day7","insurance_amt7","component_amt7","wage_amt7","painting_amt7","gbn_code8","accident_day8","insurance_amt8","component_amt8","wage_amt8","painting_amt8","gbn_code9","accident_day9","insurance_amt9","component_amt9","wage_amt9","painting_amt9","gbn_code10","accident_day10","insurance_amt10","component_amt10","wage_amt10","painting_amt10"]
-full_features_dict = {"manufacture_name":str,"representative_name":str,"car_name":str,"model_name":str,"rating_name":str,"manufacture_code":int,"rep_model_code":int,"car_code":int,"model_code":int,"rating_code":str,"car_type":str,"init_advertising_reg_date":str,"actual_advertising_date":str,"sale_date":str,"year":int,"trans_mode":str,"fuel_type":str,"vehicle_mile":int,"price":int,"sale_state":str,"city":str,"district":str,"dealer_name":str,"cylinder_disp":int,"tolerance_history":int,"sale_history":int,"rental_history":int,"no_severe_accident":int,"no_severe_water_accident":int,"no_moderate_water_accident":int,"total_no_accident":int,"recovery_fee":int,"hits":int,"online_registration_date":str,"no_message_contact":int,"no_call_contact":int,"option_navigation":int,"option_sunLoop":int,"option_smartKey":int,"option_xenonLight":int,"option_heatLineSheet":int,"option_ventilationSheet":int,"option_rearSensor":int,"option_curtainAirbag":int,"no_cover_side_recovery":int,"no_cover_side_exchange":int,"no_corrosive_part":int,"gbn_code1":int,"accident_day1":int,"insurance_amt1":int,"component_amt1":int,"wage_amt1":int,"painting_amt1":int,"gbn_code2":int,"accident_day2":int,"insurance_amt2":int,"component_amt2":int,"wage_amt2":int,"painting_amt2":int,"gbn_code3":int,"accident_day3":int,"insurance_amt3":int,"component_amt3":int,"wage_amt3":int,"painting_amt3":int,"gbn_code4":int,"accident_day4":int,"insurance_amt4":int,"component_amt4":int,"wage_amt4":int,"painting_amt4":int,"gbn_code5":int,"accident_day5":int,"insurance_amt5":int,"component_amt5":int,"wage_amt5":int,"painting_amt5":int,"gbn_code6":int,"accident_day6":int,"insurance_amt6":int,"component_amt6":int,"wage_amt6":int,"painting_amt6":int,"gbn_code7":int,"accident_day7":int,"insurance_amt7":int,"component_amt7":int,"wage_amt7":int,"painting_amt7":int,"gbn_code8":int,"accident_day8":int,"insurance_amt8":int,"component_amt8":int,"wage_amt8":int,"painting_amt8":int,"gbn_code9":int,"accident_day9":int,"insurance_amt9":int,"component_amt9":int,"wage_amt9":int,"painting_amt9":int,"gbn_code10":int,"accident_day10":int,"insurance_amt10":int,"component_amt10":int,"wage_amt10":int,"painting_amt10":int}
+full_features = ["manufacture_code","rep_model_code","car_code","model_code","rating_code","car_type","actual_advertising_date","sale_date","year","trans_mode","fuel_type","vehicle_mile","price","sale_state","city","district","dealer_name","cylinder_disp","tolerance_history","sale_history","rental_history","no_severe_accident","no_severe_water_accident","no_moderate_water_accident","total_no_accident","recovery_fee","no_click","no_message_contact","no_call_contact","option_navigation","option_sunLoop","option_smartKey","option_xenonLight","option_heatLineSheet","option_ventilationSheet","option_rearSensor","option_curtainAirbag","no_cover_side_recovery","no_cover_side_exchange","no_corrosive_part"]
+
+full_features_dict = {"manufacture_code":int,"rep_model_code":int,"car_code":int,"model_code":int,"rating_code":str,"car_type":str,"actual_advertising_date":str,"sale_date":str,"year":int,"trans_mode":str,"fuel_type":str,"vehicle_mile":int,"price":int,"sale_state":str,"city":str,"district":str,"dealer_name":str,"cylinder_disp":int,"tolerance_history":int,"sale_history":int,"rental_history":int,"no_severe_accident":int,"no_severe_water_accident":int,"no_moderate_water_accident":int,"total_no_accident":int,"recovery_fee":int,"hits":int,"no_message_contact":int,"no_call_contact":int,"option_navigation":int,"option_sunLoop":int,"option_smartKey":int,"option_xenonLight":int,"option_heatLineSheet":int,"option_ventilationSheet":int,"option_rearSensor":int,"option_curtainAirbag":int,"no_cover_side_recovery":int,"no_cover_side_exchange":int,"no_corrosive_part":int}
 
 if list_regression_model[0] == "basic_tree":
     sub_directory1 = "Tree plot/"
@@ -137,16 +138,17 @@ elif machine in ["Mac", "Windows"]:
 elif machine == "Server":
     directory_h = "../Results/" + sub_directory1
 
-if dataset == "Full dataset":
-    dataset_excel_file = '../Data/used_car_Eng_2.xlsx'
+
+if dataset == "full":
     """ Dataset length"""
     input_no = 239472
-elif dataset == "Partial dataset":
-    dataset_excel_file = '../Data/used_car_Eng_small dataset.xlsx'
-    input_no = 5458
-elif dataset == "Partial dataset_testing":
-    dataset_excel_file = '../Data/used_car_Eng_small dataset_for testing.xlsx'
+    dataset_excel_file = '../Data/used_car_Eng_pre_processing1.xlsx'
+elif dataset == "partial":
+    input_no = 1000
+    dataset_excel_file = '../Data/used_car_Eng_pre_processing1_partial dataset.xlsx'
+elif dataset == "small":
     input_no = 14
+    dataset_excel_file = '../Data/used_car_Eng_pre_processing1_small dataset.xlsx'
 
 print ('data set length:', input_no)
 print ("Output:", output)
@@ -171,8 +173,10 @@ else:
     feature_coding = "With onehot"
 
 
-feature_need_encoding = ["manufacture_code","rep_model_code","car_code","model_code","rating_code","car_type"]
+feature_need_encoding = ["manufacture_code","rep_model_code","car_code","model_code","rating_code","car_type", "trans_mode", "fuel_type"]
+feature_need_label = ["car_type", "trans_mode", "fuel_type"]
 
+strategy_h = "most_frequent"
 
 
 """ Calculate RMSE"""

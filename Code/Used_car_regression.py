@@ -83,19 +83,49 @@ class Dataset (Data_preprocessing):
         feature_array: numpy array of feature 
         return the one-hot code for feature array
         """
-        training_data_array = np.array ([self.get_training_dataset()[feature]])
+        print ("Encode one-hot.")
+        data_array = np.array ([self.get_total_dataset()[feature]]) # it is ok to use training dataset if the length of training dataset is large enough
+        #data_array = self.impute_missing_values (feature, data_array, strategy_h)
         #print ('training_data_array', training_data_array.T)
         #print ('feature array:', feature_array.T)
-        enc = OneHotEncoder()
-        enc.fit (training_data_array.T)
+        enc = OneHotEncoder(sparse = False)
+        enc.fit (data_array.T) 
         #print ('encoded:', enc.transform (feature_array.T).toarray())
-        return enc.transform (feature_array.T).toarray()
+        return enc.transform (feature_array.T)
         
         """X = np.array ([[128], [101], [105], [102], [109], [160], [101], [101], [102]])
         print ('X = ', X)
         print ('feature arr: ', feature_array)
         print (enc.fit_transform (feature_array.T))"""
+
+    def impute_missing_values (self, feature, feature_array, strategy):
+        #TODO: More appropriate method
+        """
+        There are some columns with missing values ("NaN") -> need to impute those
+            + by mean values
+            + by median values
+            + by most_frequent value
         
+        feature_array: numpy array of feature 
+        return the array of data without missing values
+        """
+        print ("Impute missing.")
+        imp = Imputer(missing_values='NaN', strategy=strategy, axis=1)
+        data_array = np.array ([self.get_total_dataset()[feature]])
+        imp.fit (data_array)
+        return imp.transform (feature_array) 
+
+    def label_str_values (self, feature, feature_array):
+        """
+        There are some columns with string values (E.g. Car type) -> need to label it as numerical labels
+        """
+        print ("Label str values.")
+        le = LabelEncoder ()
+        data_array = np.array ([self.get_total_dataset()[feature]])
+        #data_array = self.impute_missing_values (feature, data_array, strategy_h)
+        le.fit (data_array)
+        return le.transform (feature_array)
+
     def get_data_array (self, dataset, feature):  
         """
         dataset: training, validation, test, or total dataset
@@ -103,9 +133,21 @@ class Dataset (Data_preprocessing):
         return: an vector (1D numpy.array object)
         """
         data_array = np.array ([dataset[feature]])
+        #print ("1.", data_array)
+        if feature in feature_need_label:
+            data_array = self.label_str_values (feature, data_array)
+            print ("2.", data_array)
+
+        #data_array = self.impute_missing_values (feature, data_array, strategy_h)
+        #print ("3.", data_array)
+
+
         if using_one_hot_flag == 1:
             if feature in feature_need_encoding:
-                return self.encode_one_hot_feature (feature, data_array)
+                data_array = self.encode_one_hot_feature (feature, data_array) # TODO: Problem when use constraint
+    
+        
+        print ("4.", data_array)
         return data_array.T
     
     
