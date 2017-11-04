@@ -12,7 +12,9 @@ total_dataset = Dataset()
 training_dataset = total_dataset.get_training_dataset()
 validation_dataset = total_dataset.get_validation_dataset()
 
-total_dataset.get_data_array (total_dataset.get_total_dataset (),"fuel_type") # manufacture_code  "trans_mode")# 
+#total_dataset.get_data_array (total_dataset.get_total_dataset (),"rating_code") # manufacture_code  "trans_mode")# fuel_type
+X = total_dataset.get_data_matrix (total_dataset.get_total_dataset (),features)
+print (X[0])
 
 """with open ("D:/Projects/Car Price Estimation Project/Results/Simple case/Sale Duration.txt", "w") as f:
     sale_duration_array = total_dataset.get_sale_duration_array (total_dataset.get_total_dataset())

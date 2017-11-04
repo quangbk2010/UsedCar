@@ -33,9 +33,28 @@ class Data_preprocessing (object):
         d1 = datetime.strptime(str_d1, "%Y%m%d")
         d2 = datetime.strptime(str_d2, "%Y%m%d")
         return int (abs((d2 - d1).days))
-        
 
-class Dataset (Data_preprocessing):
+class DataFrameImputer(TransformerMixin):
+
+    def __init__(self):
+        """Impute missing values.
+
+        Columns of dtype object are imputed with the most frequent value 
+        in column.
+
+        Columns of other types are imputed with mean of column.
+
+        """
+    def fit(self, X, y=None):
+
+        self.fill = pd.Series([X[c].value_counts().index[0] if X[c].dtype == np.dtype('O') or X[c].dtype == np.dtype('int64') else X[c].mean() for c in X], index=X.columns)
+
+        return self
+
+    def transform(self, X, y=None):
+        return X.fillna(self.fill)        
+
+class Dataset (Data_preprocessing, DataFrameImputer):
     def __init__(self):
         """
         Loading data from csv file
@@ -47,6 +66,9 @@ class Dataset (Data_preprocessing):
         dtype_dict = full_features_dict
         #total_dataset = pd.read_excel (dataset_excel_file, names = self.headers, dtype = dtype_dict, header = 0)
         total_dataset = pd.read_excel (dataset_excel_file, names = self.headers, converters = dtype_dict, header = 0)
+        
+        # Impute missing values from here
+        total_dataset = DataFrameImputer().fit_transform (total_dataset)
         print ("Time for Loading dataset: %.3f" % (time.time() - stime))        
         self.total_dataset = total_dataset
         self.traning_dataset = self.get_training_dataset()
@@ -74,7 +96,7 @@ class Dataset (Data_preprocessing):
         self.test_dataset = self.total_dataset.tail (data_test_length)
         return self.test_dataset 
     
-    def encode_one_hot_feature (self, feature, feature_array):
+    def encode_one_hot_feature (self, total_data_array, feature, feature_array):
         """
         There are some features need to be encoded (here using one-hot), because they are categorical features (represented as nominal, is not 
         meaningful because they are index, it doesn't make sense to add or subtract them ).
@@ -83,14 +105,13 @@ class Dataset (Data_preprocessing):
         feature_array: numpy array of feature 
         return the one-hot code for feature array
         """
-        print ("Encode one-hot.")
-        data_array = np.array ([self.get_total_dataset()[feature]]) # it is ok to use training dataset if the length of training dataset is large enough
+        #print ("Encode one-hot.")
+        #data_array = np.array ([self.get_total_dataset()[feature]]) # it is ok to use training dataset if the length of training dataset is large enough
         #data_array = self.impute_missing_values (feature, data_array, strategy_h)
-        #print ('training_data_array', training_data_array.T)
-        #print ('feature array:', feature_array.T)
         enc = OneHotEncoder(sparse = False)
-        enc.fit (data_array.T) 
-        #print ('encoded:', enc.transform (feature_array.T).toarray())
+        #print ("***", total_data_array.shape, feature_array.shape)
+        enc.fit (total_data_array.T) 
+        #print ('encoded:', enc.transform (feature_array.T))
         return enc.transform (feature_array.T)
         
         """X = np.array ([[128], [101], [105], [102], [109], [160], [101], [101], [102]])
@@ -98,7 +119,7 @@ class Dataset (Data_preprocessing):
         print ('feature arr: ', feature_array)
         print (enc.fit_transform (feature_array.T))"""
 
-    def impute_missing_values (self, feature, feature_array, strategy):
+    def impute_missing_values (self, total_data_array, feature, feature_array, strategy):
         #TODO: More appropriate method
         """
         There are some columns with missing values ("NaN") -> need to impute those
@@ -111,20 +132,24 @@ class Dataset (Data_preprocessing):
         """
         print ("Impute missing.")
         imp = Imputer(missing_values='NaN', strategy=strategy, axis=1)
-        data_array = np.array ([self.get_total_dataset()[feature]])
-        imp.fit (data_array)
+        #data_array = np.array ([self.get_total_dataset()[feature]])
+        imp.fit (total_data_array)
+        """imp = DataFrameImputer ()
+        imp.fit (pd.DataFrame (total_data_array))"""
         return imp.transform (feature_array) 
 
-    def label_str_values (self, feature, feature_array):
+    def label_str_values (self, total_data_array, feature, feature_array):
         """
         There are some columns with string values (E.g. Car type) -> need to label it as numerical labels
         """
-        print ("Label str values.")
+        #print ("Label str values.", feature)
         le = LabelEncoder ()
-        data_array = np.array ([self.get_total_dataset()[feature]])
+        #data_array = np.array ([self.get_total_dataset()[feature]])
         #data_array = self.impute_missing_values (feature, data_array, strategy_h)
-        le.fit (data_array)
-        return le.transform (feature_array)
+
+        #print (total_data_array.shape, feature_array.shape)
+        le.fit (total_data_array.reshape (total_data_array.shape[1], ))
+        return le.transform (feature_array.reshape (feature_array.shape[1], )).reshape(1, feature_array.shape[1])
 
     def get_data_array (self, dataset, feature):  
         """
@@ -132,22 +157,40 @@ class Dataset (Data_preprocessing):
         feature: is a element in feature list
         return: an vector (1D numpy.array object)
         """
+        total_data_array = np.array ([self.get_total_dataset()[feature]])
         data_array = np.array ([dataset[feature]])
+
+        """if feature in feature_need_impute:
+            #print ("@@")
+            total_data_array = self.impute_missing_values (total_data_array, feature, total_data_array, strategy_h)
+            if total_data_array.shape[0] != data_array.shape[0]:
+                data_array = self.impute_missing_values (total_data_array, feature, data_array, strategy_h)
+            else:
+                data_array = total_data_array"""
+
+
         #print ("1.", data_array)
         if feature in feature_need_label:
-            data_array = self.label_str_values (feature, data_array)
-            print ("2.", data_array)
-
-        #data_array = self.impute_missing_values (feature, data_array, strategy_h)
+            total_data_array = self.label_str_values (total_data_array, feature, total_data_array)
+            if total_data_array.shape[0] != data_array.shape[0]:
+                data_array = self.label_str_values (total_data_array, feature, data_array)
+            else:
+                data_array = total_data_array
+            #print ("2.", data_array)
+        
         #print ("3.", data_array)
 
 
         if using_one_hot_flag == 1:
             if feature in feature_need_encoding:
-                data_array = self.encode_one_hot_feature (feature, data_array) # TODO: Problem when use constraint
-    
+                if total_data_array.shape[0] != data_array.shape[0]:
+                    data_array = self.encode_one_hot_feature (total_data_array, feature, data_array) # TODO: Problem when use constraint
+                else:
+                    data_array = self.encode_one_hot_feature  (total_data_array, feature, total_data_array)
+                data_array = data_array.T
+
         
-        print ("4.", data_array)
+        #print ("4.", data_array.T)
         return data_array.T
     
     
@@ -264,14 +307,17 @@ class Dataset (Data_preprocessing):
         features_copy.reverse()
         
         X = self.get_data_array (dataset, features_copy[0])#np.array ([dataset[features[0]]]).T
-        #print ('init X:', X)
+        #print ('init X:', X.shape)
         for i in range (1, featureNo):
             if features_copy[i] in self.headers:
+                #print ("---", features_copy[i]) 
                 #X = np.concatenate ((np.array ([dataset[features[i]]]).T, X), axis = 1) # Input matrix (each column represents values of a feature, each row represents a data point)
+                a = self.get_data_array (dataset, features_copy[i])
+                #print ("a:", a.shape)
                 X = np.concatenate ((self.get_data_array (dataset, features_copy[i]), X), axis = 1)
             else:
                 break
-        #print ('X:', X)
+        #print ('X:', X.shape)
         return X
     
     def get_data_matrix_with_constraint (self, dataset, features, feature_constraint, feature_constraint_value): 

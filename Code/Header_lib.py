@@ -24,6 +24,7 @@ from keras.wrappers.scikit_learn import KerasRegressor
 from sklearn.metrics import mean_squared_error, mean_absolute_error
 from sklearn.model_selection import train_test_split
 from sklearn.model_selection import KFold, cross_val_score
+from sklearn.base import TransformerMixin
 from sklearn import tree
 from os import system
 import sys
@@ -42,7 +43,7 @@ output = "price"#"sale_duration" #"price"
 features = ["manufacture_code","rep_model_code","car_code","model_code","rating_code","car_type","trans_mode","fuel_type","vehicle_mile","cylinder_disp","tolerance_history","sale_history","rental_history","no_severe_accident","no_severe_water_accident","no_moderate_water_accident","total_no_accident","recovery_fee","no_click","no_message_contact","no_call_contact", "option_navigation","option_sunLoop","option_smartKey","option_xenonLight","option_heatLineSheet","option_ventilationSheet","option_rearSensor","option_curtainAirbag","no_cover_side_recovery","no_cover_side_exchange","no_corrosive_part"]
 
 """ What type of dataset we will use"""
-dataset =  "small" # "full", or "partial", or "small"
+dataset =  "full" # "full", or "partial", or "small"
 
 
 """ Using onehot or not"""
@@ -78,7 +79,7 @@ no_penalties_h = 15
 list_alpha_h = np.logspace (-10, 4, num = no_penalties_h) #[10**(-4)]
 
 list_no_hidden_layer_h = [2]#1, 2, 3, 4, 5]#, 6, 7, 8, 9, 10, 15, 20]#, 25, 30, 40, 50] # it equals to n_layers - 2 #[60, 100, 150]
-list_no_unit_in_a_layer_h = [1000]#10, 100, 500, 1000]
+list_no_unit_in_a_layer_h = [5000]#10, 100, 500, 1000]
 list_dropout_h = [1]#0.2, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1]
 
 
@@ -141,10 +142,10 @@ elif machine == "Server":
 
 if dataset == "full":
     """ Dataset length"""
-    input_no = 239472
+    input_no = 239444# 239472
     dataset_excel_file = '../Data/used_car_Eng_pre_processing1.xlsx'
 elif dataset == "partial":
-    input_no = 1000
+    input_no = 8000
     dataset_excel_file = '../Data/used_car_Eng_pre_processing1_partial dataset.xlsx'
 elif dataset == "small":
     input_no = 14
@@ -175,6 +176,7 @@ else:
 
 feature_need_encoding = ["manufacture_code","rep_model_code","car_code","model_code","rating_code","car_type", "trans_mode", "fuel_type"]
 feature_need_label = ["car_type", "trans_mode", "fuel_type"]
+feature_need_impute = ["rating_code"]#, "car_type"]
 
 strategy_h = "most_frequent"
 
@@ -206,6 +208,6 @@ dotfile_name_h  = pre_file_name + " Best basic tree_"
 
 """ File to write results of mean_rmse over K-fold CV. This file mainly used for drawing figure"""
 
-mean_rmse_error_file_name = pre_file_name + "Mean RMSE.txt" # "Mean_rmse over K-fold CV.txt"#" Mean_rmse over K-fold CV_for_testing.txt"
+mean_relative_err_error_file_name = pre_file_name + "Mean Relative error.txt" # "Mean_rmse over K-fold CV.txt"#" Mean_rmse over K-fold CV_for_testing.txt"
 
 
