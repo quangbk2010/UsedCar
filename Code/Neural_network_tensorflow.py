@@ -319,6 +319,8 @@ class Tensor_NN(Dataset):
 
             total_batch = int((len(train_data)/self.batch_size) + 0.5)
 
+            pre_epoch_test_relative_err_val = 0
+
             for epoch in range (self.epoch):
 
                 total_relative_err = 0
@@ -351,6 +353,13 @@ class Tensor_NN(Dataset):
 
                 #print('Epoch: %04d' % (epoch + 1), 'Avg. rmse = {:.3f}'.format(total_rmse / total_batch), 'learning_rate = {:.5f}'.format(lr))
                 print('Epoch: %04d' % (epoch + 1), 'Avg. training relative_err = {:.3f}%'.format(total_relative_err / total_batch))
+                
+                epoch_test_relative_err_val = sess.run(relative_err, feed_dict={X: test_data, Y: test_label, dropout:self.dropout})
+                
+                print (pre_epoch_test_relative_err_val, epoch_test_relative_err_val)
+                #if epoch_test_relative_err_val > pre_epoch_test_relative_err_val and pre_epoch_test_relative_err_val != 0:
+                    #break
+                #pre_epoch_test_relative_err_val = epoch_test_relative_err_val
 
                 #TODO: training data permutation
                 train_set_shuffled = np.random.permutation(train_set)
@@ -366,9 +375,9 @@ class Tensor_NN(Dataset):
             stop_time = time.time()
             print ("Training time (s):", stop_time - start_time)
             
-            test_relative_err_val = sess.run(relative_err, feed_dict={X: test_data, Y: test_label, dropout:self.dropout})
-            print('test rmse: {:.3f}'.format(test_relative_err_val))
-            return test_relative_err_val
+            #test_relative_err_val = sess.run(relative_err, feed_dict={X: test_data, Y: test_label, dropout:self.dropout})
+            print('test rmse: {:.3f}'.format(epoch_test_relative_err_val))
+            return epoch_test_relative_err_val
    
     
     
