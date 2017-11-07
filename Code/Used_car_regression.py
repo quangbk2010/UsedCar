@@ -27,12 +27,18 @@ class Data_preprocessing (object):
     def get_days_between(self, d1, d2):
         
         if np.isnan(d1) or np.isnan(d2):
-            return (-1 )
+            return (-1)
         str_d1 = str (int (d1))
         str_d2 = str (int (d2))
-        d1 = datetime.strptime(str_d1, "%Y%m%d")
-        d2 = datetime.strptime(str_d2, "%Y%m%d")
-        return int (abs((d2 - d1).days))
+        try:
+            d1 = datetime.strptime(str_d1, "%Y%m%d")
+            d2 = datetime.strptime(str_d2, "%Y%m%d")
+            return int (abs((d2 - d1).days))
+        except ValueError:
+            # NOTE: prevent error when impute the missing values with mean() or some format mistakes
+            return (-1)
+            #print (str_d1, str_d2)
+            #raise
 
 class DataFrameImputer(TransformerMixin):
 
@@ -47,6 +53,7 @@ class DataFrameImputer(TransformerMixin):
         """
     def fit(self, X, y=None):
 
+        # NOTE: the year (eg. advertising date) will be affected if using the mean function
         self.fill = pd.Series([X[c].value_counts().index[0] if X[c].dtype == np.dtype('O') or X[c].dtype == np.dtype('int64') else X[c].mean() for c in X], index=X.columns)
 
         return self
@@ -71,15 +78,15 @@ class Dataset (Data_preprocessing, DataFrameImputer):
         total_dataset = DataFrameImputer().fit_transform (total_dataset)
         print ("Time for Loading dataset: %.3f" % (time.time() - stime))        
         self.total_dataset = total_dataset
-        self.traning_dataset = self.get_training_dataset()
-        self.validation_dataset = self.get_validation_dataset()
-        self.test_dataset = self.get_test_dataset()
+        #self.traning_dataset = self.get_training_dataset()
+        #self.validation_dataset = self.get_validation_dataset()
+        #self.test_dataset = self.get_test_dataset()
     
     def get_total_dataset (self):
         
         return self.total_dataset
     
-    def get_training_dataset (self):
+    """def get_training_dataset (self):
         
         self.traning_dataset = self.total_dataset.head (n = data_training_length)
         return self.traning_dataset
@@ -94,7 +101,7 @@ class Dataset (Data_preprocessing, DataFrameImputer):
     def get_test_dataset (self):
         
         self.test_dataset = self.total_dataset.tail (data_test_length)
-        return self.test_dataset 
+        return self.test_dataset""" 
     
     def encode_one_hot_feature (self, total_data_array, feature, feature_array):
         """
@@ -190,7 +197,7 @@ class Dataset (Data_preprocessing, DataFrameImputer):
                 data_array = data_array.T
 
         
-        #print ("4.", data_array.T)
+        #print ("no constraint:", data_array.T.shape, "feature:", feature)
         return data_array.T
     
     
@@ -212,6 +219,7 @@ class Dataset (Data_preprocessing, DataFrameImputer):
                 data_array_with_constraint.append (data_array[i])
             elif type_feature == int and constraint_data_array[i] <= feature_constraint_value:
                 data_array_with_constraint.append (data_array[i])
+        #print ("constraint:", np.array (data_array_with_constraint).shape, "feature:", feature)
         return np.array (data_array_with_constraint)
     
     def get_sale_duration_array (self, dataset):
@@ -221,10 +229,10 @@ class Dataset (Data_preprocessing, DataFrameImputer):
             + dataset: training, validation, test, or total dataset
         - Return: an vector oof sale duration as a numpy.array object
         """
-        """actual_advertising_date_array = self.get_data_array_with_constraint (dataset, "actual_advertising_date", "sale_state", "Sold-out")
-        sale_date_array = self.get_data_array_with_constraint (dataset, "sale_date", "sale_state", "Sold-out")"""
-        actual_advertising_date_array = self.get_data_array (dataset, "actual_advertising_date")
-        sale_date_array = self.get_data_array (dataset, "sale_date")
+        actual_advertising_date_array = self.get_data_array_with_constraint (dataset, "actual_advertising_date", "sale_state", "Sold-out")
+        sale_date_array = self.get_data_array_with_constraint (dataset, "sale_date", "sale_state", "Sold-out")
+        #actual_advertising_date_array = self.get_data_array (dataset, "actual_advertising_date")
+        #sale_date_array = self.get_data_array (dataset, "sale_date")
         length = len (sale_date_array)
         
         sale_duration_array = np.empty((length, 1))

@@ -134,6 +134,10 @@ class Tensor_NN(Dataset):
         # Due to the notes -> need to comment these 2 lines
         X_total_set = self.get_data_matrix (self.total_dataset, features) 
 
+        len_total_set = X_total_set.shape[0]    
+        train_length     = int (0.5 + len_total_set * data_training_percentage)
+        #test_length     = int (0.5 + len_total_set * data_test_percentage)
+
         scaler = StandardScaler()  
         scaler.fit(X_total_set)  
         X_total_set = scaler.transform(X_total_set)  
@@ -142,8 +146,10 @@ class Tensor_NN(Dataset):
         if output == "price":
             y_total_set = self.get_data_array (self.total_dataset, output)
         elif output == "sale_duration":
+            X_total_set = self.get_data_matrix_with_constraint (self.total_dataset, features, "sale_state", "Sold-out") 
             y_total_set = self.get_sale_duration_array (self.total_dataset)
         #print ("test:", self.total_dataset.shape, X_total_set.shape, y_total_set.shape)
+        #print (y_total_set[:10])
         #sys.exit (-1)
         X_train_set = []
         y_train_set = []
@@ -167,11 +173,11 @@ class Tensor_NN(Dataset):
                 y_test_set.append (y_test)
 
         else:
-            X_train_set = X_total_set[:data_training_length, :]
-            y_train_set = X_total_set[:data_training_length, :]
+            X_train_set = X_total_set[:train_length, :]
+            y_train_set = X_total_set[:train_length, :]
 
-            X_test_set = X_total_set[data_training_length:, :]
-            y_test_set = X_total_set[data_training_length:, :]
+            X_test_set = X_total_set[train_length:, :]
+            y_test_set = X_total_set[train_length:, :]
 
             
         return (X_total_set, y_total_set, X_train_set, y_train_set, X_test_set, y_test_set) 
@@ -192,6 +198,10 @@ class Tensor_NN(Dataset):
         
         X_total_set = self.get_data_matrix_with_constraints (self.total_dataset, features, feature_constraint, feature_constraint_values)
         y_total_set = self.get_data_array_with_constraints (self.total_dataset, output, feature_constraint, feature_constraint_values)
+
+        len_total_set = X_total_set.shape[0]    
+        train_length     = int (0.5 + len_total_set * data_training_percentage)
+        #test_length     = int (0.5 + len_total_set * data_test_percentage)
         
         scaler = StandardScaler()  
         scaler.fit(X_total_set)  
@@ -218,11 +228,11 @@ class Tensor_NN(Dataset):
                 y_test_set.append (y_test)
                 
         else:
-            X_train_set = X_total_set[:data_training_length, :]
-            y_train_set = X_total_set[:data_training_length, :]
+            X_train_set = X_total_set[:train_length, :]
+            y_train_set = X_total_set[:train_length, :]
 
-            X_test_set = X_total_set[data_training_length:, :]
-            y_test_set = X_total_set[data_training_length:, :]
+            X_test_set = X_total_set[train_length:, :]
+            y_test_set = X_total_set[train_length:, :]
             
         return (X_total_set, y_total_set, X_train_set, y_train_set, X_test_set, y_test_set) 
 
@@ -289,13 +299,14 @@ class Tensor_NN(Dataset):
         #loss = tf.reduce_mean(tf.squared_difference(prediction, Y))
 
         # Used for minimizing relative error
-        loss = tf.reduce_mean (tf.divide (tf.abs (prediction - Y), (Y))) #protect when Y = 0
+        #loss = tf.reduce_mean (tf.divide (tf.abs (prediction - Y), (Y))) #protect when Y = 0
+        loss = tf.reduce_mean (tf.abs (prediction - Y)) #protect when Y = 0
 
         optimizer = tf.train.AdamOptimizer(learning_rate).minimize(loss, global_step=global_step)
     
         # RMSE
         rmse = tf.sqrt(loss)
-        relative_err = loss * 100
+        relative_err = loss# * 100
         
         # Calculate root mean squared error as additional eval metric
 
@@ -317,6 +328,7 @@ class Tensor_NN(Dataset):
             train_data_shuffled = train_set_shuffled [:, 0:train_data.shape[1]]
             train_label_shuffled = train_set_shuffled [:, train_data.shape[1]:]
 
+            #print ("len train:", train_data.shape)
             total_batch = int((len(train_data)/self.batch_size) + 0.5)
 
             pre_epoch_test_relative_err_val = 0
@@ -349,10 +361,10 @@ class Tensor_NN(Dataset):
                     total_relative_err += training_relative_err_val
                     
                     a, b = sess.run([Y, prediction], feed_dict={X: batch_x, Y: batch_y, dropout:dropout_val})
-                    #print ("err:", a[0][0], b[0][0], training_relative_err_val)
+                    #print ("truth:", a[0][0], "prediction:", b[0][0], "Err:", training_relative_err_val)
 
                 #print('Epoch: %04d' % (epoch + 1), 'Avg. rmse = {:.3f}'.format(total_rmse / total_batch), 'learning_rate = {:.5f}'.format(lr))
-                print('Epoch: %04d' % (epoch + 1), 'Avg. training relative_err = {:.3f}%'.format(total_relative_err / total_batch))
+                print('Epoch: %04d' % (epoch + 1), 'Avg. training relative_err = {:.3f} days'.format(total_relative_err / total_batch))
                 
                 epoch_test_relative_err_val = sess.run(relative_err, feed_dict={X: test_data, Y: test_label, dropout:self.dropout})
                 
@@ -366,10 +378,10 @@ class Tensor_NN(Dataset):
                 train_data_shuffled = train_set_shuffled [:, 0:train_data.shape[1]]
                 train_label_shuffled = train_set_shuffled [:, train_data.shape[1]:]
 
-                if (epoch + 1) % self.saved_period == 0 and epoch != 0:
+                """if (epoch + 1) % self.saved_period == 0 and epoch != 0:
                     #model_path = self.model_dir + '/' + self.model_name + '_' + str (k_fold) + '_' + str(epoch + 1) + '.ckpt'
                     save_path = saver.save(sess, model_path, global_step=global_step)
-                    print('Model saved in file: %s' % save_path)
+                    print('Model saved in file: %s' % save_path)"""
 
             print ("Training finished!")
             stop_time = time.time()
@@ -395,8 +407,8 @@ class Tensor_NN(Dataset):
                 test_data = self.X_test_set[i]
                 test_label = self.y_test_set[i]
 
-                #print (train_data.shape, train_label.shape, test_data.shape, test_label.shape)
-                #sys.exit (-1)
+                print (train_data.shape, train_label.shape, test_data.shape, test_label.shape)
+                sys.exit (-1)
                 #print (train_data)
                 #print (train_label)
                 #print (test_data)
@@ -430,7 +442,7 @@ if __name__ == '__main__':
     #hyper parameter
     parser.add_argument('--epoch', type=int, default = 100) #2000
     parser.add_argument('--dropout', type=int, default = 1)
-    parser.add_argument('--batch_size', type=int, default = 128) # 128
+    parser.add_argument('--batch_size', type=int, default = 16) # 128
     parser.add_argument('--learning_rate', type=float, default=0.00125)
     parser.add_argument('--decay_rate', type=float, default=0.5)
     parser.add_argument('--decay_step', type=int, default=100) #if decay_step > epoch, no exponential decay
@@ -456,25 +468,30 @@ if __name__ == '__main__':
     start_time = time.time()
 
     
-    #print (data_training_length)
-    #sys.exit (-1)
     nn = Tensor_NN (args)
     model_path = nn.model_dir + '/' + nn.model_name
 
     print ("Shape:", nn.X_total_set.shape, nn.y_total_set.shape)
 
     total_set = np.concatenate ((nn.X_total_set, nn.y_total_set), axis = 1)
+
+    len_total_set = total_set.shape[0]    
+    train_length     = int (0.5 + len_total_set * data_training_percentage)
+    test_length     = int (0.5 + len_total_set * data_test_percentage)
+
     total_set_shuffled = np.random.permutation(total_set)
     total_data_shuffled = total_set_shuffled [:, 0:total_set.shape[1]-1]
     total_label_shuffled = total_set_shuffled [:, total_set.shape[1]-1:]
 
-    train_data  = total_data_shuffled[:data_training_length, :]
-    train_label = total_label_shuffled[:data_training_length, :]
+    train_data  = total_data_shuffled[:train_length, :]
+    train_label = total_label_shuffled[:train_length, :]
 
     
-    test_data  = total_data_shuffled[data_training_length:, :]
-    test_label = total_label_shuffled[data_training_length:, :]
+    test_data  = total_data_shuffled[train_length:, :]
+    test_label = total_label_shuffled[train_length:, :]
 
+    print ("shape of train and test:", train_data.shape, test_data.shape)
+    #sys.exit (-1)
     txt = []
     for no_hidden_layer in list_no_hidden_layer_h:  
         for no_neuron in list_no_unit_in_a_layer_h:  
@@ -488,7 +505,7 @@ if __name__ == '__main__':
                     txt.append ((no_hidden_layer, no_neuron, dropout, test_relative_err))
                 else:
                     print('mode input is wrong')
-    np.savetxt (mean_relative_err_error_file_name, txt, fmt="%d\t%d\t%.2f\t%f")
+    np.savetxt (mean_err_file_name, txt, fmt="%d\t%d\t%.2f\t%f")
     stop_time = time.time()
     print ("Total time (s):", stop_time - start_time)
 

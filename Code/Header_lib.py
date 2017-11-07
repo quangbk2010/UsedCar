@@ -38,20 +38,22 @@ from datetime import datetime
 machine = "Server" #"Ubuntu" # or "Mac" or "Windows" or "Server"
 
 """ Features"""
-output = "price"#"sale_duration" #"price"
+output = "sale_duration"#"sale_duration" #"price"
 #features = ["manufacture_code","rep_model_code","car_code","model_code","vehicle_mile","no_severe_accident","no_severe_water_accident","no_moderate_water_accident","total_no_accident","recovery_fee","no_click","no_message_contact","no_call_contact", "option_navigation","option_sunLoop","option_smartKey","option_xenonLight","option_heatLineSheet","option_ventilationSheet","option_rearSensor","option_curtainAirbag","no_cover_side_recovery","no_cover_side_exchange","no_corrosive_part"]#,"rep_model_code","car_code","model_code",
-#features = ["manufacture_code","rep_model_code","car_code","model_code","rating_code","car_type","car_type","trans_mode","fuel_type","vehicle_mile","cylinder_disp","tolerance_history","sale_history","rental_history","no_severe_accident","no_severe_water_accident","no_moderate_water_accident","total_no_accident","recovery_fee","no_click","no_message_contact","no_call_contact", "option_navigation","option_sunLoop","option_smartKey","option_xenonLight","option_heatLineSheet","option_ventilationSheet","option_rearSensor","option_curtainAirbag","no_cover_side_recovery","no_cover_side_exchange","no_corrosive_part"]
-features = ["manufacture_code","rep_model_code","car_code","model_code","rating_code","car_type","car_type","trans_mode","vehicle_mile","cylinder_disp","rental_history","total_no_accident","recovery_fee","no_click","no_message_contact","no_call_contact", "option_navigation","option_sunLoop","option_smartKey","option_xenonLight","option_heatLineSheet","option_ventilationSheet","option_rearSensor","option_curtainAirbag","no_cover_side_recovery","no_cover_side_exchange"]
+features = ["manufacture_code","rep_model_code","car_code","model_code","rating_code","car_type","car_type","trans_mode","fuel_type","vehicle_mile","cylinder_disp","tolerance_history","sale_history","rental_history","no_severe_accident","no_severe_water_accident","no_moderate_water_accident","total_no_accident","recovery_fee","no_click","no_message_contact","no_call_contact", "option_navigation","option_sunLoop","option_smartKey","option_xenonLight","option_heatLineSheet","option_ventilationSheet","option_rearSensor","option_curtainAirbag","no_cover_side_recovery","no_cover_side_exchange","no_corrosive_part"]# 33 features
+#features = ["manufacture_code","rep_model_code","car_code","model_code","rating_code","car_type","car_type","trans_mode","vehicle_mile","cylinder_disp","rental_history","total_no_accident","recovery_fee","no_click","no_message_contact","no_call_contact", "option_navigation","option_sunLoop","option_smartKey","option_xenonLight","option_heatLineSheet","option_ventilationSheet","option_rearSensor","option_curtainAirbag","no_cover_side_recovery","no_cover_side_exchange"] # 26 features
 
 """ What type of dataset we will use"""
 dataset =  "full" # "full", or "partial", or "small"
 
+""" Error type, used to evaluate performance of Prediction model"""
+err_type = "relative_err" # rmse or relative_err
 
 """ Using onehot or not"""
 using_one_hot_flag = 1 # 1-yes, 0-no
 
 """ Regression model will be used"""
-list_regression_model = ["neural_network"] #["ridge", "lasso"]#, "basic_tree"]#["basic_tree"] 
+list_regression_model = ["neural_network"]#, "basic_tree"]#["neural_network"] #"ridge", lasso
 
 """ Decision tree visualization"""
 max_depth_graphviz_h  = 100
@@ -79,9 +81,9 @@ l2_regularization_flag = 1
 no_penalties_h = 15
 list_alpha_h = np.logspace (-10, 4, num = no_penalties_h) #[10**(-4)]
 
-list_no_hidden_layer_h = [2]#1, 2, 3, 4, 5]#, 6, 7, 8, 9, 10, 15, 20]#, 25, 30, 40, 50] # it equals to n_layers - 2 #[60, 100, 150]
-list_no_unit_in_a_layer_h = [6000, 7000]#10, 100, 500, 1000]
-list_dropout_h = [1]#0.2, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1]
+list_no_hidden_layer_h = [3]#1, 2, 3, 4, 5]#, 6, 7, 8, 9, 10, 15, 20]#, 25, 30, 40, 50] # it equals to n_layers - 2 #[60, 100, 150]
+list_no_unit_in_a_layer_h = [6000]#10, 100, 500, 1000]
+list_dropout_h = [0.8]#0.2, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1]
 
 
 list_hidden_layer_sizes_h = []
@@ -157,15 +159,16 @@ print ("Output:", output)
 
 """ These below parameters used in Validation"""
 data_training_percentage = 0.8
-data_training_length     = int (0.5 + input_no * data_training_percentage)
+# NOTE: in some cases of using constraints: -> the total_length will not be the input_no -> only calculate when get_data_matrix_constraint
+#data_training_length     = int (0.5 + input_no * data_training_percentage)
 #print ('data_training_length', data_training_length)
 
 data_validation_percentage = 0.0
-data_validation_length     = int (0.5 + input_no * data_validation_percentage)
+#data_validation_length     = int (0.5 + input_no * data_validation_percentage)
 #print ('data_validation_length', data_validation_length)
 
 data_test_percentage = 0.2
-data_test_length     = int (0.5 + input_no * data_test_percentage)
+#data_test_length     = int (0.5 + input_no * data_test_percentage)
 #print ('data_test_length', data_test_length)
 
 
@@ -187,7 +190,7 @@ min_rmse_h = 10**6 # set to a large value
 
 """ Ridge and Lasso parameters"""
 no_penalties_h = 15
-l2_penalty_array_h = np.logspace (-10, 4, num = no_penalties_h)
+l2_penalty_array_h = [0.01, 0.1, 0.2, 0.5, 1]# np.logspace (-3, 1, num = no_penalties_h)
 #really_large_penalty = np.array ([10**10])
 #np.concatenate ((l2_penalty_array_h, really_large_penalty), axis = 0)
 
@@ -209,6 +212,6 @@ dotfile_name_h  = pre_file_name + " Best basic tree_"
 
 """ File to write results of mean_rmse over K-fold CV. This file mainly used for drawing figure"""
 
-mean_relative_err_error_file_name = pre_file_name + "Mean Relative error.txt" # "Mean_rmse over K-fold CV.txt"#" Mean_rmse over K-fold CV_for_testing.txt"
+mean_err_file_name = pre_file_name + "Mean Relative error.txt" # "Mean_rmse over K-fold CV.txt"#" Mean_rmse over K-fold CV_for_testing.txt"
 
 
