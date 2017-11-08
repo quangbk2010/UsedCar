@@ -42,7 +42,7 @@ class Evaluation ():
             Calculate Square Root of MSE (Mean of RSS) when know input and label of test data, awa weights
         """
         return np.sqrt (mean_squared_error(predicted_output, y))
-
+    
     def get_Relative_err (self, predicted_label, actual_label):
         return np.mean (np.abs (predicted_label - actual_label)/actual_label) * 100
         
@@ -51,7 +51,12 @@ class Evaluation ():
             Calculate Mean Absolute Error when know input and label of test data, awa weights
         """
         return mean_absolute_error(predicted_output, y)
-      
+    
+    def get_SMAPE(self, predicted_output, y):
+        """
+            Calculate Mean Absolute Error when know input and label of test data, awa weights
+        """
+        return np.mean (np.abs (predicted_output - y) / (np.abs (y) + np.abs (predicted_output))) * 100
     
     def get_score_of_model (self, regr, X_test, y):
         """
@@ -333,7 +338,6 @@ class Cross_validation (Dataset, Evaluation):
         self.features = features
         self.feature_constraint = feature_constraint
         self.feature_constraint_values = feature_constraint_values
-        self.dropout = dropout_h 
         
         if constraint_flag == 0:
             (self.X_total_set, self.y_total_set, self.X_train_set, self.y_train_set, self.X_test_set, self.y_test_set) = self.get_data_label (self.features, output)
@@ -445,11 +449,24 @@ class Cross_validation (Dataset, Evaluation):
         elif model == "lasso":
             regr = linear_model.Lasso (alpha = l2_penalty, normalize = True)
             regr.fit (X_train_bar, y_train)
-            
-        elif model == "basic_tree":
-            regr = tree.DecisionTreeRegressor(max_depth = max_depth, max_leaf_nodes = max_leaf_nodes)
-            regr.fit (X_train_bar, y_train)
         
+        elif model == "basic_tree":
+            regr = tree.DecisionTreeRegressor(max_leaf_nodes = max_leaf_nodes)
+            regr.fit (X_train_bar, y_train)
+            
+        elif model == "gd_boosting":
+            params = {'n_estimators': 1000,'learning_rate': 0.1, 'loss': 'lad'}
+            regr = ensemble.GradientBoostingRegressor(**params, max_leaf_nodes = max_leaf_nodes)
+            regr.fit (X_train_bar, y_train)
+            
+        elif model == "ada_boost":
+            regr = ensemble.AdaBoostRegressor(tree.DecisionTreeRegressor(criterion="mae",min_samples_split=5,max_leaf_nodes = max_leaf_nodes),n_estimators=500)
+            regr.fit (X_train_bar, y_train)
+            
+        elif model == "random_forest":
+            regr = ensemble.RandomForestRegressor(max_leaf_nodes=max_leaf_nodes, random_state=2) # 10000
+            regr.fit (X_train_bar, y_train)
+                        
         elif model == "neural_network":
             regr = MLPRegressor (hidden_layer_sizes = hidden_layer_sizes, alpha = alpha_NN, learning_rate = learning_rate_h, max_iter = max_iter_h, random_state = random_state_h, verbose = verbose_h)
             regr.fit (X_train_bar, y_train)
@@ -468,7 +485,17 @@ class Cross_validation (Dataset, Evaluation):
         test_rmse = self.get_RMSE(test_predicted_label, y_test)
         
         return (training_rmse, test_rmse)
-
+    
+    def get_mae (self, regr, X_train_bar, y_train, X_test_bar, y_test):
+        
+        training_predicted_label = self.get_regression_predictions(regr, X_train_bar)
+        training_mae = self.get_MAE(training_predicted_label, y_train)
+        
+        test_predicted_label = self.get_regression_predictions(regr, X_test_bar)   
+        test_mae = self.get_MAE(test_predicted_label, y_test)
+        
+        return (training_mae, test_mae)
+    
     def get_relative_err (self, regr, X_train_bar, y_train, X_test_bar, y_test):
         
         training_predicted_label = self.get_regression_predictions(regr, X_train_bar)
@@ -478,7 +505,25 @@ class Cross_validation (Dataset, Evaluation):
         test_relative_err = self.get_Relative_err(test_predicted_label, y_test)
         
         return (training_relative_err, test_relative_err)
- 
+    
+    def get_smape (self, regr, X_train_bar, y_train, X_test_bar, y_test):
+        
+        training_predicted_label = self.get_regression_predictions(regr, X_train_bar)
+        training_mae = self.get_SMAPE (training_predicted_label, y_train)
+        
+        test_predicted_label = self.get_regression_predictions(regr, X_test_bar)   
+        test_mae = self.get_SMAPE (test_predicted_label, y_test)
+        
+        return (training_mae, test_mae)
+    
+    def get_err (self, regr, X_train_bar, y_train, X_test_bar, y_test):
+        rmse = self.get_rmse (regr, X_train_bar, y_train, X_test_bar, y_test)
+        mae = self.get_mae (regr, X_train_bar, y_train, X_test_bar, y_test)
+        relative_err = -1# self.get_relative_err (regr, X_train_bar, y_train, X_test_bar, y_test)
+        smape = self.get_smape (regr, X_train_bar, y_train, X_test_bar, y_test)
+        
+        return (rmse, mae, relative_err, smape)
+    
     def compute_error_over_Kset (self, file, model, l2_penalty = 0, max_depth = 0, max_leaf_nodes = 0, alpha_NN = 0, hidden_layer_sizes = ()):
         """
             - Purpose: 
@@ -496,26 +541,32 @@ class Cross_validation (Dataset, Evaluation):
         """
         
         """ In each iteration, we need to store training error and test error into 2 separare lists"""
-        list_training_err = []
-        list_test_err  = []
+        list_train_rmse_err = []
+        list_test_rmse_err  = []
+        list_train_mae_err = []
+        list_test_mae_err  = []
+        list_train_relative_err = []
+        list_test_relative_err  = []
+        list_train_smape_err = []
+        list_test_smape_err  = []
         
         print ("\nResult over K =", self.K, "iteration")
         file.write ("\nResult over K = %d iteration\n" % (self.K))
         if model == "linear":
-            print ("training_err test_err")
-            file.write ("training_err\ttest_err\n")
+            print (" train_rmse\ttest_rmse\ttrain_mae\ttrain_relative_err\ttest_relative_err\ttrain_smape\ttest_smape")
+            file.write (" train_rmse\ttest_rmse\ttrain_mae\ttrain_relative_err\ttest_relative_err\ttrain_smape\ttest_smape\n")
             
         elif model in ["ridge", "lasso"]:
-            print ("log10(penalty) training_err test_err")
-            file.write ("log10(penalty)\ttraining_err\ttest_err\n")
+            print ("log10(penalty) train_rmse\ttest_rmse\ttrain_mae\ttrain_relative_err\ttest_relative_err\ttrain_smape\ttest_smape")
+            file.write ("log10(penalty)\ttrain_rmse\ttest_rmse\ttrain_mae\ttrain_relative_err\ttest_relative_err\ttrain_smape\ttest_smape\n")
             
-        elif model in ["basic_tree"]:
-            print ("max_depth max_leaf_nodes training_err test_err")
-            file.write ("max_depth\tmax_leaf_nodes\ttraining_err\ttest_err\n")
+        elif model in ["basic_tree", "gd_boosting", "ada_boost", "random_forest"]:
+            print ("max_depth max_leaf_nodes  train_rmse\ttest_rmse\ttrain_mae\ttrain_relative_err\ttest_relative_err\ttrain_smape\ttest_smape")
+            file.write ("max_depth\tmax_leaf_nodes\ttrain_rmse\ttest_rmse\ttrain_mae\ttrain_relative_err\ttest_relative_err\ttrain_smape\ttest_smape\n")
             
         elif model in ["neural_network"]:
-            print ("log10(alpha_NN) no_hidden_layer no_unit_in_a_layer training_err test_err")
-            file.write ("log10(alpha_NN)\tno_hidden_layer\tno_unit_in_a_layer\ttraining_err\ttest_err\n")                      
+            print ("log10(alpha_NN) no_hidden_layer no_unit_in_a_layer  train_rmse\ttest_rmse\ttrain_mae\ttrain_relative_err\ttest_relative_err\ttrain_smape\ttest_smape")
+            file.write ("log10(alpha_NN)\tno_hidden_layer\tno_unit_in_a_layer\ttrain_rmse\ttest_rmse\ttrain_mae\ttrain_relative_err\ttest_relative_err\ttrain_smape\ttest_smape\n")                      
             
         else:
             pass
@@ -531,7 +582,7 @@ class Cross_validation (Dataset, Evaluation):
             
             """ Multi-layer Perceptron is sensitive to feature scaling => need to scale our data"""
             """ Particularly, Standardize features by removing the mean and scaling to unit variance"""
-            if model in ["neural_network"]:
+            if model in ["neural_network"]:#TODO. is this necessary to use feature scaling with other models ("linear", "ridge", "lasso", "basic_tree")??? 
                 scaler = StandardScaler()  
                 scaler.fit(X_train)  
                 #print ("Before scaling: ", X_train)
@@ -548,41 +599,44 @@ class Cross_validation (Dataset, Evaluation):
             regr = self.regression (model, X_train_bar, y_train, l2_penalty = l2_penalty, max_depth = max_depth, max_leaf_nodes = max_leaf_nodes, alpha_NN = alpha_NN, hidden_layer_sizes = hidden_layer_sizes)
             
             """ Compute error for a iteration"""
-
-            if err_type == "rmse":
-                (training_err, test_err) = self.get_rmse (regr, X_train_bar, y_train, X_test_bar, y_test)
-            elif err_type == "relative_err":
-                (training_err, test_err) = self.get_relative_err (regr, X_train_bar, y_train, X_test_bar, y_test)
- 
+            rmse, mae, relative_err, smape = self.get_err (regr, X_train_bar, y_train, X_test_bar, y_test)
+            
+            
             if model in ["linear"]:
-                print (training_err, test_err)
-                file.write ("%f\t%f\n" % (training_err, test_err))
+                print (rmse, mae, relative_err, smape)
+                file.write ("%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\n" % (rmse[0], rmse[1], mae[0], mae[1], relative_err[0], relative_err[1], smape[0], smape[1]))
                 
             elif model in ["ridge", "lasso"]:
-                print (np.log10(l2_penalty), training_err, test_err)
-                file.write ("%d\t%f\t%f\n" % (np.log10(l2_penalty), training_err, test_err))
+                print (l2_penalty, rmse, mae, relative_err, smape)
+                file.write ("%d\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\n" % (np.log10(l2_penalty), rmse[0], rmse[1], mae[0], mae[1], relative_err[0], relative_err[1], smape[0], smape[1]))
             
-            elif model in ["basic_tree"]:
-                print (max_depth, max_leaf_nodes, training_err, test_err)
-                file.write ("%d\t%d\t%f\t%f\n" % (max_depth, max_leaf_nodes, training_err, test_err))
+            elif model in ["basic_tree", "gd_boosting", "ada_boost", "random_forest"]:
+                print (max_depth, max_leaf_nodes, rmse, mae, relative_err, smape)
+                file.write ("%d\t%d\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\n" % (max_depth, max_leaf_nodes, rmse[0], rmse[1], mae[0], mae[1], relative_err[0], relative_err[1], smape[0], smape[1]))
                 
             elif model in ["neural_network"]:
                 # TODO: Need to care about alpha
                 no_hidden_layer_h = hidden_layer_sizes[0]
                 no_unit_in_a_layer_h = len (hidden_layer_sizes)
-                print (np.log10(alpha_NN), no_hidden_layer_h, no_unit_in_a_layer_h, training_err, test_err)
-                file.write ("%d\t%d\t%d\t%f\t%f\n" % (np.log10(alpha_NN), no_hidden_layer_h, no_unit_in_a_layer_h, training_err, test_err))
+                print (np.log10(alpha_NN), no_hidden_layer_h, no_unit_in_a_layer_h, rmse, mae, relative_err, smape)
+                file.write ("%d\t%d\t%d\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\n" % (np.log10(alpha_NN), no_hidden_layer_h, no_unit_in_a_layer_h, rmse[0], rmse[1], mae[0], mae[1], relative_err[0], relative_err[1], smape[0], smape[1]))
             
             else:
                 pass
             
             
             """ Append errors to the lists"""
-            list_training_err.append (training_err)
-            list_test_err.append (test_err)
+            list_train_rmse_err.append (rmse[0])
+            list_test_rmse_err.append (rmse[1])
+            list_train_mae_err.append (mae[0])
+            list_test_mae_err.append (mae[1])
+            list_train_relative_err.append (relative_err[0])
+            list_test_relative_err.append (relative_err[1])
+            list_train_smape_err.append (smape[0])
+            list_test_smape_err.append (smape[1])
             
         """ Compute average error over K sets"""
-        return (np.mean (list_training_err), np.mean (test_err))
+        return (np.mean (list_train_rmse_err), np.mean (list_test_rmse_err),np.mean (list_train_mae_err), np.mean (list_test_mae_err),np.mean (list_train_relative_err), np.mean (list_test_relative_err),np.mean (list_train_smape_err), np.mean (list_test_smape_err))
     
     def visualize_tree(self, tree, regr, fn="dt"):
         """
@@ -623,7 +677,7 @@ class Cross_validation (Dataset, Evaluation):
         hyper_param_dict = {}
         
         """ Store mean_rmse into the below file for drawing purpose"""
-        mean_err_file = open (mean_err_file_name, "w")
+        mean_error_file = open (mean_error_file_name, "w")
         
         """ Select hyper-parameter for each regression model"""
         for model in self.list_regression_model:
@@ -640,27 +694,32 @@ class Cross_validation (Dataset, Evaluation):
             file.write ("\n\n --- Model: %s ---\n" % (model))
             
             if model in ["linear"]:
-                (mean_train_err, mean_test_err) = self.compute_error_over_Kset (file = file, model = model)
-                print ("\nmean_train_err  mean_test_err")
-                file.write ("\nmean_train_err\tmean_test_err\n")
-                print (mean_train_err, mean_test_err)
-                file.write ("%f\t%f\n" % (mean_train_err, mean_test_err))
-                
-                mean_err_file.write ("%f\t%f\n" % (mean_train_err, mean_test_err))
+                (mean_train_rmse_err, mean_test_rmse_err, mean_train_mae_err, mean_test_mae_err, mean_train_relative_err, mean_test_relative_err, mean_train_smape_err, mean_test_smape_err) = self.compute_error_over_Kset (file = file, model = model)
+                print ("\nmean_train_rmse_err\tmean_test_rmse_err\tmean_train_mae_err\tmean_test_mae_err\tmean_train_relative_err\tmean_test_relative_err\tmean_train_smape_err\tmean_test_smape_err")
+                file.write ("\nmean_train_rmse_err\tmean_test_rmse_err\tmean_train_mae_err\tmean_test_mae_err\tmean_train_relative_err\tmean_test_relative_err\tmean_train_smape_err\tmean_test_smape_err\n")
+                   
+                print (mean_train_rmse_err, mean_test_rmse_err, mean_train_mae_err, mean_test_mae_err, mean_train_relative_err, mean_test_relative_err, mean_train_smape_err, mean_test_smape_err)
+                file.write ("%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\n" % (mean_train_rmse_err, mean_test_rmse_err, mean_train_mae_err, mean_test_mae_err, mean_train_relative_err, mean_test_relative_err, mean_train_smape_err, mean_test_smape_err))
+                mean_error_file.write ("%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\n" % (mean_train_rmse_err, mean_test_rmse_err, mean_train_mae_err, mean_test_mae_err, mean_train_relative_err, mean_test_relative_err, mean_train_smape_err, mean_test_smape_err))
                 
             elif model in ["ridge", "lasso"]: 
                 """ Initialize an array of penalties will be used to select the suitable hyper-parameter"""
-                l2_penalty_array = l2_penalty_array_h#.copy() #np.logspace (-10, 4, num = no_penalties)
+                l2_penalty_array = l2_penalty_array_h.copy() #np.logspace (-10, 4, num = no_penalties)
                 len_penalty_array = len (l2_penalty_array)  
                 
                 
                 """ Loop over all penalties"""
                 for i in range (len_penalty_array):
-                    (mean_train_err, mean_test_err) = self.compute_error_over_Kset (file = file, model = model, l2_penalty = l2_penalty_array[i])
+                    (mean_train_rmse_err, mean_test_rmse_err, mean_train_mae_err, mean_test_mae_err, mean_train_relative_err, mean_test_relative_err, mean_train_smape_err, mean_test_smape_err) = self.compute_error_over_Kset (file = file, model = model, l2_penalty = l2_penalty_array[i])
+                      
+                    print ("\nmean_train_rmse_err\tmean_test_rmse_err\tmean_train_mae_err\tmean_test_mae_err\tmean_train_relative_err\tmean_test_relative_err\tmean_train_smape_err\tmean_test_smape_err")
+                    file.write ("\nmean_train_rmse_err\tmean_test_rmse_err\tmean_train_mae_err\tmean_test_mae_err\tmean_train_relative_err\tmean_test_relative_err\tmean_train_smape_err\tmean_test_smape_err\n")
+                       
+                    print (mean_train_rmse_err, mean_test_rmse_err, mean_train_mae_err, mean_test_mae_err, mean_train_relative_err, mean_test_relative_err, mean_train_smape_err, mean_test_smape_err)
+                    file.write ("%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\n" % (mean_train_rmse_err, mean_test_rmse_err, mean_train_mae_err, mean_test_mae_err, mean_train_relative_err, mean_test_relative_err, mean_train_smape_err, mean_test_smape_err))
+                    mean_error_file.write ("%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\n" % (mean_train_rmse_err, mean_test_rmse_err, mean_train_mae_err, mean_test_mae_err, mean_train_relative_err, mean_test_relative_err, mean_train_smape_err, mean_test_smape_err))
                     
-                    print ("\nmean_train_err  mean_test_err")
-                    file.write ("\nmean_train_err\tmean_test_err\n")
-                    
+                    '''
                     """ Choose the final test error"""
                     
                     if choose_hyperparam == 0 and  mean_test_err < final_rmse: 
@@ -680,19 +739,15 @@ class Cross_validation (Dataset, Evaluation):
                             # sigificant with previous model???
                     else:
                         pass
-                      
+                    '''
                     
-                    print (mean_train_err, mean_test_err)
-                    file.write ("%f\t%f\n" % (mean_train_err, mean_test_err))
-                    mean_err_file.write ("%f\t%f\n" % (mean_train_err, mean_test_err))
-                
-                print ("\n\nFinal mean_test_err of", model, "over all hyper-param: ", final_rmse, "with penalty:", l2_penalty_array[selected_i])
-                file.write ("\n\nFinal mean_test_err of %s over all hyper-param is %f with with hyper-param: %f\n" % (model, final_rmse, l2_penalty_array[selected_i]))
+                #print ("\n\nFinal mean_test_err of", model, "over all hyper-param: ", final_rmse, "with penalty:", l2_penalty_array[selected_i])
+                #file.write ("\n\nFinal mean_test_err of %s over all hyper-param is %f with with hyper-param: %f\n" % (model, final_rmse, l2_penalty_array[selected_i]))
                 
                 """ Store hyper-param into a dictionary"""
-                hyper_param_dict[model] = l2_penalty_array[selected_i]
+                #hyper_param_dict[model] = l2_penalty_array[selected_i]
                 
-            elif model in ["basic_tree"]:
+            elif model in ["basic_tree", "gd_boosting", "ada_boost", "random_forest"]:
                 """ Initiate 2 list of hyper-parameters"""
                 max_depth_list      = max_depth_list_h #[5, 10, 20, 50, 100, 200, 10**5]
                 max_leaf_nodes_list = max_leaf_nodes_list_h #[5, 10, 20, 50, 100, 200, 10**5]
@@ -708,15 +763,16 @@ class Cross_validation (Dataset, Evaluation):
                         break_flag = 0
                         break
                     for j in range (len_max_leaf_nodes_list):
-                        (mean_train_err, mean_test_err) = self.compute_error_over_Kset (file = file, model = model, max_depth = max_depth_list[i], max_leaf_nodes = max_leaf_nodes_list[j])
+                        (mean_train_rmse_err, mean_test_rmse_err, mean_train_mae_err, mean_test_mae_err, mean_train_relative_err, mean_test_relative_err, mean_train_smape_err, mean_test_smape_err) = self.compute_error_over_Kset (file = file, model = model, max_depth = max_depth_list[i], max_leaf_nodes = max_leaf_nodes_list[j])
                         
-                        print ("\nmean_train_err  mean_test_err")
-                        file.write ("\nmean_train_err\tmean_test_err\n")
+                        print ("\nmean_train_rmse_err\tmean_test_rmse_err\tmean_train_mae_err\tmean_test_mae_err\tmean_train_relative_err\tmean_test_relative_err\tmean_train_smape_err\tmean_test_smape_err")
+                        file.write ("\nmean_train_rmse_err\tmean_test_rmse_err\tmean_train_mae_err\tmean_test_mae_err\tmean_train_relative_err\tmean_test_relative_err\tmean_train_smape_err\tmean_test_smape_err\n")
                            
-                        print (mean_train_err, mean_test_err)
-                        file.write ("%f\t%f\n" % (mean_train_err, mean_test_err))
-                        mean_err_file.write ("%f\t%f\n" % (mean_train_err, mean_test_err))
+                        print (mean_train_rmse_err, mean_test_rmse_err, mean_train_mae_err, mean_test_mae_err, mean_train_relative_err, mean_test_relative_err, mean_train_smape_err, mean_test_smape_err)
+                        file.write ("%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\n" % (mean_train_rmse_err, mean_test_rmse_err, mean_train_mae_err, mean_test_mae_err, mean_train_relative_err, mean_test_relative_err, mean_train_smape_err, mean_test_smape_err))
+                        mean_error_file.write ("%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\n" % (mean_train_rmse_err, mean_test_rmse_err, mean_train_mae_err, mean_test_mae_err, mean_train_relative_err, mean_test_relative_err, mean_train_smape_err, mean_test_smape_err))
                         
+                        '''
                         """ Choose the final test error"""
                         if choose_hyperparam == 0: 
                             """ Choose the model with minimum rmse"""
@@ -738,12 +794,13 @@ class Cross_validation (Dataset, Evaluation):
                             #print ("test: %f\t%.2f\n", initial_rmse, 1 - mean_test_err / initial_rmse)
                         else:
                             pass
+                        '''
                         
-                print ("\n\nFinal mean_test_err of", model, "over all hyper-param: ", final_rmse, "with max_depth:", max_depth_list[selected_i], ", and max_leaf_nodes:", max_leaf_nodes_list[selected_j])
-                file.write ("\n\nFinal mean_test_err of %s over all hyper-param is %f with max_depth: %d, and max_leaf_nodes: %d\n" % (model, final_rmse, max_depth_list[selected_i], max_leaf_nodes_list[selected_j]))
+                #print ("\n\nFinal mean_test_err of", model, "over all hyper-param: ", final_rmse, "with max_depth:", max_depth_list[selected_i], ", and max_leaf_nodes:", max_leaf_nodes_list[selected_j])
+                #file.write ("\n\nFinal mean_test_err of %s over all hyper-param is %f with max_depth: %d, and max_leaf_nodes: %d\n" % (model, final_rmse, max_depth_list[selected_i], max_leaf_nodes_list[selected_j]))
                 
                 """ Store hyper-param into a dictionary"""
-                hyper_param_dict[model] = (max_depth_list[selected_i], max_leaf_nodes_list[selected_j])
+                #hyper_param_dict[model] = (max_depth_list[selected_i], max_leaf_nodes_list[selected_j])
                 
             elif model in ["neural_network"]:
                 
@@ -755,15 +812,16 @@ class Cross_validation (Dataset, Evaluation):
                     len_list_alpha = len (list_alpha)
                     
                     for i in range (len_list_alpha):
-                        (mean_train_err, mean_test_err) = self.compute_error_over_Kset (file = file, model = model, alpha_NN = list_alpha[i], hidden_layer_sizes = hidden_layers_sizes)
+                        (mean_train_rmse_err, mean_test_rmse_err, mean_train_mae_err, mean_test_mae_err, mean_train_relative_err, mean_test_relative_err, mean_train_smape_err, mean_test_smape_err) = self.compute_error_over_Kset (file = file, model = model, alpha_NN = list_alpha[i], hidden_layer_sizes = hidden_layers_sizes)
                         
-                        print ("\nmean_train_err  mean_test_err")
-                        file.write ("\nmean_train_err\tmean_test_err\n")
+                        print ("\nmean_train_rmse_err\tmean_test_rmse_err\tmean_train_mae_err\tmean_test_mae_err\tmean_train_relative_err\tmean_test_relative_err\tmean_train_smape_err\tmean_test_smape_err")
+                        file.write ("\nmean_train_rmse_err\tmean_test_rmse_err\tmean_train_mae_err\tmean_test_mae_err\tmean_train_relative_err\tmean_test_relative_err\tmean_train_smape_err\tmean_test_smape_err\n")
                            
-                        print (mean_train_err, mean_test_err)
-                        file.write ("%f\t%f\n" % (mean_train_err, mean_test_err))
-                        mean_err_file.write ("%f\t%f\n" % (mean_train_err, mean_test_err))
+                        print (mean_train_rmse_err, mean_test_rmse_err, mean_train_mae_err, mean_test_mae_err, mean_train_relative_err, mean_test_relative_err, mean_train_smape_err, mean_test_smape_err)
+                        file.write ("%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\n" % (mean_train_rmse_err, mean_test_rmse_err, mean_train_mae_err, mean_test_mae_err, mean_train_relative_err, mean_test_relative_err, mean_train_smape_err, mean_test_smape_err))
+                        mean_error_file.write ("%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\n" % (mean_train_rmse_err, mean_test_rmse_err, mean_train_mae_err, mean_test_mae_err, mean_train_relative_err, mean_test_relative_err, mean_train_smape_err, mean_test_smape_err))
                         
+                        '''
                         """ Choose the final test error"""
                         if choose_hyperparam == 0: 
                             """ Choose the model with minimum rmse"""
@@ -784,13 +842,14 @@ class Cross_validation (Dataset, Evaluation):
                             #print ("test: %f\t%.2f\n", initial_rmse, 1 - mean_test_err / initial_rmse)
                         else:
                             pass
+                        '''
                     
-                    print ("\n\nFinal mean_test_err of", model, "over all hyper-param is: ", final_rmse, "with alpha: %d\n" % (list_alpha[selected_i]))
+                    #print ("\n\nFinal mean_test_err of", model, "over all hyper-param is: ", final_rmse, "with alpha: %f\n" % (list_alpha[selected_i]))
                     """ Interesting thing: "(" + ','.join('{}'.format(*k) for k in enumerate(list_hidden_layer_sizes[selected_i])) + ")")"""
-                    file.write ("\n\nFinal mean_test_err of %s over all hyper-param is %f with alpha: %d\n" % (model, final_rmse, list_alpha[selected_i]))
+                    #file.write ("\n\nFinal mean_test_err of %s over all hyper-param is %f with alpha: %f\n" % (model, final_rmse, list_alpha[selected_i]))
                     
                     """ Store hyper-param into a dictionary"""
-                    hyper_param_dict[model] = list_alpha[selected_i]
+                    #hyper_param_dict[model] = list_alpha[selected_i]
                     
                 else:  
                     """ Initiate 2 list of hyper-parameters"""
@@ -802,15 +861,16 @@ class Cross_validation (Dataset, Evaluation):
                     break_flag = 0
                     for i in range (len_list_hidden_layer_sizes):
                         
-                        (mean_train_err, mean_test_err) = self.compute_error_over_Kset (file = file, model = model, alpha_NN = list_alpha_h[0], hidden_layer_sizes = list_hidden_layer_sizes[i])
+                        (mean_train_rmse_err, mean_test_rmse_err, mean_train_mae_err, mean_test_mae_err, mean_train_relative_err, mean_test_relative_err, mean_train_smape_err, mean_test_smape_err) = self.compute_error_over_Kset (file = file, model = model, alpha_NN = list_alpha_h[0], hidden_layer_sizes = list_hidden_layer_sizes[i])
                         
-                        print ("\nmean_train_err  mean_test_err")
-                        file.write ("\nmean_train_err\tmean_test_err\n")
+                        print ("\nmean_train_rmse_err\tmean_test_rmse_err\tmean_train_mae_err\tmean_test_mae_err\tmean_train_relative_err\tmean_test_relative_err\tmean_train_smape_err\tmean_test_smape_err")
+                        file.write ("\nmean_train_rmse_err\tmean_test_rmse_err\tmean_train_mae_err\tmean_test_mae_err\tmean_train_relative_err\tmean_test_relative_err\tmean_train_smape_err\tmean_test_smape_err\n")
                            
-                        print (mean_train_err, mean_test_err)
-                        file.write ("%f\t%f\n" % (mean_train_err, mean_test_err))
-                        mean_err_file.write ("%f\t%f\n" % (mean_train_err, mean_test_err))
+                        print (mean_train_rmse_err, mean_test_rmse_err, mean_train_mae_err, mean_test_mae_err, mean_train_relative_err, mean_test_relative_err, mean_train_smape_err, mean_test_smape_err)
+                        file.write ("%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\n" % (mean_train_rmse_err, mean_test_rmse_err, mean_train_mae_err, mean_test_mae_err, mean_train_relative_err, mean_test_relative_err, mean_train_smape_err, mean_test_smape_err))
+                        mean_error_file.write ("%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\n" % (mean_train_rmse_err, mean_test_rmse_err, mean_train_mae_err, mean_test_mae_err, mean_train_relative_err, mean_test_relative_err, mean_train_smape_err, mean_test_smape_err))
                         
+                        '''
                         """ Choose the final test error"""
                         if choose_hyperparam == 0: 
                             """ Choose the model with minimum rmse"""
@@ -831,111 +891,19 @@ class Cross_validation (Dataset, Evaluation):
                             #print ("test: %f\t%.2f\n", initial_rmse, 1 - mean_test_err / initial_rmse)
                         else:
                             pass
+                        '''
                             
-                    print ("\n\nFinal mean_test_err of", model, "over all hyper-param is: ", final_rmse, "with (no_hidden_layer, no_unit_in_a_hidden_layer): (%d, %d)\n:" % (len (list_hidden_layer_sizes[selected_i]), list_hidden_layer_sizes[selected_i][0]))
+                    #print ("\n\nFinal mean_test_err of", model, "over all hyper-param is: ", final_rmse, "with (no_hidden_layer, no_unit_in_a_hidden_layer): (%d, %d)\n:" % (len (list_hidden_layer_sizes[selected_i]), list_hidden_layer_sizes[selected_i][0]))
                     """ Interesting thing: "(" + ','.join('{}'.format(*k) for k in enumerate(list_hidden_layer_sizes[selected_i])) + ")")"""
-                    file.write ("\n\nFinal mean_test_err of %s over all hyper-param is %f with (no_hidden_layer, no_unit_in_a_hidden_layer): (%d, %d)\n" % (model, final_rmse, len (list_hidden_layer_sizes[selected_i]), list_hidden_layer_sizes[selected_i][0]))
+                    #file.write ("\n\nFinal mean_test_err of %s over all hyper-param is %f with (no_hidden_layer, no_unit_in_a_hidden_layer): (%d, %d)\n" % (model, final_rmse, len (list_hidden_layer_sizes[selected_i]), list_hidden_layer_sizes[selected_i][0]))
                     
                     """ Store hyper-param into a dictionary"""
-                    hyper_param_dict[model] = (list_hidden_layer_sizes[selected_i])
+                    #hyper_param_dict[model] = (list_hidden_layer_sizes[selected_i])
                 
                 
             else:
                 pass
         
-        mean_err_file.close()
-        return hyper_param_dict
-    
-    def get_final_model (self, file):
-        
-        """ Get data, and label in total datset, and then use it with selected parameters from "choose_hyper_param" to train the full model"""
-        X_train = self.X_total_set
-        y_train = self.y_total_set
-        
-        """ Get the expanded data for training"""
-        X_train_bar = self.get_expand_data (X_train)
-        
-        """ Initialize hyper-param = 0"""
-        l2_penalty = max_depth = max_leaf_nodes = 0
-        
-        """ Calculate the optimal hyper-param"""
-        hyper_param_dict = self.choose_hyper_param(file)
-        print ("hyper_param_dict: ", hyper_param_dict)
-    
-        for model in self.list_regression_model:
-            
-            if model in ["ridge", "lasso"]:
-                l2_penalty = hyper_param_dict[model]
-                
-            elif model in ["basic_tree"]:
-                (max_depth, max_leaf_nodes) = hyper_param_dict[model]
-            
-            elif model in ["neural_network"]:
-                hidden_layer_sizes = hyper_param_dict[model]
-            
-            """ Training model"""
-            # TODO: Recently, we only rebuild model in total datset with basic_tree.
-            # Need to think more about the other cases, due to time consuming
-            if model in ["basic_tree"]:
-                regr = self.regression (model, X_train_bar, y_train, l2_penalty, max_depth, max_leaf_nodes)        
-            
-            if model in ["basic_tree"]:
-                """ Draw tree in case of using Decision tree in type of .dot file. It need to be converted to .png file (as in Plot_lib file)"""   
-                self.visualize_tree(tree, regr, fn = dotfile_name_h + str(max_depth) + "_" + str(max_leaf_nodes)) 
-            
-            # TODO: what to do with other models?
-        
-        return (l2_penalty, max_depth, max_leaf_nodes)
-
-
-    def create_model_keras(self):
-        print ("Creating model keras...")
-        # create model
-        input_dim = 24#X_train_bar.shape[1] 
-        hidden_layer_sizes = 1#no_layers
-        no_units_in_a_layer = 10
-        dropout = 0.7
-
-        # Input layer
-        model = Sequential()
-
-        # Hidden layers
-        for i in range (hidden_layer_sizes):
-            model.add(Dense(no_units_in_a_layer, input_dim=input_dim, kernel_initializer='normal', activation='relu'))
-            model.add(Dropout(dropout))
-
-        # Output layer
-        model.add(Dense(1, kernel_initializer='normal'))
-
-        # Compile model
-        model.compile(loss='mean_squared_error', optimizer='adam')
-        print ("Finish creating keras model.")
-        return model
-
-    def evaluate_model_keras (self):#, file):#, total_X, total_y, list_dropout, hidden_layer_sizes):
-        print ("Evaluating model keras...")
-        seed = 7
-        np.random.seed(seed)
-
-        list_hidden_layer_sizes      = list_hidden_layer_sizes_h 
-                    
-        len_list_hidden_layer_sizes = len (list_hidden_layer_sizes)
-        
-        """ Get data, and label in total datset, and then use it with selected parameters from "choose_hyper_param" to train the full model"""
-        X_train = self.X_total_set
-        y_train = self.y_total_set
-        
-        """ Get the expanded data for training"""
-        X_train_bar = self.get_expand_data (X_train)
-
-        
-        estimator = KerasRegressor (build_fn=self.create_model_keras, nb_epoch=1000, batch_size=5, verbose=0)
-        kfold = KFold (n_splits=5, random_state=seed)
-        results = cross_val_score (estimator, X_train, y_train, cv=kfold)
-        print ("Finish validating keras model.")
-        return results.mean()
-        
-        
-
-
-
+        mean_error_file.close()
+        #return hyper_param_dict
+   

@@ -17,10 +17,10 @@ import matplotlib.pyplot as plt
 from scipy.stats.stats import pearsonr
 from scipy import stats
 from sklearn.neural_network import MLPRegressor
-from keras.models import Sequential
+"""from keras.models import Sequential
 from keras.layers import Dense
 from keras.layers import Dropout
-from keras.wrappers.scikit_learn import KerasRegressor
+from keras.wrappers.scikit_learn import KerasRegressor"""
 from sklearn.metrics import mean_squared_error, mean_absolute_error
 from sklearn.model_selection import train_test_split
 from sklearn.model_selection import KFold, cross_val_score
@@ -35,7 +35,7 @@ from datetime import datetime
 """ ------------------------------------------------ What to change frequently------------------------------------ """
 
 """ Running machine"""
-machine = "Server" #"Ubuntu" # or "Mac" or "Windows" or "Server"
+machine = "Windows" #"Ubuntu" # or "Mac" or "Windows" or "Server"
 
 """ Features"""
 output = "sale_duration"#"sale_duration" #"price"
@@ -46,14 +46,14 @@ features = ["manufacture_code","rep_model_code","car_code","model_code","rating_
 """ What type of dataset we will use"""
 dataset =  "full" # "full", or "partial", or "small"
 
-""" Error type, used to evaluate performance of Prediction model"""
-err_type = "relative_err" # rmse or relative_err
+""" Error type"""
+err_type = "relative_err" # rmse
 
 """ Using onehot or not"""
 using_one_hot_flag = 1 # 1-yes, 0-no
 
 """ Regression model will be used"""
-list_regression_model = ["neural_network"]#, "basic_tree"]#["neural_network"] #"ridge", lasso
+list_regression_model = ["basic_tree", "gd_boosting", "random_forest", "ada_boost"] #["ridge", "lasso"]#, "basic_tree"]#["basic_tree"] ["neural_network"] #
 
 """ Decision tree visualization"""
 max_depth_graphviz_h  = 100
@@ -81,8 +81,8 @@ l2_regularization_flag = 1
 no_penalties_h = 15
 list_alpha_h = np.logspace (-10, 4, num = no_penalties_h) #[10**(-4)]
 
-list_no_hidden_layer_h = [3]#1, 2, 3, 4, 5]#, 6, 7, 8, 9, 10, 15, 20]#, 25, 30, 40, 50] # it equals to n_layers - 2 #[60, 100, 150]
-list_no_unit_in_a_layer_h = [7000]#10, 100, 500, 1000]
+list_no_hidden_layer_h = [2]#1, 2, 3, 4, 5]#, 6, 7, 8, 9, 10, 15, 20]#, 25, 30, 40, 50] # it equals to n_layers - 2 #[60, 100, 150]
+list_no_unit_in_a_layer_h = [6000]#10, 100, 500, 1000]
 list_dropout_h = [1]#0.2, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1]
 
 
@@ -123,7 +123,13 @@ full_features = ["manufacture_code","rep_model_code","car_code","model_code","ra
 full_features_dict = {"manufacture_code":int,"rep_model_code":int,"car_code":int,"model_code":int,"rating_code":str,"car_type":str,"actual_advertising_date":str,"sale_date":str,"year":int,"trans_mode":str,"fuel_type":str,"vehicle_mile":int,"price":int,"sale_state":str,"city":str,"district":str,"dealer_name":str,"cylinder_disp":int,"tolerance_history":int,"sale_history":int,"rental_history":int,"no_severe_accident":int,"no_severe_water_accident":int,"no_moderate_water_accident":int,"total_no_accident":int,"recovery_fee":int,"hits":int,"no_message_contact":int,"no_call_contact":int,"option_navigation":int,"option_sunLoop":int,"option_smartKey":int,"option_xenonLight":int,"option_heatLineSheet":int,"option_ventilationSheet":int,"option_rearSensor":int,"option_curtainAirbag":int,"no_cover_side_recovery":int,"no_cover_side_exchange":int,"no_corrosive_part":int}
 
 if list_regression_model[0] == "basic_tree":
-    sub_directory1 = "Tree plot/"
+    sub_directory1 = "Basic tree/"
+elif list_regression_model[0] == "gd_boosting":
+    sub_directory1 = "Gradient boosting/"
+elif list_regression_model[0] == "random_forest":
+    sub_directory1 = "Random forest/"
+elif list_regression_model[0] == "ada_boost":
+    sub_directory1 = "Adaboost/"
 elif list_regression_model[0] == "ridge":
     sub_directory1 = "Ridge regression/"
 elif list_regression_model[0] == "lasso":
@@ -159,16 +165,15 @@ print ("Output:", output)
 
 """ These below parameters used in Validation"""
 data_training_percentage = 0.8
-# NOTE: in some cases of using constraints: -> the total_length will not be the input_no -> only calculate when get_data_matrix_constraint
-#data_training_length     = int (0.5 + input_no * data_training_percentage)
+data_training_length     = int (0.5 + input_no * data_training_percentage)
 #print ('data_training_length', data_training_length)
 
 data_validation_percentage = 0.0
-#data_validation_length     = int (0.5 + input_no * data_validation_percentage)
+data_validation_length     = int (0.5 + input_no * data_validation_percentage)
 #print ('data_validation_length', data_validation_length)
 
 data_test_percentage = 0.2
-#data_test_length     = int (0.5 + input_no * data_test_percentage)
+data_test_length     = int (0.5 + input_no * data_test_percentage)
 #print ('data_test_length', data_test_length)
 
 
@@ -190,7 +195,7 @@ min_rmse_h = 10**6 # set to a large value
 
 """ Ridge and Lasso parameters"""
 no_penalties_h = 15
-l2_penalty_array_h = [0.01, 0.1, 0.2, 0.5, 1]# np.logspace (-3, 1, num = no_penalties_h)
+l2_penalty_array_h = np.logspace (-10, 4, num = no_penalties_h)
 #really_large_penalty = np.array ([10**10])
 #np.concatenate ((l2_penalty_array_h, really_large_penalty), axis = 0)
 
@@ -212,6 +217,6 @@ dotfile_name_h  = pre_file_name + " Best basic tree_"
 
 """ File to write results of mean_rmse over K-fold CV. This file mainly used for drawing figure"""
 
-mean_err_file_name = pre_file_name + "Mean Relative error.txt" # "Mean_rmse over K-fold CV.txt"#" Mean_rmse over K-fold CV_for_testing.txt"
+mean_error_file_name = pre_file_name + "Mean error.txt" # "Mean_rmse over K-fold CV.txt"#" Mean_rmse over K-fold CV_for_testing.txt"
 
 
