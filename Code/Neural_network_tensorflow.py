@@ -305,8 +305,10 @@ class Tensor_NN(Dataset):
         optimizer = tf.train.AdamOptimizer(learning_rate).minimize(loss, global_step=global_step)
     
         # RMSE
-        rmse = tf.sqrt(loss)
-        relative_err = loss# * 100
+        rmse = tf.sqrt (tf.reduce_mean(tf.squared_difference(prediction, Y)))
+        mae = tf.reduce_mean (tf.abs (prediction - Y))
+        relative_err = tf.reduce_mean (tf.divide (tf.abs (prediction - Y), (Y))) * 100 # there are problem when Y = 0 -> inf or nan answer
+        smape = tf.reduce_mean (tf.divide (tf.abs (prediction - Y), tf.abs (Y) + tf.abs (prediction) )) * 100
         
         # Calculate root mean squared error as additional eval metric
 
@@ -335,7 +337,10 @@ class Tensor_NN(Dataset):
 
             for epoch in range (self.epoch):
 
+                total_rmse = 0
+                total_mae = 0
                 total_relative_err = 0
+                total_smape = 0
                 index_counter = 0
                 left_num = len(train_data)
                 for i in range (total_batch):
@@ -357,18 +362,24 @@ class Tensor_NN(Dataset):
                         index_counter = 0
 
                     #_, cost_val, lr = sess.run([optimizer, cost, learning_rate], feed_dict={X: batch_x, Y: batch_y})
-                    _, training_relative_err_val = sess.run([optimizer, relative_err], feed_dict={X: batch_x, Y: batch_y, dropout:dropout_val})
+                    _, training_rmse_val, training_mae_val, training_relative_err_val, training_smape_val = sess.run([optimizer, rmse, mae, relative_err, smape], feed_dict={X: batch_x, Y: batch_y, dropout:dropout_val})
+                    total_rmse += training_rmse_val
+                    total_mae += training_mae_val
                     total_relative_err += training_relative_err_val
+                    total_smape += training_smape_val
                     
                     a, b = sess.run([Y, prediction], feed_dict={X: batch_x, Y: batch_y, dropout:dropout_val})
                     #print ("truth:", a[0][0], "prediction:", b[0][0], "Err:", training_relative_err_val)
 
                 #print('Epoch: %04d' % (epoch + 1), 'Avg. rmse = {:.3f}'.format(total_rmse / total_batch), 'learning_rate = {:.5f}'.format(lr))
-                print('Epoch: %04d' % (epoch + 1), 'Avg. training relative_err = {:.3f} days'.format(total_relative_err / total_batch))
+                print('\n\nEpoch: %04d' % (epoch + 1), "Avg. training rmse:", total_rmse/total_batch, "mae:", total_mae/total_batch, 'relative_err:', total_relative_err/total_batch, "smape:", total_smape/total_batch)
                 
-                epoch_test_relative_err_val = sess.run(relative_err, feed_dict={X: test_data, Y: test_label, dropout:self.dropout})
+                epoch_test_rmse_val, epoch_test_mae_val, epoch_test_relative_err_val, epoch_test_smape_val = sess.run([rmse, mae, relative_err, smape], feed_dict={X: test_data, Y: test_label, dropout:self.dropout})
                 
-                print (pre_epoch_test_relative_err_val, epoch_test_relative_err_val)
+                print ("test: rmse", epoch_test_rmse_val)
+                print ("test: mae", epoch_test_mae_val)
+                print ("test: relative_err", epoch_test_relative_err_val)
+                print ("test: smape", epoch_test_smape_val)
                 #if epoch_test_relative_err_val > pre_epoch_test_relative_err_val and pre_epoch_test_relative_err_val != 0:
                     #break
                 #pre_epoch_test_relative_err_val = epoch_test_relative_err_val

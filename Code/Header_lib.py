@@ -82,8 +82,8 @@ no_penalties_h = 15
 list_alpha_h = np.logspace (-10, 4, num = no_penalties_h) #[10**(-4)]
 
 list_no_hidden_layer_h = [3]#1, 2, 3, 4, 5]#, 6, 7, 8, 9, 10, 15, 20]#, 25, 30, 40, 50] # it equals to n_layers - 2 #[60, 100, 150]
-list_no_unit_in_a_layer_h = [6000]#10, 100, 500, 1000]
-list_dropout_h = [0.8]#0.2, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1]
+list_no_unit_in_a_layer_h = [7000]#10, 100, 500, 1000]
+list_dropout_h = [1]#0.2, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1]
 
 
 list_hidden_layer_sizes_h = []
