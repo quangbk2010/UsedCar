@@ -61,6 +61,64 @@ class DataFrameImputer(TransformerMixin):
     def transform(self, X, y=None):
         return X.fillna(self.fill)        
 
+class MultiColumnLabelEncoder:
+    def __init__(self,columns = None):
+        self.columns = columns # array of column names to encode
+
+    def fit(self,X,y=None):
+        return self # not relevant here
+
+    def transform(self,X):
+        '''
+        Transforms columns of X specified in self.columns using
+        LabelEncoder(). If no columns specified, transforms all
+        columns in X.
+        '''
+        output = X.copy()
+        if self.columns is not None:
+            for col in self.columns:
+                output[col] = LabelEncoder().fit_transform(output[col])
+        else:
+            for colname,col in output.iteritems():
+                output[colname] = LabelEncoder().fit_transform(col)
+        return output
+
+    def fit_transform(self,X,y=None):
+        return self.fit(X,y).transform(X)
+
+class MultiColumnOutlierRemove:
+    def __init__(self,columns = None):
+        self.columns = columns # array of column names to encode
+
+    def fit(self,X,y=None):
+        return self # not relevant here
+
+    def transform(self,X):
+        '''
+        Transforms columns of X specified in self.columns using
+        LabelEncoder(). If no columns specified, transforms all
+        columns in X.
+        '''
+        output = X.copy()
+        if self.columns is not None:
+            for col in self.columns:
+                #output[col] = LabelEncoder().fit_transform(output[col])
+                #print ("column:", output[col])
+                aColumn = output[col]
+                print ("feature:", col, np.array (aColumn).shape, aColumn.mean(), aColumn.std())
+                output[col] = output[aColumn < 100] #((aColumn - aColumn.mean()) / aColumn.std()).abs() < 0] #output[np.abs(aColumn - aColumn.mean()) / aColumn.std() < 3)]#.all(axis=1)]
+               
+                print ("after feature:", col, np.array (output[col]).shape)
+ 
+                #output[col] = output[np.abs (stats.zscore(output[col])) < 3]
+        else:
+            for colname,col in output.iteritems():
+                output[colname] =output[((aColumn - aColumn.mean()) / aColumn.std()).abs() < 3]
+        return output
+
+    def fit_transform(self,X,y=None):
+        return self.fit(X,y).transform(X)
+
 class Dataset (Data_preprocessing, DataFrameImputer):
     def __init__(self):
         """
@@ -74,13 +132,31 @@ class Dataset (Data_preprocessing, DataFrameImputer):
         #total_dataset = pd.read_excel (dataset_excel_file, names = self.headers, dtype = dtype_dict, header = 0)
         total_dataset = pd.read_excel (dataset_excel_file, names = self.headers, converters = dtype_dict, header = 0)
         
+        # Remove outliers
+        df = total_dataset.copy()
+        filt_df = df.copy()
+        for feature in feature_need_not_remove_outlier:
+            filt_df = filt_df.loc[:, filt_df.columns != feature]
+        
+        filt_df = filt_df[filt_df.apply(lambda x: np.abs(x - x.mean()) / x.std() < 3).all(axis=1)]
+        
+        for feature in feature_need_not_remove_outlier:
+            filt_df = pd.concat([df.loc[:,feature], filt_df], axis=1)
+
+        filt_df.dropna(inplace=True)
+        total_dataset = filt_df
+
         # Impute missing values from here
         total_dataset = DataFrameImputer().fit_transform (total_dataset)
+
+        # There are some columns with string values (E.g. Car type) -> need to label it as numerical labels
+        #le = LabelEncoder ()
+        #for feature in feature_need_label:
+        #    total_dataset[feature] = total_dataset[feature].apply(le.fit_transform)
+        total_dataset = MultiColumnLabelEncoder(columns = feature_need_label).fit_transform(total_dataset)
         print ("Time for Loading dataset: %.3f" % (time.time() - stime))        
+
         self.total_dataset = total_dataset
-        #self.traning_dataset = self.get_training_dataset()
-        #self.validation_dataset = self.get_validation_dataset()
-        #self.test_dataset = self.get_test_dataset()
     
     def get_total_dataset (self):
         
@@ -125,6 +201,39 @@ class Dataset (Data_preprocessing, DataFrameImputer):
         print ('X = ', X)
         print ('feature arr: ', feature_array)
         print (enc.fit_transform (feature_array.T))"""
+    
+    def count_car (self):    
+        """
+            Count how many cars (each car can be diffirentiated by (model_code, rating_code)) in the dataset. 
+        """
+        model_code_arr = total_dataset.get_data_array (total_dataset.get_total_dataset(), "model_code")
+        rating_code_arr = total_dataset.get_data_array (total_dataset.get_total_dataset(), "rating_code")
+        
+        len_dataset = model_code_arr.shape[0]
+        model_code_list = [] # store all model codes
+        car_recog_dict = {} # eg. car_recog[0] = 0, car_recog[1] = 0
+        model_rating_dict = {} # eg. model_rating_dict[11045] = [692, 693]
+        count = 0
+        car_recog_list = []
+        
+        for i in range (len_dataset):
+            if model_code_arr[i] not in model_code_list:
+                count += 1
+                model_code_list.append (model_code_arr[i])
+                #car_recog[i] = count
+                model_rating_dict[model_code_arr[i][0]] = [rating_code_arr[i][0]]
+            elif rating_code_arr[i] not in model_rating_dict[model_code_arr[i][0]]:
+                count += 1
+                car_recog_dict[i] = count
+                model_rating_dict[model_code_arr[i][0]] += [rating_code_arr[i][0]]
+            car_recog_dict[i] = count
+            car_recog_list.append (count)
+        return (count, car_recog_dict, car_recog_list)
+
+    def encode_one_hot_a_car (self):
+        (count, car_recog_dict, car_recog_list) = count_car ()
+        enc = OneHotEncoder(sparse = False)
+        return enc.fit_transform (np.array (car_recog_list).reshape (len (car_recog_list, 1))) 
 
     def impute_missing_values (self, total_data_array, feature, feature_array, strategy):
         #TODO: More appropriate method
@@ -175,25 +284,21 @@ class Dataset (Data_preprocessing, DataFrameImputer):
             else:
                 data_array = total_data_array"""
 
-
         #print ("1.", data_array)
-        if feature in feature_need_label:
+        """if feature in feature_need_label:
             total_data_array = self.label_str_values (total_data_array, feature, total_data_array)
             if total_data_array.shape[0] != data_array.shape[0]:
                 data_array = self.label_str_values (total_data_array, feature, data_array)
             else:
                 data_array = total_data_array
-            #print ("2.", data_array)
+            #print ("2.", data_array)"""
         
-        #print ("3.", data_array)
-
-
         if using_one_hot_flag == 1:
             if feature in feature_need_encoding:
                 if total_data_array.shape[0] != data_array.shape[0]:
                     data_array = self.encode_one_hot_feature (total_data_array, feature, data_array) # TODO: Problem when use constraint
                 else:
-                    data_array = self.encode_one_hot_feature  (total_data_array, feature, total_data_array)
+                    data_array = self.encode_one_hot_feature (total_data_array, feature, total_data_array)
                 data_array = data_array.T
 
         
@@ -222,6 +327,36 @@ class Dataset (Data_preprocessing, DataFrameImputer):
         #print ("constraint:", np.array (data_array_with_constraint).shape, "feature:", feature)
         return np.array (data_array_with_constraint)
     
+    def get_data_array_remove_outliers (self, dataset, feature, window, all_outlier_index):
+        """
+        - Purpose: remove outliers by removing all data points with values of the corresponding feature which are out of the range from mean to +- window * SD (standard deviation)
+        """
+        data_array = self.get_data_array (dataset, feature)#np.array ([dataset[feature]]).T
+        #print ("before remove outliers:", data_array.shape)
+        len_data_array = data_array.shape[0]
+
+        mean_data_array = np.mean (data_array)
+        std_data_array = np.std (data_array)
+        print ("mean:", mean_data_array, "std:", std_data_array)
+
+        data_array_without_outliers = []
+        outlier_index = []
+
+        for i in range (len_data_array):
+            if i not in all_outlier_index:
+                if data_array[i] <= (mean_data_array + window * std_data_array) and data_array[i] >= (mean_data_array - window * std_data_array):
+                    data_array_without_outliers.append (data_array[i])
+                else:
+                    #print ("---", data_array[i])
+                    outlier_index.append (i)
+        a = np.array (data_array_without_outliers)
+        #print ("after remove outliers:", a.shape, "mean:", np.mean (a), "std:", np.std (a))
+        #sys.exit (-1)
+
+        
+        return (np.array (data_array_without_outliers), outlier_index)
+        
+    
     def get_sale_duration_array (self, dataset):
         """
         - Purpose: as Return
@@ -229,8 +364,11 @@ class Dataset (Data_preprocessing, DataFrameImputer):
             + dataset: training, validation, test, or total dataset
         - Return: an vector oof sale duration as a numpy.array object
         """
+        #print ("dataset", dataset)
         actual_advertising_date_array = self.get_data_array_with_constraint (dataset, "actual_advertising_date", "sale_state", "Sold-out")
         sale_date_array = self.get_data_array_with_constraint (dataset, "sale_date", "sale_state", "Sold-out")
+        #print ("advertising date:", actual_advertising_date_array[:10])
+        #print ("sale date:", sale_date_array[:10])
         #actual_advertising_date_array = self.get_data_array (dataset, "actual_advertising_date")
         #sale_date_array = self.get_data_array (dataset, "sale_date")
         length = len (sale_date_array)
@@ -327,7 +465,7 @@ class Dataset (Data_preprocessing, DataFrameImputer):
                 break
         #print ('X:', X.shape)
         return X
-    
+
     def get_data_matrix_with_constraint (self, dataset, features, feature_constraint, feature_constraint_value): 
         """
         dataset: training, validation, test, or total dataset
@@ -352,6 +490,48 @@ class Dataset (Data_preprocessing, DataFrameImputer):
             else:
                 break
         #print ('X:', X)
+        return X
+    
+
+    def get_data_matrix_without_outliers (self, dataset, features, window): 
+        """
+        dataset: training, validation, test, or total dataset
+        features: an array contains name of features 
+        constraint: only get the input that satify the constraint
+        feature_constraint_values: a list of accepted values
+        => return: a matrix with rows are data points, columns are features values (nD numpy.array object)
+        
+        """
+        featureNo = len (features)
+        
+        """ NOTE!: The order of features are reversed due to concatenate() function => then we need to reverse it first"""
+        features_copy = features[:]
+        features_copy.reverse()
+        
+        all_outlier_index = [] # initiate the empty list
+        X, all_outlier_index = self.get_data_array_remove_outliers (dataset, features_copy[0], window, all_outlier_index) # update the outlier-index list with the first feature
+        print ('X0:', X.shape)
+
+
+        for i in range (1, featureNo):
+
+            if features_copy[i] in self.headers: #try: #if features_copy[i] in self.headers:
+                x, outlier_index = self.get_data_array_remove_outliers (dataset, features_copy[i], window, all_outlier_index) # update the outlier-index list with the all remaining features
+                print ("...",x.shape, len (outlier_index))
+        
+                # update outlier index
+                for index in outlier_index:
+                    if index not in all_outlier_index:
+                        all_outlier_index.append (index)
+
+                X = np.concatenate ((x, X), axis = 1)
+            else: #except ValueError: #else:
+                #break
+                print ("This feature is not exist!!!", features_copy[i])
+
+            #except:
+            #    print ("There are some errors here!!!")
+        print ('Xn:', X.shape)
         return X
     
     def get_data_matrix_with_constraints (self, dataset, features, feature_constraint, feature_constraint_values): 
