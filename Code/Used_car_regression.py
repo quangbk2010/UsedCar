@@ -133,18 +133,19 @@ class Dataset (Data_preprocessing, DataFrameImputer):
         total_dataset = pd.read_excel (dataset_excel_file, names = self.headers, converters = dtype_dict, header = 0)
         
         # Remove outliers
-        df = total_dataset.copy()
-        filt_df = df.copy()
-        for feature in feature_need_not_remove_outlier:
-            filt_df = filt_df.loc[:, filt_df.columns != feature]
-        
-        filt_df = filt_df[filt_df.apply(lambda x: np.abs(x - x.mean()) / x.std() < 3).all(axis=1)]
-        
-        for feature in feature_need_not_remove_outlier:
-            filt_df = pd.concat([df.loc[:,feature], filt_df], axis=1)
+        if remove_outliers_flag == 1:
+            df = total_dataset.copy()
+            filt_df = df.copy()
+            for feature in feature_need_not_remove_outlier:
+                filt_df = filt_df.loc[:, filt_df.columns != feature]
+            
+            filt_df = filt_df[filt_df.apply(lambda x: np.abs(x - x.mean()) / x.std() < 3).all(axis=1)]
+            
+            for feature in feature_need_not_remove_outlier:
+                filt_df = pd.concat([df.loc[:,feature], filt_df], axis=1)
 
-        filt_df.dropna(inplace=True)
-        total_dataset = filt_df
+            filt_df.dropna(inplace=True)
+            total_dataset = filt_df
 
         # Impute missing values from here
         total_dataset = DataFrameImputer().fit_transform (total_dataset)
@@ -202,38 +203,45 @@ class Dataset (Data_preprocessing, DataFrameImputer):
         print ('feature arr: ', feature_array)
         print (enc.fit_transform (feature_array.T))"""
     
-    def count_car (self):    
+    def count_car (self, dataset):    
         """
             Count how many cars (each car can be diffirentiated by (model_code, rating_code)) in the dataset. 
+            Return: 
+                + No. different cars in dataset
+                + A dictionary that translates the indexs of all cars to the identification numbers (2 same cars will have the same identification number).
+                + The list of all identification numbers of all cars.
         """
-        model_code_arr = total_dataset.get_data_array (total_dataset.get_total_dataset(), "model_code")
-        rating_code_arr = total_dataset.get_data_array (total_dataset.get_total_dataset(), "rating_code")
+        model_code_arr = self.get_data_array (dataset, "model_code")
+        #print ("model_code_arr", model_code_arr)
+        rating_code_arr = self.get_data_array (dataset, "rating_code")
+        #print ("rating_code_arr", rating_code_arr)
         
         len_dataset = model_code_arr.shape[0]
         model_code_list = [] # store all model codes
-        car_recog_dict = {} # eg. car_recog[0] = 0, car_recog[1] = 0
+        car_ident_dict = {} # eg. car_ident[0] = 0, car_ident[1] = 0
         model_rating_dict = {} # eg. model_rating_dict[11045] = [692, 693]
         count = 0
-        car_recog_list = []
+        car_ident_list = []
         
         for i in range (len_dataset):
-            if model_code_arr[i] not in model_code_list:
+            if model_code_arr[i][0] not in model_code_list:
                 count += 1
-                model_code_list.append (model_code_arr[i])
-                #car_recog[i] = count
+                model_code_list.append (model_code_arr[i][0])
+                #car_ident[i] = count
                 model_rating_dict[model_code_arr[i][0]] = [rating_code_arr[i][0]]
-            elif rating_code_arr[i] not in model_rating_dict[model_code_arr[i][0]]:
+            elif rating_code_arr[i][0] not in model_rating_dict[model_code_arr[i][0]]:
                 count += 1
-                car_recog_dict[i] = count
+                car_ident_dict[i] = count
                 model_rating_dict[model_code_arr[i][0]] += [rating_code_arr[i][0]]
-            car_recog_dict[i] = count
-            car_recog_list.append (count)
-        return (count, car_recog_dict, car_recog_list)
+            car_ident_dict[i] = count
+            car_ident_list.append (count)
+        return (count, car_ident_dict, car_ident_list)
 
-    def encode_one_hot_a_car (self):
-        (count, car_recog_dict, car_recog_list) = count_car ()
+    def encode_one_hot_car_ident (self, dataset):
+        (count, car_ident_dict, car_ident_list) = self.count_car (dataset)
+        #print ("count:", count, "car_ident_list:", car_ident_list)
         enc = OneHotEncoder(sparse = False)
-        return enc.fit_transform (np.array (car_recog_list).reshape (len (car_recog_list, 1))) 
+        return enc.fit_transform (np.array (car_ident_list).reshape (len (car_ident_list), 1)) 
 
     def impute_missing_values (self, total_data_array, feature, feature_array, strategy):
         #TODO: More appropriate method
@@ -453,18 +461,49 @@ class Dataset (Data_preprocessing, DataFrameImputer):
         features_copy.reverse()
         
         X = self.get_data_array (dataset, features_copy[0])#np.array ([dataset[features[0]]]).T
-        #print ('init X:', X.shape)
         for i in range (1, featureNo):
             if features_copy[i] in self.headers:
-                #print ("---", features_copy[i]) 
-                #X = np.concatenate ((np.array ([dataset[features[i]]]).T, X), axis = 1) # Input matrix (each column represents values of a feature, each row represents a data point)
                 a = self.get_data_array (dataset, features_copy[i])
-                #print ("a:", a.shape)
                 X = np.concatenate ((self.get_data_array (dataset, features_copy[i]), X), axis = 1)
             else:
                 break
-        #print ('X:', X.shape)
         return X
+
+    def get_data_matrix_car_ident (self, dataset):
+        """
+        dataset: training, validation, test, or total dataset
+        => return: a matrix with rows are data points, columns are features values (nD numpy.array object)
+        
+        """
+        featureNo = len (features_remove_car_ident)
+        
+        """ NOTE!: The order of features are reversed due to concatenate() function => then we need to reverse it first"""
+        features_copy = features_remove_car_ident[:]
+        features_copy.reverse()
+        
+        X = self.encode_one_hot_car_ident (dataset)
+        d_ident = X.shape[1]
+
+        car_ident_codes = self.get_data_array (dataset, "rating_code")
+        for feature in ["model_code","car_code","rep_model_code","manufacture_code"]:
+            a = self.get_data_array (dataset, feature)
+            car_ident_codes = np.concatenate ((a, car_ident_codes), axis = 1) #(self.get_data_array (dataset, feature)
+
+        print ("car_ident_codes", car_ident_codes.shape)
+        #sys.exit (-1)
+
+        print ("X.shape1", X.shape)
+        for i in range (0, featureNo):
+            if features_copy[i] in self.headers:
+                a = self.get_data_array (dataset, features_copy[i])
+                #print ("a.shape", a.shape)
+                X = np.concatenate ((a, X), axis = 1) #(self.get_data_array (dataset, features_copy[i])
+            else:
+                break
+
+        d_remain = X.shape[1] - d_ident
+        print ("X.shape2", X.shape, d_remain, d_ident)
+        return (car_ident_codes, X, d_ident, d_remain)
 
     def get_data_matrix_with_constraint (self, dataset, features, feature_constraint, feature_constraint_value): 
         """
@@ -492,6 +531,31 @@ class Dataset (Data_preprocessing, DataFrameImputer):
         #print ('X:', X)
         return X
     
+    def get_data_matrix_car_ident_with_constraint (self, dataset, feature_constraint, feature_constraint_value):
+        """
+        dataset: training, validation, test, or total dataset
+        => return: a matrix with rows are data points, columns are features values (nD numpy.array object), and the car identification is encoded as onehot
+        """
+        #TODO: add constraints 
+
+        featureNo = len (features_remove_car_ident)
+        
+        """ NOTE!: The order of features are reversed due to concatenate() function => then we need to reverse it first"""
+        features_copy = features_remove_car_ident[:]
+        features_copy.reverse()
+        
+        X = self.encode_one_hot_car_ident (dataset.get_total_dataset ())
+        d_ident = X.shape[1]
+        print ("X.shape1", X.shape)
+        for i in range (0, featureNo):
+            if features_copy[i] in self.headers:
+                a = self.get_data_array (dataset.get_total_dataset (), features_copy[i])
+                #print ("a.shape", a.shape)
+                X = np.concatenate ((self.get_data_array (dataset.get_total_dataset (), features_copy[i]), X), axis = 1)
+            else:
+                break
+        print ("X.shape2", X.shape)
+        return (X, d_ident)
 
     def get_data_matrix_without_outliers (self, dataset, features, window): 
         """

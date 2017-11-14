@@ -39,11 +39,11 @@ from scipy import stats
 machine = "Server" #"Ubuntu" # or "Mac" or "Windows" or "Server"
 
 """ Features"""
-output = "sale_duration"#"sale_duration" #"price"
+output = "price"#"sale_duration" #"price"
 #features = ["manufacture_code","rep_model_code","car_code","model_code","vehicle_mile","no_severe_accident","no_severe_water_accident","no_moderate_water_accident","total_no_accident","recovery_fee","no_click","no_message_contact","no_call_contact", "option_navigation","option_sunLoop","option_smartKey","option_xenonLight","option_heatLineSheet","option_ventilationSheet","option_rearSensor","option_curtainAirbag","no_cover_side_recovery","no_cover_side_exchange","no_corrosive_part"]#,"rep_model_code","car_code","model_code",
-features = ["manufacture_code","rep_model_code","car_code","model_code","rating_code","car_type","car_type","trans_mode","fuel_type","vehicle_mile","cylinder_disp","tolerance_history","sale_history","rental_history","no_severe_accident","no_severe_water_accident","no_moderate_water_accident","total_no_accident","recovery_fee","no_click","no_message_contact","no_call_contact", "option_navigation","option_sunLoop","option_smartKey","option_xenonLight","option_heatLineSheet","option_ventilationSheet","option_rearSensor","option_curtainAirbag","no_cover_side_recovery","no_cover_side_exchange","no_corrosive_part"]# 33 features
-#features = ["price", "manufacture_code","rep_model_code","car_code","model_code","rating_code","car_type","car_type","trans_mode","fuel_type","vehicle_mile","cylinder_disp","tolerance_history","sale_history","rental_history","no_severe_accident","no_severe_water_accident","no_moderate_water_accident","total_no_accident","recovery_fee","no_click","no_message_contact","no_call_contact", "option_navigation","option_sunLoop","option_smartKey","option_xenonLight","option_heatLineSheet","option_ventilationSheet","option_rearSensor","option_curtainAirbag","no_cover_side_recovery","no_cover_side_exchange","no_corrosive_part"]# try 33 features + price -> predict sale duration
-#features = ["manufacture_code","rep_model_code","car_code","model_code","rating_code","car_type","car_type","trans_mode","vehicle_mile","cylinder_disp","rental_history","total_no_accident","recovery_fee","no_click","no_message_contact","no_call_contact", "option_navigation","option_sunLoop","option_smartKey","option_xenonLight","option_heatLineSheet","option_ventilationSheet","option_rearSensor","option_curtainAirbag","no_cover_side_recovery","no_cover_side_exchange"] # 26 features
+features = ["manufacture_code","rep_model_code","car_code","model_code","rating_code","car_type","year","trans_mode","fuel_type","vehicle_mile","cylinder_disp","tolerance_history","sale_history","rental_history","no_severe_accident","no_severe_water_accident","no_moderate_water_accident","total_no_accident","recovery_fee","no_click","no_message_contact","no_call_contact", "option_navigation","option_sunLoop","option_smartKey","option_xenonLight","option_heatLineSheet","option_ventilationSheet","option_rearSensor","option_curtainAirbag","no_cover_side_recovery","no_cover_side_exchange","no_corrosive_part"]# 33 features
+#features = ["price", "manufacture_code","rep_model_code","car_code","model_code","rating_code","car_type","year","trans_mode","fuel_type","vehicle_mile","cylinder_disp","tolerance_history","sale_history","rental_history","no_severe_accident","no_severe_water_accident","no_moderate_water_accident","total_no_accident","recovery_fee","no_click","no_message_contact","no_call_contact", "option_navigation","option_sunLoop","option_smartKey","option_xenonLight","option_heatLineSheet","option_ventilationSheet","option_rearSensor","option_curtainAirbag","no_cover_side_recovery","no_cover_side_exchange","no_corrosive_part"]# try 33 features + price -> predict sale duration
+#features = ["manufacture_code","rep_model_code","car_code","model_code","rating_code","car_type","year","trans_mode","vehicle_mile","cylinder_disp","rental_history","total_no_accident","recovery_fee","no_click","no_message_contact","no_call_contact", "option_navigation","option_sunLoop","option_smartKey","option_xenonLight","option_heatLineSheet","option_ventilationSheet","option_rearSensor","option_curtainAirbag","no_cover_side_recovery","no_cover_side_exchange"] # 26 features
 
 """ What type of dataset we will use"""
 dataset =  "full" # "full", or "partial", or "small"
@@ -54,8 +54,14 @@ err_type = "relative_err" # rmse
 """ Using onehot or not"""
 using_one_hot_flag = 1 # 1-yes, 0-no
 
+""" Encode onehot for car indent"""
+using_car_ident_flag = 1 # 1-yes, 0-no
+
+""" Remove oulier"""
+remove_outliers_flag = 0 # 1-yes, 0-no
+
 """ Regression model will be used"""
-list_regression_model = ["basic_tree", "gd_boosting", "random_forest", "ada_boost"] #["ridge", "lasso"]#, "basic_tree"]#["basic_tree"] ["neural_network"] #
+list_regression_model = ["neural_network"] #["basic_tree", "gd_boosting", "random_forest", "ada_boost"] #["ridge", "lasso"]#, "basic_tree"]#["basic_tree"] ["neural_network"] #
 
 """ Decision tree visualization"""
 max_depth_graphviz_h  = 100
@@ -184,15 +190,22 @@ if using_one_hot_flag == 0:
 else:
     feature_coding = "With onehot"
 
+if using_car_ident_flag == 0:
+    feature_need_encoding = ["manufacture_code","rep_model_code","car_code","model_code","rating_code","car_type", "trans_mode", "fuel_type"]
+else:
+    feature_need_encoding = ["car_type", "trans_mode", "fuel_type"]
 
-feature_need_encoding = ["manufacture_code","rep_model_code","car_code","model_code","rating_code","car_type", "trans_mode", "fuel_type"]
 feature_need_label = ["car_type", "trans_mode", "fuel_type"]
 feature_need_impute = ["rating_code"]#, "car_type"]
 feature_need_remove_outlier = ["vehicle_mile", "no_click", "recovery_fee"]#, "price"]
+feature_need_scaler = ["vehicle_mile", "no_click", "recovery_fee", "price"]
+
 #feature_need_not_remove_outlier = features[:]
 #for feature in feature_need_remove_outlier:
 #    feature_need_not_remove_outlier.remove (feature)
 feature_need_not_remove_outlier = ["manufacture_code","rep_model_code","car_code","model_code","rating_code","car_type","actual_advertising_date","sale_date","year","trans_mode","fuel_type","price","sale_state","city","district","dealer_name","cylinder_disp","tolerance_history","sale_history","rental_history","no_severe_accident","no_severe_water_accident","no_moderate_water_accident","total_no_accident","no_message_contact","no_call_contact","option_navigation","option_sunLoop","option_smartKey","option_xenonLight","option_heatLineSheet","option_ventilationSheet","option_rearSensor","option_curtainAirbag","no_cover_side_recovery","no_cover_side_exchange","no_corrosive_part"]
+
+features_remove_car_ident = ["car_type","year","trans_mode","fuel_type","vehicle_mile","cylinder_disp","tolerance_history","sale_history","rental_history","no_severe_accident","no_severe_water_accident","no_moderate_water_accident","total_no_accident","recovery_fee","no_click","no_message_contact","no_call_contact", "option_navigation","option_sunLoop","option_smartKey","option_xenonLight","option_heatLineSheet","option_ventilationSheet","option_rearSensor","option_curtainAirbag","no_cover_side_recovery","no_cover_side_exchange","no_corrosive_part"]# 28 features
 
 strategy_h = "most_frequent"
 
@@ -226,4 +239,7 @@ dotfile_name_h  = pre_file_name + " Best basic tree_"
 
 mean_error_file_name = pre_file_name + "Mean error.txt" # "Mean_rmse over K-fold CV.txt"#" Mean_rmse over K-fold CV_for_testing.txt"
 
+x_embed_file_name = pre_file_name + "Y embeded.txt" # store the vector after applying car2vect
+x_ident_file_name = pre_file_name + "x identification.txt" # store the vector after applying car2vect
 
+y_predict_file_name = pre_file_name + "predicted " + output + ".txt" # store predicted value
