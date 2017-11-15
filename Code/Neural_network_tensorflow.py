@@ -491,7 +491,7 @@ class Tensor_NN(Dataset):
                 rel_err_list.append (epoch_test_relative_err_val)
                 smape_list.append (epoch_test_smape_val)
 
-                np.savetxt (x_embed_file_name + str (epoch), x_embed_val, fmt="%.2f\t%.2f")#\t%.2f")
+                np.savetxt (x_embed_file_name + str (epoch), x_embed_val, fmt="%.2f")#\t%.2f")#\t%.2f")
 
                 line = np.zeros(len (test_label), dtype=[('truth', float), ('pred', float)])
                 line['truth'] = test_label.reshape (test_label.shape[0])
@@ -785,7 +785,7 @@ if __name__ == '__main__':
     print ("shape of train and test:", train_data.shape, test_data.shape)
 
     
-    nn.car2vect(train_data, train_label, test_data, test_label, test_car_ident, 100, 1, model_path, nn.d_ident, 2, nn.d_remain, 6000) # 1000, 3, 6000
+    nn.car2vect(train_data=train_data, train_label=train_label, test_data=test_data, test_label=test_label, test_car_ident=test_car_ident, no_neuron=100, dropout_val=1, model_path=model_path, d_ident=nn.d_ident,d_embed=1, d_remain=nn.d_remain, no_neuron_embed=6000) # 1000, 3, 6000
     #nn.test_CV (model_path)
     sys.exit (-1)
 
