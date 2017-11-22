@@ -40,6 +40,12 @@ class Data_preprocessing (object):
             #print (str_d1, str_d2)
             #raise
 
+    def shuffle(self, df, n=1, axis=0):     
+        df = df.copy()
+        for _ in range(n):
+            df.apply(np.random.shuffle, axis=axis)
+        return df
+
 class DataFrameImputer(TransformerMixin):
 
     def __init__(self):
@@ -131,7 +137,18 @@ class Dataset (Data_preprocessing, DataFrameImputer):
         dtype_dict = full_features_dict
         #total_dataset = pd.read_excel (dataset_excel_file, names = self.headers, dtype = dtype_dict, header = 0)
         total_dataset = pd.read_excel (dataset_excel_file, names = self.headers, converters = dtype_dict, header = 0)
+
         
+        # Shuffle dataset (dataframe)
+        #total_dataset = total_dataset.reindex(np.random.permutation(total_dataset.index))
+
+        
+        # Sort by actual advertising date
+        total_dataset = total_dataset.sort_values ("actual_advertising_date", ascending=True)
+        
+        # Remove the data points with price == 0
+        total_dataset = total_dataset[total_dataset["price"] != 0]
+
         # Remove outliers
         if remove_outliers_flag == 1:
             df = total_dataset.copy()
