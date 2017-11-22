@@ -116,7 +116,7 @@ class Tensor_NN(Dataset):
         self.feature_constraint_values = feature_constraint_values
 
         if using_car_ident_flag == 1:
-            (self.car_ident_codes, self.X_total_set, self.y_total_set, self.X_train_set, self.y_train_set, self.X_test_set, self.y_test_set, self.d_ident, self.d_remain) = self.get_data_label_car_ident (self.features, output)
+            (self.car_ident_code_total_set, self.X_total_set, self.y_total_set, self.X_train_set, self.y_train_set, self.X_test_set, self.y_test_set, self.d_ident, self.d_remain, self.car_ident_code_test_set) = self.get_data_label_car_ident (self.features, output)
             
         elif constraint_flag == 0:
             (self.X_total_set, self.y_total_set, self.X_train_set, self.y_train_set, self.X_test_set, self.y_test_set) = self.get_data_label (self.features, output)
@@ -177,10 +177,10 @@ class Tensor_NN(Dataset):
 
         else:
             X_train_set = X_total_set[:train_length, :]
-            y_train_set = X_total_set[:train_length, :]
+            y_train_set = y_total_set[:train_length, :]
 
             X_test_set = X_total_set[train_length:, :]
-            y_test_set = X_total_set[train_length:, :]
+            y_test_set = y_total_set[train_length:, :]
 
             
         return (X_total_set, y_total_set, X_train_set, y_train_set, X_test_set, y_test_set) 
@@ -197,7 +197,7 @@ class Tensor_NN(Dataset):
              and "n_splits" test sets (X_test_set, y_test_set)
         """
         
-        car_ident_codes, X_total_set, d_ident, d_remain = self.get_data_matrix_car_ident (self.get_total_dataset ()) 
+        car_ident_code_total_set, X_total_set, d_ident, d_remain = self.get_data_matrix_car_ident (self.get_total_dataset ()) 
 
         len_total_set = X_total_set.shape[0]    
         train_length     = int (0.5 + len_total_set * data_training_percentage)
@@ -219,6 +219,7 @@ class Tensor_NN(Dataset):
         y_train_set = []
         X_test_set = []
         y_test_set = []
+        car_ident_code_test_set = []
         
         if self.k_fold > 0:
             kf = KFold(self.k_fold, shuffle=True)
@@ -227,21 +228,24 @@ class Tensor_NN(Dataset):
                 
                 X_train, X_test = X_total_set[train_index], X_total_set[test_index]
                 y_train, y_test = y_total_set[train_index], y_total_set[test_index]
+                test_car_ident_codes = car_ident_code_total_set[test_index]
                
                 X_train_set.append (X_train)
                 y_train_set.append (y_train)
                 X_test_set.append (X_test)
                 y_test_set.append (y_test)
+                car_ident_code_test_set.append (test_car_ident_codes)
 
         else:
             X_train_set = X_total_set[:train_length, :]
-            y_train_set = X_total_set[:train_length, :]
+            y_train_set = y_total_set[:train_length, :]
 
             X_test_set = X_total_set[train_length:, :]
-            y_test_set = X_total_set[train_length:, :]
+            y_test_set = y_total_set[train_length:, :]
+            car_ident_code_test_set = car_ident_code_total_set[train_length:, :]
 
             
-        return (car_ident_codes, X_total_set, y_total_set, X_train_set, y_train_set, X_test_set, y_test_set, d_ident, d_remain) 
+        return (car_ident_code_total_set, X_total_set, y_total_set, X_train_set, y_train_set, X_test_set, y_test_set, d_ident, d_remain, car_ident_code_test_set) 
 
     def get_data_label_with_constraints (self, features, output, feature_constraint, feature_constraint_values):
         """
@@ -287,10 +291,10 @@ class Tensor_NN(Dataset):
                 
         else:
             X_train_set = X_total_set[:train_length, :]
-            y_train_set = X_total_set[:train_length, :]
+            y_train_set = y_total_set[:train_length, :]
 
             X_test_set = X_total_set[train_length:, :]
-            y_test_set = X_total_set[train_length:, :]
+            y_test_set = y_total_set[train_length:, :]
             
         return (X_total_set, y_total_set, X_train_set, y_train_set, X_test_set, y_test_set) 
 
@@ -342,6 +346,8 @@ class Tensor_NN(Dataset):
             - Purpose: Create the model of NN with using car2vect: from the one-hot encode of a car identification, use word2vect to embed it into a vector with small dimension.
         """
     
+        #tf.reset_default_graph() 
+
         x_ident = tf.placeholder(tf.float32, [None, d_ident])
         x_remain = tf.placeholder(tf.float32, [None, d_remain])
         Y = tf.placeholder(tf.float32, [None, 1])
@@ -357,10 +363,22 @@ class Tensor_NN(Dataset):
 
         return x_ident, x_remain, Y, x_embed, prediction, dropout
 
-    def car2vect(self, train_data, train_label, test_data, test_label, test_car_ident, no_neuron, dropout_val, model_path, d_ident, d_embed, d_remain, no_neuron_embed): 
+    def car2vect(self, train_data, train_label, test_data, test_label, test_car_ident, no_neuron, dropout_val, model_path, d_ident, d_embed, d_remain, no_neuron_embed): # Used for 1train-1test
+    #def car2vect(self, train_data, train_label, test_data, test_label, test_car_ident, dropout_val, model_path, d_ident, d_embed, d_remain, x_ident, x_remain, Y, x_embed, prediction, dropout, fold): # used for Cross-validation 
 
         #building car embedding model
-        x_ident, x_remain, Y, x_embed, prediction, dropout = self.build_car2vect_model(no_neuron, no_neuron_embed, d_ident, d_embed, d_remain)
+        if using_CV_flag == 0:
+            x_ident, x_remain, Y, x_embed, prediction, dropout = self.build_car2vect_model(no_neuron, no_neuron_embed, d_ident, d_embed, d_remain)
+            x_ident_file_name_ = x_ident_file_name
+            x_embed_file_name_ = x_embed_file_name
+            mean_error_file_name_ = mean_error_file_name
+            y_predict_file_name_ = y_predict_file_name
+        else:
+            x_ident_file_name_ = x_ident_file_name + "_" + "fold" + str (fold+1)
+            x_embed_file_name_ = x_embed_file_name + "_" + "fold" + str (fold+1)
+            mean_error_file_name_ = mean_error_file_name + "_" + "fold" + str (fold+1)
+            y_predict_file_name_ = y_predict_file_name + "_" + "fold" + str (fold+1)
+
 
         # Try to use weights decay
         num_batches_per_epoch = int(len(train_data) / self.batch_size)
@@ -369,15 +387,15 @@ class Tensor_NN(Dataset):
         learning_rate = tf.train.exponential_decay(self.learning_rate, global_step, decay_steps, self.decay_rate, staircase = True)
 
         # Used for minimizing relative error
-        loss = tf.reduce_mean (tf.divide (tf.abs (prediction - Y), (Y))) #protect when Y = 0
-        #loss = tf.reduce_mean (tf.divide (tf.abs (prediction - Y), tf.abs (Y) + tf.abs (prediction) ))# tf.reduce_mean (tf.abs (prediction - Y)) #protect when Y = 0
+        loss = tf.reduce_mean (tf.divide (tf.abs (prediction - Y), Y)) 
+        #loss = tf.reduce_mean (tf.divide (tf.abs (prediction - Y), tf.abs (Y) + tf.abs (prediction) ))
 
         optimizer = tf.train.AdamOptimizer(learning_rate).minimize(loss, global_step=global_step)
     
         # RMSE
         rmse = tf.sqrt (tf.reduce_mean(tf.squared_difference(prediction, Y)))
         mae = tf.reduce_mean (tf.abs (prediction - Y))
-        relative_err = tf.reduce_mean (tf.divide (tf.abs (prediction - Y), (tf.abs (Y)))) * 100 # there are problem when Y = 0 -> inf or nan answer
+        relative_err = tf.reduce_mean (tf.divide (tf.abs (prediction - Y), Y)) * 100 # there are problem when Y = 0 -> inf or nan answer
         smape = tf.reduce_mean (tf.divide (tf.abs (prediction - Y), tf.abs (Y) + tf.abs (prediction) )) * 100
         
         # Calculate root mean squared error as additional eval metric
@@ -407,7 +425,7 @@ class Tensor_NN(Dataset):
             test_data_ident = test_data [:, d_remain:]
 
             print ("test car ident", test_car_ident[0])
-            np.savetxt (x_ident_file_name, test_car_ident, fmt="%d\t%d\t%d\t%d\t%s")  #[manufacture_codes,rep_model_codes,car_codes,model_codes,rating_codes, x_embed_val]
+            np.savetxt (x_ident_file_name_, test_car_ident, fmt="%d\t%d\t%d\t%d\t%s")  #[manufacture_codes,rep_model_codes,car_codes,model_codes,rating_codes, x_embed_val]
             #sys.exit (-1)
             """manufacture_codes = test_car_ident[0]
             rep_model_codes = test_car_ident[1]
@@ -445,7 +463,7 @@ class Tensor_NN(Dataset):
                 left_num = len(train_data)
                 for i in range (total_batch):
                     start_index = index_counter * self.batch_size
-                    end_idex = 0
+                    #end_index = 0
                     if(left_num < self.batch_size):
                         end_index = index_counter * self.batch_size + left_num
                     else:
@@ -491,12 +509,12 @@ class Tensor_NN(Dataset):
                 rel_err_list.append (epoch_test_relative_err_val)
                 smape_list.append (epoch_test_smape_val)
 
-                np.savetxt (x_embed_file_name + str (epoch), x_embed_val, fmt="%.2f")#\t%.2f")#\t%.2f")
+                np.savetxt (x_embed_file_name_ + str (epoch), x_embed_val, fmt="%.2f")#\t%.2f")#\t%.2f")
 
                 line = np.zeros(len (test_label), dtype=[('truth', float), ('pred', float)])
                 line['truth'] = test_label.reshape (test_label.shape[0])
                 line['pred'] = predicted_y.reshape (predicted_y.shape[0])
-                np.savetxt(y_predict_file_name + str (epoch), line, fmt="%.2f\t%.2f")
+                np.savetxt(y_predict_file_name_ + str (epoch), line, fmt="%.2f\t%.2f")
 
                 #sys.exit (-1)
                 #if epoch_test_relative_err_val > pre_epoch_test_relative_err_val and pre_epoch_test_relative_err_val != 0:
@@ -519,7 +537,6 @@ class Tensor_NN(Dataset):
             stop_time = time.time()
             print ("Training time (s):", stop_time - start_time)
             
-            #test_relative_err_val = sess.run(relative_err, feed_dict={X: test_data, Y: test_label, dropout:self.dropout})
             print('test last epoch rel_err: {:.3f}'.format(epoch_test_relative_err_val))
 
             line = np.zeros(len (epoch_list), dtype=[('epoch', int), ('rmse', float), ('mae', float), ('rel_err', float), ('smape', float), ('train_rel_err', float)])
@@ -529,22 +546,23 @@ class Tensor_NN(Dataset):
             line['rel_err'] = rel_err_list
             line['smape'] = smape_list
             line['train_rel_err'] = train_err_list
-            np.savetxt(mean_error_file_name + str (epoch), line, fmt="%d\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f")
+            np.savetxt(mean_error_file_name_ + str (epoch), line, fmt="%d\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f")
 
             return epoch_test_relative_err_val
 
-    def train_nn(self, train_data, train_label, test_data, test_label, no_neuron, no_hidden_layer, dropout_val, model_path): #k_fold, 
-
+    #def train_nn(self, train_data, train_label, test_data, test_label, no_neuron, no_hidden_layer, dropout_val, model_path): # Used for 1train-1test
+    def train_nn(self, train_data, train_label, test_data, test_label, dropout_val, model_path, X, Y, prediction, weights, dropout, fold): # used for Cross-validation 
        
-        #building model
-        X, Y, prediction, weights, dropout = self.build_model(train_data.shape[1], self.dim_label, no_neuron, no_hidden_layer)
+        #building car embedding model
+        if using_CV_flag == 0:
+            X, Y, prediction, weights, dropout = self.build_model(train_data.shape[1], self.dim_label, no_neuron, no_hidden_layer) 
+            mean_error_file_name_ = mean_error_file_name
+            y_predict_file_name_ = y_predict_file_name
+        else:
+            mean_error_file_name_ = mean_error_file_name + "_" + "fold" + str (fold+1)
+            y_predict_file_name_ = y_predict_file_name + "_" + "fold" + str (fold+1)
 
-        #evaluate model on training process
-        """cost = tf.reduce_mean(tf.squared_difference(prediction, Y)) # or can use tf.nn.l2_loss
-        optimizer = tf.train.AdamOptimizer(learning_rate = 0.001).minimize(cost) #TODO: learning rate adaptive
-        rmse = tf.sqrt(cost)
 
-        """
         # Try to use weights decay
         num_batches_per_epoch = int(len(train_data) / self.batch_size)
         decay_steps = int(num_batches_per_epoch * self.decay_step)
@@ -556,8 +574,10 @@ class Tensor_NN(Dataset):
         #loss = tf.reduce_mean(tf.squared_difference(prediction, Y))
 
         # Used for minimizing relative error
-        #loss = tf.reduce_mean (tf.divide (tf.abs (prediction - Y), (Y))) #protect when Y = 0
-        loss = tf.reduce_mean (tf.divide (tf.abs (prediction - Y), tf.abs (Y) + tf.abs (prediction) ))# tf.reduce_mean (tf.abs (prediction - Y)) #protect when Y = 0
+        loss = tf.reduce_mean (tf.divide (tf.abs (prediction - Y), Y)) #protect when Y = 0
+
+        # Used for minimizing SMAPE
+        #loss = tf.reduce_mean (tf.divide (tf.abs (prediction - Y), tf.abs (Y) + tf.abs (prediction) ))
 
         optimizer = tf.train.AdamOptimizer(learning_rate).minimize(loss, global_step=global_step)
     
@@ -592,6 +612,13 @@ class Tensor_NN(Dataset):
 
             pre_epoch_test_relative_err_val = 0
 
+            epoch_list = [] 
+            train_err_list = [] 
+            rmse_list = []
+            mae_list = []
+            rel_err_list = []
+            smape_list = []
+
             for epoch in range (self.epoch):
 
                 total_rmse = 0
@@ -602,7 +629,7 @@ class Tensor_NN(Dataset):
                 left_num = len(train_data)
                 for i in range (total_batch):
                     start_index = index_counter * self.batch_size
-                    end_idex = 0
+                    #end_index = 0
                     if(left_num < self.batch_size):
                         end_index = index_counter * self.batch_size + left_num
                     else:
@@ -637,11 +664,20 @@ class Tensor_NN(Dataset):
                 print ("test: mae", epoch_test_mae_val)
                 print ("test: relative_err", epoch_test_relative_err_val)
                 print ("test: smape", epoch_test_smape_val)
-                print ("truth:", Y[:10], "prediction:", predicted_y[:10])
-                #sys.exit (-1)
-                #if epoch_test_relative_err_val > pre_epoch_test_relative_err_val and pre_epoch_test_relative_err_val != 0:
-                    #break
-                #pre_epoch_test_relative_err_val = epoch_test_relative_err_val
+                print ("truth:", test_label[:10], "prediction:", predicted_y[:10])
+
+                epoch_list.append (epoch)
+                train_err_list.append (total_relative_err/total_batch)
+                rmse_list.append (epoch_test_rmse_val)
+                mae_list.append (epoch_test_mae_val)
+                rel_err_list.append (epoch_test_relative_err_val)
+                smape_list.append (epoch_test_smape_val)
+
+                line = np.zeros(len (test_label), dtype=[('truth', float), ('pred', float)])
+                line['truth'] = test_label.reshape (test_label.shape[0])
+                line['pred'] = predicted_y.reshape (predicted_y.shape[0])
+                np.savetxt(y_predict_file_name_ + str (epoch), line, fmt="%.2f\t%.2f")
+
 
                 #TODO: training data permutation
                 train_set_shuffled = np.random.permutation(train_set)
@@ -657,44 +693,60 @@ class Tensor_NN(Dataset):
             stop_time = time.time()
             print ("Training time (s):", stop_time - start_time)
             
-            #test_relative_err_val = sess.run(relative_err, feed_dict={X: test_data, Y: test_label, dropout:self.dropout})
-            print('test rmse: {:.3f}'.format(epoch_test_relative_err_val))
+            print('test last epoch rel_err: {:.3f}'.format(epoch_test_relative_err_val))
+
+            line = np.zeros(len (epoch_list), dtype=[('epoch', int), ('rmse', float), ('mae', float), ('rel_err', float), ('smape', float), ('train_rel_err', float)])
+            line['epoch'] = epoch_list
+            line['rmse'] = rmse_list
+            line['mae'] = mae_list
+            line['rel_err'] = rel_err_list
+            line['smape'] = smape_list
+            line['train_rel_err'] = train_err_list
+            np.savetxt(mean_error_file_name_ + str (epoch), line, fmt="%d\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f")
+
             return epoch_test_relative_err_val
    
-    
-    
     
     #def test_CV (self, no_neuron, no_hidden_layer, dropout_val, model_path):
     def test_CV (self, model_path):
         
         with tf.Session() as sess:
             """ In each iteration, we need to store training error and test error into 2 separare lists"""
-            test_err = []
+            print ("Start k-fold CV:")
+            d_embed_val = 3
+            if using_car_ident_flag == 1:
+                print ("--Build model using car identification")
+                x_ident, x_remain, Y, x_embed, prediction, dropout = self.build_car2vect_model(no_neuron=100, no_neuron_embed=6000, d_ident=nn.d_ident,d_embed=d_embed_val, d_remain=nn.d_remain)
+            else:
+                print ("--Build model using only onehot code")
+                X, Y, prediction, weights, dropout = self.build_model(dim_data=self.X_train_set[0].shape[1], dim_label=self.dim_label, no_unit_in_a_hidden_layer=6000, no_hidden_layer=2)
 
+            
+            test_err = []
             for i in range (self.k_fold):
-                print ("fold:", i)
+                print ("Start fold:", i)
                 train_data = self.X_train_set[i] 
                 train_label = self.y_train_set[i]
                 test_data = self.X_test_set[i]
                 test_label = self.y_test_set[i]
+                if using_car_ident_flag == 1:
+                    test_car_ident = self.car_ident_code_test_set[i]
 
-                #print (train_data.shape, train_label.shape, test_data.shape, test_label.shape)
-                #print (train_data[0], train_label[0], test_data[0], test_label[0])
+                #print ("train_data.shape", train_data.shape,"train_label.shape",  train_label.shape, "test_data.shape", test_data.shape, "test_data.shape", test_label.shape, "test_car_ident.shape", test_car_ident.shape)
+                #print ("train_data[0]", train_data[0], "train_label[0:10]", train_label[0:10], "test_data[0]", test_data[0], "test_label[0:10]", test_label[0:10], "test_car_ident[0]", test_car_ident[0])
                 #sys.exit (-1)
-                #print (train_data)
-                #print (train_label)
-                #print (test_data)
-                #print (test_label)
-                #sys.exit(-1)
+                
                 
                 train_set = np.concatenate ((train_data, train_label), axis = 1)
                 train_set_shuffled = np.random.permutation(train_set)
                 train_data_shuffled = train_set_shuffled [:, 0:train_data.shape[1]]
                 train_label_shuffled = train_set_shuffled [:, train_data.shape[1]:]
 
-                total_batch = int(train_data.shape[0]/self.batch_size)
-                #test_relative_err_val = self.train_nn(train_data_shuffled, train_label_shuffled, test_data, test_label, no_neuron, no_hidden_layer, dropout_val, model_path)
-                test_relative_err_val = self.car2vect(train_data_shuffled, train_label_shuffled, test_data, test_label, 1000, 1, model_path, nn.d_ident, 3, nn.d_remain, 6000)
+                if using_car_ident_flag == 1:
+                    test_relative_err_val = self.car2vect(train_data=train_data_shuffled, train_label=train_label_shuffled, test_data=test_data, test_label=test_label, test_car_ident=test_car_ident, dropout_val=1, model_path=model_path, d_ident=self.d_ident,d_embed=d_embed_val, d_remain=self.d_remain, x_ident=x_ident, x_remain=x_remain, Y=Y, x_embed=x_embed, prediction=prediction, dropout=dropout, fold=i) # 1000, 3, 6000
+                else:
+                    test_relative_err_val = self.train_nn (train_data=train_data_shuffled, train_label=train_label_shuffled, test_data=test_data, test_label=test_label, dropout_val=1, model_path=model_path, X=X, Y=Y, prediction=prediction, weights=weights, dropout=dropout, fold=i)
+
                 test_err.append (test_relative_err_val) 
                 print ("Fold:", i, test_relative_err_val)
             print ("---Mean relative_err:", np.mean (test_err))
@@ -713,7 +765,7 @@ if __name__ == '__main__':
     parser.add_argument('--output_dir', type=str, default = '../Results')
 
     #hyper parameter
-    parser.add_argument('--epoch', type=int, default = 70) #2000 # 100
+    parser.add_argument('--epoch', type=int, default = 20) #2000 # 100
     parser.add_argument('--dropout', type=int, default = 1)
     parser.add_argument('--batch_size', type=int, default = 128)
     parser.add_argument('--learning_rate', type=float, default=0.00125)
@@ -725,7 +777,7 @@ if __name__ == '__main__':
     parser.add_argument('--dim_label', type=int, default=1)
     parser.add_argument('--no_hidden_layer', type=int, default = 1) #not implement variabel network layer
     parser.add_argument('--no_neuron', type=int, default = 1000)
-    parser.add_argument('--k_fold', type=int, default = -1) # set it to -1 when don't want to use k-fold CV
+    parser.add_argument('--k_fold', type=int, default = 5) # set it to -1 when don't want to use k-fold CV
 
     args = parser.parse_args()
 
@@ -747,48 +799,85 @@ if __name__ == '__main__':
     model_path = nn.model_dir + '/' + nn.model_name
 
     print ("Shape:", nn.X_total_set.shape, nn.y_total_set.shape)
+    if using_CV_flag == 1:
+        print ("Test CV:")
+        if nn.k_fold > 0:
+            nn.test_CV (model_path)
+        else:
+            print ("kfold < 0")
+        sys.exit (-1)
 
-    concate_car_ident = np.concatenate ((nn.y_total_set, nn.car_ident_codes), axis = 1) # car_ident_codes used only to draw embeded vector
-    total_set_car_ident = np.concatenate ((nn.X_total_set, concate_car_ident), axis = 1)
-    total_set = np.concatenate ((nn.X_total_set, nn.y_total_set), axis = 1)
+    # otherwise, used for 1train-1test
+    print ("1train-1test:")
+    if nn.k_fold > 0:
+        print ("kfold > 0")
+        sys.exit (-1)
 
-    len_total_set = total_set.shape[0]   
-    dim_data_label = total_set.shape[1]
-    dim_data_label_car_ident = total_set_car_ident.shape[1]
+    if using_shuffle_flag == 1:
+        concate_car_ident = np.concatenate ((nn.y_total_set, nn.car_ident_codes), axis = 1) # car_ident_codes used only to draw embeded vector
+        total_set_car_ident = np.concatenate ((nn.X_total_set, concate_car_ident), axis = 1)
+        total_set = np.concatenate ((nn.X_total_set, nn.y_total_set), axis = 1)
 
-    train_length     = int (0.5 + len_total_set * data_training_percentage)
-    test_length     = int (0.5 + len_total_set * data_test_percentage)
+        len_total_set = total_set.shape[0]   
+        dim_data_label = total_set.shape[1]
+        dim_data_label_car_ident = total_set_car_ident.shape[1]
 
-    total_set_shuffled = np.random.permutation(total_set_car_ident)
-    total_data_shuffled = total_set_shuffled [:, 0:dim_data_label-1]
-    total_label_shuffled = total_set_shuffled [:, dim_data_label-1:dim_data_label]
+        #print ("data before suffling:", total_set_car_ident[:5, dim_data_label:])
+        print ("label before suffling:", nn.y_total_set[:])
+        #np.savetxt (total_set_shuffled_file_name + "_before", nn.y_total_set, fmt="%f")
+        train_length     = int (0.5 + len_total_set * data_training_percentage)
+        test_length     = int (0.5 + len_total_set * data_test_percentage)
 
-    # Creating a noise with the same dimension, and add to price
-    SD = 5
-    mu, sigma = 0, 5
-    #noise = np.random.normal (mu, sigma, [len_total_set, 1])
-    #print ("noise: ", "min:", np.min (noise), "max:", np.max (noise))
-    #total_label_shuffled += 30 + noise
+        total_set_shuffled = np.random.permutation(total_set_car_ident)
+        total_data_shuffled = total_set_shuffled [:, 0:dim_data_label-1]
+        total_label_shuffled = total_set_shuffled [:, dim_data_label-1:dim_data_label]
 
-    train_data  = total_data_shuffled[:train_length, :]
-    train_label = total_label_shuffled[:train_length, :]
+        #print ("data after suffling:", total_set_shuffled[:5, dim_data_label:])
+        print ("label after suffling:", total_label_shuffled[:])
+        #np.savetxt (total_set_shuffled_file_name, total_label_shuffled, fmt="%f")
+        sys.exit (-1)
+
+    if add_noise_flag == 1:
+        # Creating a noise with the same dimension, and add to price
+        SD = 5
+        mu, sigma = 0, 5
+        #noise = np.random.normal (mu, sigma, [len_total_set, 1])
+        #print ("noise: ", "min:", np.min (noise), "max:", np.max (noise))
+        #total_label_shuffled += 30 + noise
+
     
-    test_data  = total_data_shuffled[train_length:, :]
-    test_label = total_label_shuffled[train_length:, :]
-    test_car_ident = total_set_shuffled [train_length:, dim_data_label:] # car identification
+    if using_shuffle_flag == 1:
+        train_data  = total_data_shuffled[:train_length, :]
+        train_label = total_label_shuffled[:train_length, :]
+        
+        test_data  = total_data_shuffled[train_length:, :]
+        test_label = total_label_shuffled[train_length:, :]
+        test_car_ident = total_set_shuffled [train_length:, dim_data_label:] # car identification
+    else:
+        train_data = nn.X_train_set
+        train_label = nn.y_train_set
+        test_data = nn.X_test_set
+        test_label = nn.y_test_set
+        if using_car_ident_flag == 1:
+            test_car_ident = nn.car_ident_code_total_set[train_data.shape[0]:]
+
+    print ("train_data:", train_data.shape)
+    print ("train_label:", train_label.shape)
+    print ("test_data:", test_data.shape)
+    print ("test_label:", test_label.shape)
+    print ("train_data:", train_data.shape)
  
-    """scaler = StandardScaler()  
-    scaler.fit(train_data)  
-    train_data = scaler.transform (train_data) 
-    test_data = scaler.transform (test_data)"""
-
-    print ("shape of train and test:", train_data.shape, test_data.shape)
-
+    if using_CV_flag == 0:
+        if using_car_ident_flag == 1:
+            nn.car2vect(train_data=train_data, train_label=train_label, test_data=test_data, test_label=test_label, test_car_ident=test_car_ident, no_neuron=100, dropout_val=1, model_path=model_path, d_ident=nn.d_ident,d_embed=3, d_remain=nn.d_remain, no_neuron_embed=6000) # 1000, 3, 6000
+        else:
+            test_relative_err = nn.train_nn(train_data=train_data, train_label=train_label, test_data=test_data, test_label=test_label, no_neuron=6000, no_hidden_layer=2, dropout_val=1, model_path=model_path)
+         
     
-    nn.car2vect(train_data=train_data, train_label=train_label, test_data=test_data, test_label=test_label, test_car_ident=test_car_ident, no_neuron=100, dropout_val=1, model_path=model_path, d_ident=nn.d_ident,d_embed=1, d_remain=nn.d_remain, no_neuron_embed=6000) # 1000, 3, 6000
-    #nn.test_CV (model_path)
     sys.exit (-1)
 
+    
+    # These lines below used for choosing hyper-param
     txt = []
     for no_hidden_layer in list_no_hidden_layer_h:  
         for no_neuron in list_no_unit_in_a_layer_h:  
