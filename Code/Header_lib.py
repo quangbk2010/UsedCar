@@ -31,6 +31,8 @@ import sys
 import subprocess
 from datetime import datetime
 from scipy import stats
+from scipy.stats import truncnorm
+from collections import Counter
 
 
 """ ------------------------------------------------ What to change frequently------------------------------------ """
@@ -46,19 +48,19 @@ features = ["manufacture_code","rep_model_code","car_code","model_code","rating_
 #features = ["manufacture_code","rep_model_code","car_code","model_code","rating_code","car_type","year","trans_mode","vehicle_mile","cylinder_disp","rental_history","total_no_accident","recovery_fee","no_click","no_message_contact","no_call_contact", "option_navigation","option_sunLoop","option_smartKey","option_xenonLight","option_heatLineSheet","option_ventilationSheet","option_rearSensor","option_curtainAirbag","no_cover_side_recovery","no_cover_side_exchange"] # 26 features
 
 """ What type of dataset we will use"""
-dataset =  "partial" # "full", or "partial", or "small"
+dataset =  "full" # "full", or "partial", or "small"
 
 """ Using cross validation or not"""
-using_CV_flag = 1
+using_CV_flag = 0
 
 """ Using onehot or not"""
 using_one_hot_flag = 1 # 1-yes, 0-no
 
 """ Encode onehot for car indent"""
-using_car_ident_flag = 0 # 1-yes, 0-no
+using_car_ident_flag = 1 # 1-yes, 0-no
 
 """ Shuffle dataset or not"""
-using_shuffle_flag = 0
+using_shuffle_flag = 1
 
 """ Add noise to label of dataset or not to verify results"""
 add_noise_flag = 0
@@ -166,11 +168,11 @@ elif machine == "Server":
 
 if dataset == "full":
     """ Dataset length"""
-    input_no = 239472 #239444# 
-    dataset_excel_file = '../Data/used_car_Eng_pre_processing2.xlsx'
+    input_no = 239444# 239472 #
+    dataset_excel_file = '../Data/used_car_Eng_pre_processing1.xlsx'
 elif dataset == "partial":
     input_no = 8000
-    dataset_excel_file = '../Data/used_car_Eng_pre_processing2_partial dataset.xlsx'
+    dataset_excel_file = '../Data/used_car_Eng_pre_processing1_partial dataset.xlsx'
 elif dataset == "small":
     input_no = 14
     dataset_excel_file = '../Data/used_car_Eng_pre_processing1_small dataset.xlsx'
@@ -254,3 +256,7 @@ x_embed_file_name = pre_file_name + "Y embeded.txt" # store the vector after app
 x_ident_file_name = pre_file_name + "x identification.txt" # store the vector after applying car2vect
 
 y_predict_file_name = pre_file_name + "predicted " + output + ".txt" # store predicted value
+
+total_set_file_name = pre_file_name + "total set.txt" # store the data set after shuffle total numpy array
+train_set_file_name = pre_file_name + "train set.txt" # store the training set after shuffle total numpy array
+test_set_file_name = pre_file_name + "test set.txt" # store the test set after shuffle total numpy array
