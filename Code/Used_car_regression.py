@@ -46,6 +46,9 @@ class Data_preprocessing (object):
             df.apply(np.random.shuffle, axis=axis)
         return df
 
+    def get_truncated_normal(self, mean=0, sd=1, low=0, upp=10):
+        return truncnorm((low - mean) / sd, (upp - mean) / sd, loc=mean, scale=sd)
+
 class DataFrameImputer(TransformerMixin):
 
     def __init__(self):
@@ -144,8 +147,11 @@ class Dataset (Data_preprocessing, DataFrameImputer):
 
         
         # Sort by actual advertising date
-        total_dataset = total_dataset.sort_values ("actual_advertising_date", ascending=True)
+        #total_dataset = total_dataset.sort_values ("actual_advertising_date", ascending=True)
         
+        # Remove the data points with price == 0
+        #total_dataset = total_dataset[total_dataset["sale_state"] == "Sold-out"]
+
         # Remove the data points with price == 0
         total_dataset = total_dataset[total_dataset["price"] != 0]
 
@@ -225,11 +231,12 @@ class Dataset (Data_preprocessing, DataFrameImputer):
             Count how many cars (each car can be diffirentiated by (model_code, rating_code)) in the dataset. 
             Return: 
                 + No. different cars in dataset
-                + A dictionary that translates the indexs of all cars to the identification numbers (2 same cars will have the same identification number).
+                + A dictionary that translates the indexs of all cars to the identification numbers .
                 + The list of all identification numbers of all cars.
+            !NOTE: This method is used to embed car identifications to vectors that are similar if have similar price. (different with create_car_ident() function, -> similar car_ident -> same vector)
         """
         model_code_arr = self.get_data_array (dataset, "model_code")
-        #print ("model_code_arr", model_code_arr)
+        print ("model_code_arr", model_code_arr[:5])
         rating_code_arr = self.get_data_array (dataset, "rating_code")
         #print ("rating_code_arr", rating_code_arr)
         
@@ -254,11 +261,34 @@ class Dataset (Data_preprocessing, DataFrameImputer):
             car_ident_list.append (count)
         return (count, car_ident_dict, car_ident_list)
 
+    def create_car_ident (self, dataset):
+        """
+            From model_code and rating_code (because car identification can be only realized on these 2 features), create another feature: car_ident = 1.1 * model_code + rating_code
+            (2 same cars will have the same identification number)
+            Return: car_ident
+        """
+        model_code_arr = self.get_data_array (dataset, "model_code")
+        print ("car model_code shape:", model_code_arr.shape)
+
+        rating_code_arr = self.get_data_array (dataset, "rating_code")
+        print ("car rating_code shape:", rating_code_arr.shape)
+        rating_code_arr = rating_code_arr.astype (int)
+
+        return model_code_arr ** 2 + rating_code_arr
+
+
     def encode_one_hot_car_ident (self, dataset):
-        (count, car_ident_dict, car_ident_list) = self.count_car (dataset)
-        #print ("count:", count, "car_ident_list:", car_ident_list)
+        #(count, car_ident_dict, car_ident_list) = self.count_car (dataset)
+        car_ident = self.create_car_ident (dataset)
+        car_ident_list = list (car_ident.reshape (car_ident.shape[0]))
+        print ("len of car_ident_list:", len (car_ident_list))
+        print ("no different car identification:", len (Counter(car_ident_list).keys()))
+
+        #print ("count:", count, "car_ident_list:", car_ident_list[:50])
+        #sys.exit (-1)
         enc = OneHotEncoder(sparse = False)
-        return enc.fit_transform (np.array (car_ident_list).reshape (len (car_ident_list), 1)) 
+        #return enc.fit_transform (np.array (car_ident_list).reshape (len (car_ident_list), 1)) 
+        return enc.fit_transform (car_ident) 
 
     def impute_missing_values (self, total_data_array, feature, feature_array, strategy):
         #TODO: More appropriate method
