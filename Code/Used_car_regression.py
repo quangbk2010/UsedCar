@@ -231,11 +231,12 @@ class Dataset (Data_preprocessing, DataFrameImputer):
             Count how many cars (each car can be diffirentiated by (model_code, rating_code)) in the dataset. 
             Return: 
                 + No. different cars in dataset
-                + A dictionary that translates the indexs of all cars to the identification numbers (2 same cars will have the same identification number).
+                + A dictionary that translates the indexs of all cars to the identification numbers .
                 + The list of all identification numbers of all cars.
+            !NOTE: This method is used to embed car identifications to vectors that are similar if have similar price. (different with create_car_ident() function, -> similar car_ident -> same vector)
         """
         model_code_arr = self.get_data_array (dataset, "model_code")
-        #print ("model_code_arr", model_code_arr)
+        print ("model_code_arr", model_code_arr[:5])
         rating_code_arr = self.get_data_array (dataset, "rating_code")
         #print ("rating_code_arr", rating_code_arr)
         
@@ -263,6 +264,7 @@ class Dataset (Data_preprocessing, DataFrameImputer):
     def create_car_ident (self, dataset):
         """
             From model_code and rating_code (because car identification can be only realized on these 2 features), create another feature: car_ident = 1.1 * model_code + rating_code
+            (2 same cars will have the same identification number)
             Return: car_ident
         """
         model_code_arr = self.get_data_array (dataset, "model_code")
@@ -282,7 +284,8 @@ class Dataset (Data_preprocessing, DataFrameImputer):
         print ("len of car_ident_list:", len (car_ident_list))
         print ("no different car identification:", len (Counter(car_ident_list).keys()))
 
-        #print ("count:", count, "car_ident_list:", car_ident_list)
+        #print ("count:", count, "car_ident_list:", car_ident_list[:50])
+        #sys.exit (-1)
         enc = OneHotEncoder(sparse = False)
         #return enc.fit_transform (np.array (car_ident_list).reshape (len (car_ident_list), 1)) 
         return enc.fit_transform (car_ident) 
