@@ -140,6 +140,7 @@ class Dataset (Data_preprocessing, DataFrameImputer):
         dtype_dict = full_features_dict
         #total_dataset = pd.read_excel (dataset_excel_file, names = self.headers, dtype = dtype_dict, header = 0)
         total_dataset = pd.read_excel (dataset_excel_file, names = self.headers, converters = dtype_dict, header = 0)
+        print ("1.", total_dataset.shape)
 
         
         # Shuffle dataset (dataframe)
@@ -150,13 +151,15 @@ class Dataset (Data_preprocessing, DataFrameImputer):
         #total_dataset = total_dataset.sort_values ("actual_advertising_date", ascending=True)
         
         # Remove the data points with price == 0
-        #total_dataset = total_dataset[total_dataset["sale_state"] == "Sold-out"]
+        total_dataset = total_dataset[total_dataset["sale_state"] == "Sold-out"]
+        print ("2.", total_dataset.shape)
 
         # Remove the data points with price == 0
         total_dataset = total_dataset[total_dataset["price"] != 0]
+        print ("3.", total_dataset.shape)
 
         # Remove outliers
-        if remove_outliers_flag == 1:
+        """if remove_outliers_flag == 1:
             df = total_dataset.copy()
             filt_df = df.copy()
             for feature in feature_need_not_remove_outlier:
@@ -164,11 +167,22 @@ class Dataset (Data_preprocessing, DataFrameImputer):
             
             filt_df = filt_df[filt_df.apply(lambda x: np.abs(x - x.mean()) / x.std() < 3).all(axis=1)]
             
+            sys.exit (-1)
             for feature in feature_need_not_remove_outlier:
                 filt_df = pd.concat([df.loc[:,feature], filt_df], axis=1)
 
             filt_df.dropna(inplace=True)
-            total_dataset = filt_df
+            total_dataset = filt_df"""
+        """print (total_dataset["price"])
+        print (total_dataset["price"].mean())
+        print (total_dataset["price"].std())
+        print (np.abs(total_dataset["price"] - total_dataset["price"].mean()) / total_dataset["price"].std())"""
+        
+        total_dataset = total_dataset[np.abs(total_dataset["price"] - total_dataset["price"].mean()) / total_dataset["price"].std() < 2]
+        print ("4.", total_dataset.shape)
+        #total_dataset = total_dataset[np.abs(total_dataset["price"] - total_dataset["price"].mean()) / total_dataset["price"].std() < 3]
+        #print ("5.", total_dataset.shape)
+        #sys.exit (-1)
 
         # Impute missing values from here
         total_dataset = DataFrameImputer().fit_transform (total_dataset)
