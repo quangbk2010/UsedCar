@@ -138,7 +138,6 @@ class Dataset (Data_preprocessing, DataFrameImputer):
         stime = time.time()
         self.headers = full_features
         dtype_dict = full_features_dict
-        #total_dataset = pd.read_excel (dataset_excel_file, names = self.headers, dtype = dtype_dict, header = 0)
         total_dataset = pd.read_excel (dataset_excel_file, names = self.headers, converters = dtype_dict, header = 0)
         print ("1.", total_dataset.shape)
 
@@ -159,27 +158,6 @@ class Dataset (Data_preprocessing, DataFrameImputer):
         #print ("3.", total_dataset.shape)
 
         # Remove outliers
-        # 1st way: too long
-        """if remove_outliers_flag == 1:
-            df = total_dataset.copy()
-            filt_df = df.copy()
-            for feature in feature_need_not_remove_outlier:
-                filt_df = filt_df.loc[:, filt_df.columns != feature]
-            
-            filt_df = filt_df[filt_df.apply(lambda x: np.abs(x - x.mean()) / x.std() < 3).all(axis=1)]
-            
-            sys.exit (-1)
-            for feature in feature_need_not_remove_outlier:
-                filt_df = pd.concat([df.loc[:,feature], filt_df], axis=1)
-
-            filt_df.dropna(inplace=True)
-            total_dataset = filt_df"""
-        """print (total_dataset["price"])
-        print (total_dataset["price"].mean())
-        print (total_dataset["price"].std())
-        print (np.abs(total_dataset["price"] - total_dataset["price"].mean()) / total_dataset["price"].std())"""
-        
-        # 2nd way:
         #total_dataset = total_dataset[np.abs(total_dataset["price"] - total_dataset["price"].mean()) / total_dataset["price"].std() < 1]
         #print ("4.", total_dataset.shape)
 
@@ -187,9 +165,6 @@ class Dataset (Data_preprocessing, DataFrameImputer):
         total_dataset = DataFrameImputer().fit_transform (total_dataset)
 
         # There are some columns with string values (E.g. Car type) -> need to label it as numerical labels
-        #le = LabelEncoder ()
-        #for feature in feature_need_label:
-        #    total_dataset[feature] = total_dataset[feature].apply(le.fit_transform)
         total_dataset = MultiColumnLabelEncoder(columns = feature_need_label).fit_transform(total_dataset)
 
         # Standard scale dataset
@@ -260,9 +235,10 @@ class Dataset (Data_preprocessing, DataFrameImputer):
             !NOTE: This method is used to embed car identifications to vectors that are similar if have similar price. (different with create_car_ident() function, -> similar car_ident -> same vector)
         """
         model_code_arr = self.get_data_array (dataset, "model_code")
-        print ("model_code_arr", model_code_arr[:5])
         rating_code_arr = self.get_data_array (dataset, "rating_code")
-        #print ("rating_code_arr", rating_code_arr)
+        #price_2 = self.get_data_array (dataset, "price_2")
+        #ident_car = np.concatenate ((model_code_arr, rating_code_arr, price_2), axis = 1 )
+        #print ("ident_car", ident_car[:50])
         
         len_dataset = model_code_arr.shape[0]
         model_code_list = [] # store all model codes
@@ -275,11 +251,9 @@ class Dataset (Data_preprocessing, DataFrameImputer):
             if model_code_arr[i][0] not in model_code_list:
                 count += 1
                 model_code_list.append (model_code_arr[i][0])
-                #car_ident[i] = count
                 model_rating_dict[model_code_arr[i][0]] = [rating_code_arr[i][0]]
             elif rating_code_arr[i][0] not in model_rating_dict[model_code_arr[i][0]]:
                 count += 1
-                car_ident_dict[i] = count
                 model_rating_dict[model_code_arr[i][0]] += [rating_code_arr[i][0]]
             car_ident_dict[i] = count
             car_ident_list.append (count)
@@ -308,7 +282,7 @@ class Dataset (Data_preprocessing, DataFrameImputer):
         #print ("len of car_ident_list:", len (car_ident_list))
         print ("no different car identification:", len (Counter(car_ident_list).keys()))
 
-        #print ("count:", count, "car_ident_list:", car_ident_list)#[:50])
+        print ("count:", count, "car_ident_list:", car_ident_list[:100])
         #sys.exit (-1)
         enc = OneHotEncoder(sparse = False)
         return enc.fit_transform (np.array (car_ident_list).reshape (len (car_ident_list), 1)) 
@@ -501,21 +475,7 @@ class Dataset (Data_preprocessing, DataFrameImputer):
         => return: a matrix with rows are data points, columns are features values (nD numpy.array object)
         
         """
-        featureNo = len (features)
-        
-        """ NOTE!: The order of features are reversed due to concatenate() function => then we need to reverse it first"""
-        features_copy = features[:]
-        features_copy.reverse()
-        
-        X = self.get_data_array (dataset, features_copy[0])#np.array ([dataset[features[0]]]).T
-        for i in range (1, featureNo):
-            if features_copy[i] in self.headers:
-                a = self.get_data_array (dataset, features_copy[i])
-                X = np.concatenate ((self.get_data_array (dataset, features_copy[i]), X), axis = 1)
-            else:
-                break
-        return X
-
+        return np.array (dataset[features])
 
     def get_data_matrix_car_ident (self, dataset):
         """
@@ -529,23 +489,16 @@ class Dataset (Data_preprocessing, DataFrameImputer):
         features_copy = features_remove_car_ident[:]
         features_copy.reverse()
 
-        car_ident_codes = self.get_data_array (dataset, "rating_code")
-        for feature in ["model_code","car_code","rep_model_code","manufacture_code"]:
-            a = self.get_data_array (dataset, feature)
-            car_ident_codes = np.concatenate ((a, car_ident_codes), axis = 1) 
+        car_ident_codes = np.array (dataset[car_ident]) 
         print ("car_ident_codes", car_ident_codes.shape)
 
-        X = self.encode_one_hot_car_ident (dataset)
-        d_ident = X.shape[1]
+        X1 = self.encode_one_hot_car_ident (dataset)
+        d_ident = X1.shape[1]
 
-        print ("X.shape1", X.shape)
-        for i in range (0, featureNo):
-            if features_copy[i] in self.headers:
-                a = self.get_data_array (dataset, features_copy[i])
-                X = np.concatenate ((a, X), axis = 1) 
-            else:
-                break
-
+        print ("X.shape1", X1.shape)
+        X2 = np.array (dataset[features_remove_car_ident]) 
+        X = np.concatenate ((X2, X1), axis = 1) 
+        
         d_remain = X.shape[1] - d_ident
         print ("X.shape2", X.shape, d_remain, d_ident)
         return (car_ident_codes, X, d_ident, d_remain)
@@ -556,36 +509,23 @@ class Dataset (Data_preprocessing, DataFrameImputer):
         => return: Add 'set_flag' feature into the matrix.
         
         """
-        # add one more feature: 'set_flag' to indicate if it belongs to whether train_set or test_set
-        features_remove_car_ident_ = ['set_flag'] + ['price_2'] + ['price'] + features_remove_car_ident
-        featureNo = len (features_remove_car_ident_)
-        
-        """ NOTE!: The order of features are reversed due to concatenate() function => then we need to reverse it first"""
-        features_copy = features_remove_car_ident_[:]
-        features_copy.reverse()
-        
-        car_ident_codes = self.get_data_array (dataset, "rating_code")
-        for feature in ["model_code","car_code","rep_model_code","manufacture_code"]:
-            a = self.get_data_array (dataset, feature)
-            car_ident_codes = np.concatenate ((a, car_ident_codes), axis = 1) 
+        print ("[get_data_matrix_car_ident_flag] dataset:", dataset[:2])
+        car_ident_codes = np.array (dataset[car_ident])
         print ("car_ident_codes", car_ident_codes.shape)
 
         X_ident = self.encode_one_hot_car_ident (dataset)
         d_ident = X_ident.shape[1]
 
-        print ("X.shape1", X_ident.shape)
-        """for i in range (0, featureNo):
-            a = self.get_data_array (dataset, features_copy[i])
-            X = np.concatenate ((a, X), axis = 1) """
         X_ = np.array (dataset[feature_need_encoding])
         enc = OneHotEncoder(sparse = False)
         X_need_encoding = enc.fit_transform (X_) 
 
         X_need_not_encoding = np.array (dataset[['set_flag'] + ['price_2'] + ['price'] + features_not_need_encoding])
-        #X_need_not_encoding = np.array (dataset[['set_flag'] + ['price_2'] + ['price']])
+        """scaler = StandardScaler()  
+        scaler.fit_transform(X_need_not_encoding)"""
 
         X = np.concatenate ((X_need_not_encoding, X_need_encoding, X_ident), axis=1)
-        #X = np.concatenate ((X_need_not_encoding, X), axis=1)
+        print ("[get_data_matrix_car_ident_flag] X:", X[:2])
 
         scaler = StandardScaler()  
         scaler.fit(X)  
@@ -595,7 +535,7 @@ class Dataset (Data_preprocessing, DataFrameImputer):
         sys.exit (-1)
 
         d_remain = X.shape[1] - d_ident - 3
-        print ("X.shape2", X.shape, d_remain, d_ident)
+        print ("[get_data_matrix_car_ident_flag] X.shape", X.shape, "d_remain", d_remain, "d_ident", d_ident)
         # The first column of X should be 'set_flag'
         return (car_ident_codes, X, d_ident, d_remain)
 
