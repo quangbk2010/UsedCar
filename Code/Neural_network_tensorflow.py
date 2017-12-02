@@ -82,7 +82,7 @@ class Evaluation ():
             return 1
         return 0
     
-class Tensor_NN(Dataset):
+class Tensor_NN(Support,Dataset):
 
     def __init__(self, args):
         #from args
@@ -120,6 +120,32 @@ class Tensor_NN(Dataset):
             
         elif constraint_flag == 0:
             (self.X_total_set, self.y_total_set, self.X_train_set, self.y_train_set, self.X_test_set, self.y_test_set) = self.get_data_label (self.features, output)
+            expand_dataset = self.tree_GradientBoostingRegressor (self.X_train_set, self.y_train_set, self.X_test_set, self.y_test_set)
+            sorted_expand_dataset = expand_dataset.sort_values ("price_2", ascending=True)
+
+            print ("sorted_expand_dataset:", sorted_expand_dataset[['set_flag','price_2', 'price','manufacture_code']])
+            self.car_ident_code_total_set, X_total_set, self.d_ident, self.d_remain = self.get_data_matrix_car_ident_flag (sorted_expand_dataset)
+            #print ("matrix 4:",X_total_set)
+
+            train_set = X_total_set[X_total_set[:,0].astype(int)==0] # X_total_set here is 'set_flag' + 'price_2' + 'price' + 'other features'
+            self.X_train_set = train_set[:,3:]
+            train_price_2 = train_set[:,1]
+            train_price = train_set[:,2]
+            self.y_train_set = train_price.reshape (train_price.shape[0], 1)
+            print ("train:", self.X_train_set.shape, self.y_train_set.shape)
+
+
+            test_set = X_total_set[X_total_set[:,0].astype(int)==1] # X_total_set here is 'set_flag' + 'price_2' + 'price' + 'other features'
+            self.X_test_set = test_set[:,3:]
+            test_price_2 = test_set[:,1]
+            test_price = test_set[:,2]
+            self.y_test_set = test_price.reshape (test_price.shape[0], 1)
+            print ("test:", self.X_test_set.shape, self.y_test_set.shape)
+
+            #print ("price_2", test_price_2)
+            #print ("price", test_price)
+            #sys.exit (-1)
+ 
 
         else:
             (self.X_total_set, self.y_total_set, self.X_train_set, self.y_train_set, self.X_test_set, self.y_test_set) = self.get_data_label_with_constraints (self.features, output, self.feature_constraint, self.feature_constraint_values)
@@ -139,11 +165,11 @@ class Tensor_NN(Dataset):
 
         len_total_set = X_total_set.shape[0]    
         train_length     = int (0.5 + len_total_set * data_training_percentage)
-        #test_length     = int (0.5 + len_total_set * data_test_percentage)
+        print ("train_length", train_length)
 
-        scaler = StandardScaler()  
+        """scaler = StandardScaler()  
         scaler.fit(X_total_set)  
-        X_total_set = scaler.transform(X_total_set)  
+        X_total_set = scaler.transform(X_total_set)  """
             
 
         if output == "price":
@@ -181,6 +207,7 @@ class Tensor_NN(Dataset):
 
             X_test_set = X_total_set[train_length:, :]
             y_test_set = y_total_set[train_length:, :]
+
 
             
         return (X_total_set, y_total_set, X_train_set, y_train_set, X_test_set, y_test_set) 
@@ -365,9 +392,15 @@ class Tensor_NN(Dataset):
 
         #output1 = slim.fully_connected(x_ident, d_ident + 1, scope='input_embed', activation_fn=tf.nn.relu)
         output1 = slim.fully_connected(x_ident, no_neuron_embed, scope='input_embed', activation_fn=tf.nn.relu)
+<<<<<<< HEAD
         output2 = slim.fully_connected(output1, no_neuron_embed, scope='hidden_embed1', activation_fn=tf.nn.relu)
         #output3 = slim.fully_connected(output2, no_neuron_embed, scope='hidden_embed2', activation_fn=tf.nn.relu)
         x_embed = slim.fully_connected(output2, d_embed, scope='output_embed', activation_fn=tf.nn.relu) # 3-dimension of embeding NN
+=======
+        #output2 = slim.fully_connected(output1, no_neuron_embed, scope='hidden_embed1', activation_fn=tf.nn.relu)
+        #output3 = slim.fully_connected(output2, no_neuron_embed, scope='hidden_embed2', activation_fn=tf.nn.relu)
+        x_embed = slim.fully_connected(output1, d_embed, scope='output_embed', activation_fn=tf.nn.relu) # 3-dimension of embeding NN
+>>>>>>> b80ae4f1ff9c44331a1a9d4aac5176b20555a405
 
         input3 = tf.concat ([x_remain, x_embed], 1)
 
@@ -724,6 +757,50 @@ class Tensor_NN(Dataset):
             return epoch_test_relative_err_val
    
     
+    def tree_GradientBoostingRegressor (self, train_data, train_label, test_data, test_label, n_estimators = 10000, learning_rate = 0.00125, loss = 'lad'):
+        
+        """
+            Apply GradientBoostingRegressor
+        """        
+        reg_tree = ensemble.GradientBoostingRegressor(n_estimators = n_estimators, learning_rate = learning_rate, loss = loss)
+        stime = time.time()
+
+        print ("training...")
+        reg_tree.fit(train_data,train_label)
+        print("Time for GradientBoostingRegressor learning_rate 0.1 tree fitting: %.3f" % (time.time() - stime))
+
+        # Testing
+        print ("testing...")
+        err_type = "relative_err"
+        print (train_data.shape, train_label.shape)
+        predicted_train_label = self.get_predicted_label (reg_tree, train_data) 
+        train_err = self.get_err (err_type, predicted_train_label, train_label)
+        
+        predicted_test_label = self.get_predicted_label (reg_tree, test_data)
+        test_err = self.get_err (err_type, predicted_test_label, test_label) 
+        print ("[DecisionTreeRegressor] Relative err: train_err: %.3f %%, test_err: %.3f %%" % (train_err, test_err))
+        sys.exit (-1)
+
+        # assign set_flag and concatenate the dataset with both set_flag and price_2
+        train_length = train_data.shape[0]
+        test_length = test_data.shape[0]
+        train_set_flag = np.zeros ((train_length, 1))
+        test_set_flag = np.ones ((test_length, 1))
+        train_set = np.concatenate ((train_set_flag, train_label, train_data, train_label), axis = 1)
+        test_set = np.concatenate ((test_set_flag, predicted_test_label, test_data, test_label), axis = 1)
+        
+        # Concatenate to total_dataset
+        total_dataset = np.concatenate ((train_set, test_set), axis = 0)
+        total_length = total_dataset.shape[0]
+
+        # return expanded dataframe
+        columns = ['set_flag'] + ['price_2'] + features + ['price']
+        index = [i for i in range (1, total_length + 1)]
+        df = pd.DataFrame (data=total_dataset, index=index, columns=columns)
+        print (df[['set_flag','price_2','manufacture_code']])#.loc[:2])
+        return df
+        #sys.exit (-1)
+
     #def test_CV (self, no_neuron, no_hidden_layer, dropout_val, model_path):
     def test_CV (self, model_path):
         
@@ -815,75 +892,17 @@ if __name__ == '__main__':
 
     model_path = nn.model_dir + '/' + nn.model_name
 
-    print ("Shape:", nn.X_total_set.shape, nn.y_total_set.shape)
-    if using_CV_flag == 1:
-        print ("Test CV:")
-        if nn.k_fold > 0:
-            nn.test_CV (model_path)
-        else:
-            print ("kfold < 0")
-        sys.exit (-1)
-
-    # otherwise, used for 1train-1test
-    print ("1train-1test:")
-    if nn.k_fold > 0:
-        print ("kfold > 0")
-        sys.exit (-1)
-
-    if using_shuffle_flag == 1:
-        concate_car_ident = np.concatenate ((nn.y_total_set, nn.car_ident_code_total_set), axis = 1) # car_ident_codes used only to draw embeded vector
-        total_set_car_ident = np.concatenate ((nn.X_total_set, concate_car_ident), axis = 1)
-        total_set = np.concatenate ((nn.X_total_set, nn.y_total_set), axis = 1)
-
-        len_total_set = total_set.shape[0]   
-        dim_data_label = total_set.shape[1]
-        dim_data_label_car_ident = total_set_car_ident.shape[1]
-
-        #print ("data before suffling:", total_set_car_ident[:5, dim_data_label:])
-        #print ("label before suffling:", nn.y_total_set[:])
-        #np.savetxt (total_set_shuffled_file_name + "_before", nn.y_total_set, fmt="%f")
-        train_length     = int (0.5 + len_total_set * data_training_percentage)
-        test_length     = int (0.5 + len_total_set * data_test_percentage)
-
-        total_set_shuffled = np.random.permutation(total_set_car_ident)
-        total_data_shuffled = total_set_shuffled [:, 0:dim_data_label-1]
-        total_label_shuffled = total_set_shuffled [:, dim_data_label-1:dim_data_label]
-
-        #print ("data after suffling:", total_set_shuffled[:5, dim_data_label:])
-        #print ("label after suffling:", total_label_shuffled[:])
-        #np.savetxt (total_set_shuffled_file_name, total_label_shuffled, fmt="%f")
-
-    if add_noise_flag == 1:
-        # Creating a noise with the same dimension, and add to price
-        SD = 5
-        mu, sigma = 0, 5
-        generator = nn.get_truncated_normal(mean=0.1, sd=0.1, low=-100000, upp=100000)
-        alpha = generator.rvs (total_set.shape[0]).reshape (total_set.shape[0], 1)
-        print ("alpha noise: ", "min:", np.min (alpha), "max:", np.max (alpha), "mean:", np.mean (alpha))
-        total_label_shuffled *= (1-alpha)
-
-    
-    if using_shuffle_flag == 1:
-        train_data  = total_data_shuffled[:train_length, :]
-        train_label = total_label_shuffled[:train_length, :]
-        
-        test_data  = total_data_shuffled[train_length:, :]
-        test_label = total_label_shuffled[train_length:, :]
-        test_car_ident = total_set_shuffled [train_length:, dim_data_label:] # car identification
-        np.savetxt (train_set_file_name, np.concatenate ((train_label, total_set_shuffled [:train_length, dim_data_label:]), axis=1), fmt = "%.2f\t%d\t%d\t%d\t%d\t%s")
-        np.savetxt (test_set_file_name, np.concatenate ((test_label, test_car_ident), axis=1), fmt = "%.2f\t%d\t%d\t%d\t%d\t%s")
-    else:
-        train_data = nn.X_train_set
-        train_label = nn.y_train_set
-        test_data = nn.X_test_set
-        test_label = nn.y_test_set
-        if using_car_ident_flag == 1:
-            test_car_ident = nn.car_ident_code_total_set[train_data.shape[0]:]
+    train_data = nn.X_train_set
+    train_label = nn.y_train_set
+    test_data = nn.X_test_set
+    test_label = nn.y_test_set
+    test_car_ident = nn.car_ident_code_total_set[train_data.shape[0]:]
 
     print ("train_data:", train_data.shape)
     print ("train_label:", train_label.shape)
     print ("test_data:", test_data.shape)
     print ("test_label:", test_label.shape)
+<<<<<<< HEAD
     print ("train_data:", train_data.shape)
  
     if using_CV_flag == 0:
@@ -894,24 +913,11 @@ if __name__ == '__main__':
          
     
     sys.exit (-1)
+=======
+>>>>>>> b80ae4f1ff9c44331a1a9d4aac5176b20555a405
 
+    #sys.exit (-1)
+ 
+    nn.car2vect(train_data=train_data, train_label=train_label, test_data=test_data, test_label=test_label, test_car_ident=test_car_ident, no_neuron=100, dropout_val=1, model_path=model_path, d_ident=nn.d_ident,d_embed=3, d_remain=nn.d_remain, no_neuron_embed=1000) # 1000, 3, 6000
+                 
     
-    # These lines below used for choosing hyper-param
-    txt = []
-    for no_hidden_layer in list_no_hidden_layer_h:  
-        for no_neuron in list_no_unit_in_a_layer_h:  
-            for dropout in list_dropout_h:
-                print ("no_hidden_layer: %d, no_neuron: %d, dropout: %.2f" % (no_hidden_layer, no_neuron, dropout))
-                if args.mode ==  'train':
-                    test_relative_err = nn.train_nn(train_data, train_label, test_data, test_label, no_neuron, no_hidden_layer, dropout, model_path)
-                    #test_relative_err = nn.test_CV (no_neuron, no_hidden_layer, dropout, model_path)
-                #elif args.mode == 'test':
-                    #test_relative_err = nn.test_nn(test_data, test_label, no_neuron, no_hidden_layer, model_path)
-                    txt.append ((no_hidden_layer, no_neuron, dropout, test_relative_err))
-                else:
-                    print('mode input is wrong')
-    np.savetxt (mean_err_file_name, txt, fmt="%d\t%d\t%.2f\t%f")
-    stop_time = time.time()
-    print ("Total time (s):", stop_time - start_time)
-
-

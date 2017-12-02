@@ -54,20 +54,20 @@ dataset =  "full" # "full", or "partial", or "small"
 using_CV_flag = 0
 
 """ Using onehot or not"""
-using_one_hot_flag = 1 # 1-yes, 0-no
+using_one_hot_flag = 0 # 1-yes, 0-no
 
 """ Encode onehot for car indent"""
-using_car_ident_flag = 1 # 1-yes, 0-no
+using_car_ident_flag = 0 # 1-yes, 0-no
 
 """ Shuffle dataset or not"""
-using_shuffle_flag = 1
+using_shuffle_flag = 0
 
 """ Add noise to label of dataset or not to verify results"""
 add_noise_flag = 0
 
 
 """ Remove oulier"""
-remove_outliers_flag = 0 # 1-yes, 0-no
+remove_outliers_flag = 1 # 1-yes, 0-no
 
 """ Regression model will be used"""
 list_regression_model = ["neural_network"] #["basic_tree", "gd_boosting", "random_forest", "ada_boost"] #["ridge", "lasso"]#, "basic_tree"]#["basic_tree"] ["neural_network"] #
@@ -195,26 +195,23 @@ data_test_length     = int (0.5 + input_no * data_test_percentage)
 
 
 if using_one_hot_flag == 0:
-    feature_coding = "Without onehot"
+    feature_coding = "With onehot"#"Without onehot" # TODO: used for get_data_matrix_car_ident
 else:
     feature_coding = "With onehot"
 
-if using_car_ident_flag == 0:
-    feature_need_encoding = ["manufacture_code","rep_model_code","car_code","model_code","rating_code","car_type", "trans_mode", "fuel_type"]
-else:
-    feature_need_encoding = ["car_type", "trans_mode", "fuel_type"]
-
 feature_need_label = ["car_type", "trans_mode", "fuel_type"]
 feature_need_impute = ["rating_code"]#, "car_type"]
-feature_need_remove_outlier = ["vehicle_mile", "no_click", "recovery_fee"]#, "price"]
+feature_need_remove_outlier = ["price"] #"vehicle_mile", "no_click", "recovery_fee"]#, 
 feature_need_scaler = ["vehicle_mile", "no_click", "recovery_fee", "price"]
 
-#feature_need_not_remove_outlier = features[:]
-#for feature in feature_need_remove_outlier:
-#    feature_need_not_remove_outlier.remove (feature)
-feature_need_not_remove_outlier = ["manufacture_code","rep_model_code","car_code","model_code","rating_code","car_type","actual_advertising_date","sale_date","year","trans_mode","fuel_type","price","sale_state","city","district","dealer_name","cylinder_disp","tolerance_history","sale_history","rental_history","no_severe_accident","no_severe_water_accident","no_moderate_water_accident","total_no_accident","no_message_contact","no_call_contact","option_navigation","option_sunLoop","option_smartKey","option_xenonLight","option_heatLineSheet","option_ventilationSheet","option_rearSensor","option_curtainAirbag","no_cover_side_recovery","no_cover_side_exchange","no_corrosive_part"]
+# list of features whether it needs remove outliers 
+feature_need_not_remove_outlier = [feature for feature in features if feature not in feature_need_remove_outlier] 
+car_ident = ["manufacture_code","rep_model_code","car_code","model_code","rating_code"]
+features_remove_car_ident = [feature for feature in features if feature not in car_ident] 
 
-features_remove_car_ident = ["car_type","year","trans_mode","fuel_type","vehicle_mile","cylinder_disp","tolerance_history","sale_history","rental_history","no_severe_accident","no_severe_water_accident","no_moderate_water_accident","total_no_accident","recovery_fee","no_click","no_message_contact","no_call_contact", "option_navigation","option_sunLoop","option_smartKey","option_xenonLight","option_heatLineSheet","option_ventilationSheet","option_rearSensor","option_curtainAirbag","no_cover_side_recovery","no_cover_side_exchange","no_corrosive_part"]# 28 features
+# list of features whether it needs one-hot encode
+feature_need_encoding = ["car_type", "trans_mode", "fuel_type"]
+features_not_need_encoding = [feature for feature in features_remove_car_ident if feature not in feature_need_encoding] 
 
 strategy_h = "most_frequent"
 
