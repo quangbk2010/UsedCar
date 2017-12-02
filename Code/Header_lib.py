@@ -181,7 +181,7 @@ print ('data set length:', input_no)
 print ("Output:", output)
 
 """ These below parameters used in Validation"""
-data_training_percentage = 0.8
+data_training_percentage = 0.9
 data_training_length     = int (0.5 + input_no * data_training_percentage)
 #print ('data_training_length', data_training_length)
 
@@ -189,7 +189,7 @@ data_validation_percentage = 0.0
 data_validation_length     = int (0.5 + input_no * data_validation_percentage)
 #print ('data_validation_length', data_validation_length)
 
-data_test_percentage = 0.2
+data_test_percentage = 0.1
 data_test_length     = int (0.5 + input_no * data_test_percentage)
 #print ('data_test_length', data_test_length)
 
