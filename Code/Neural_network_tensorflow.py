@@ -82,7 +82,7 @@ class Evaluation ():
             return 1
         return 0
     
-class Tensor_NN(Support,Dataset):
+class Tensor_NN(Support, Dataset):
 
     def __init__(self, args):
         #from args
@@ -123,7 +123,7 @@ class Tensor_NN(Support,Dataset):
             expand_dataset = self.tree_GradientBoostingRegressor (self.X_train_set, self.y_train_set, self.X_test_set, self.y_test_set)
             sorted_expand_dataset = expand_dataset.sort_values ("price_2", ascending=True)
 
-            print ("sorted_expand_dataset:", sorted_expand_dataset[['set_flag','price_2', 'price','manufacture_code']])
+            #print ("sorted_expand_dataset:", sorted_expand_dataset[['set_flag','price_2', 'price','manufacture_code']])
             self.car_ident_code_total_set, X_total_set, self.d_ident, self.d_remain = self.get_data_matrix_car_ident_flag (sorted_expand_dataset)
             #print ("matrix 4:",X_total_set)
 
@@ -169,7 +169,7 @@ class Tensor_NN(Support,Dataset):
 
         """scaler = StandardScaler()  
         scaler.fit(X_total_set)  
-        X_total_set = scaler.transform(X_total_set)  """
+        X_total_set = scaler.transform(X_total_set)"""
             
 
         if output == "price":
@@ -372,7 +372,7 @@ class Tensor_NN(Support,Dataset):
                 + d_remain: the dimension of the remaining features (after one-hot encoding)
             - Purpose: Create the model of NN with using car2vect: from the one-hot encode of a car identification, use word2vect to embed it into a vector with small dimension.
         """
-    
+        print ("-----------build car2vect model") 
         #tf.reset_default_graph() 
 
         x_ident = tf.placeholder(tf.float32, [None, d_ident])
@@ -392,16 +392,10 @@ class Tensor_NN(Support,Dataset):
 
         #output1 = slim.fully_connected(x_ident, d_ident + 1, scope='input_embed', activation_fn=tf.nn.relu)
         output1 = slim.fully_connected(x_ident, no_neuron_embed, scope='input_embed', activation_fn=tf.nn.relu)
-<<<<<<< HEAD
         output2 = slim.fully_connected(output1, no_neuron_embed, scope='hidden_embed1', activation_fn=tf.nn.relu)
         #output3 = slim.fully_connected(output2, no_neuron_embed, scope='hidden_embed2', activation_fn=tf.nn.relu)
         x_embed = slim.fully_connected(output2, d_embed, scope='output_embed', activation_fn=tf.nn.relu) # 3-dimension of embeding NN
-=======
-        #output2 = slim.fully_connected(output1, no_neuron_embed, scope='hidden_embed1', activation_fn=tf.nn.relu)
-        #output3 = slim.fully_connected(output2, no_neuron_embed, scope='hidden_embed2', activation_fn=tf.nn.relu)
-        x_embed = slim.fully_connected(output1, d_embed, scope='output_embed', activation_fn=tf.nn.relu) # 3-dimension of embeding NN
->>>>>>> b80ae4f1ff9c44331a1a9d4aac5176b20555a405
-
+        
         input3 = tf.concat ([x_remain, x_embed], 1)
 
         #output3 = slim.fully_connected(input3, d_remain + d_embed + 1, scope='input_main', activation_fn=tf.nn.relu)
@@ -757,7 +751,7 @@ class Tensor_NN(Support,Dataset):
             return epoch_test_relative_err_val
    
     
-    def tree_GradientBoostingRegressor (self, train_data, train_label, test_data, test_label, n_estimators = 10000, learning_rate = 0.00125, loss = 'lad'):
+    '''def tree_GradientBoostingRegressor (self, train_data, train_label, test_data, test_label, n_estimators = 1000, learning_rate = 0.125, loss = 'lad'):
         
         """
             Apply GradientBoostingRegressor
@@ -799,7 +793,7 @@ class Tensor_NN(Support,Dataset):
         df = pd.DataFrame (data=total_dataset, index=index, columns=columns)
         print (df[['set_flag','price_2','manufacture_code']])#.loc[:2])
         return df
-        #sys.exit (-1)
+        #sys.exit (-1)'''
 
     #def test_CV (self, no_neuron, no_hidden_layer, dropout_val, model_path):
     def test_CV (self, model_path):
@@ -902,22 +896,8 @@ if __name__ == '__main__':
     print ("train_label:", train_label.shape)
     print ("test_data:", test_data.shape)
     print ("test_label:", test_label.shape)
-<<<<<<< HEAD
-    print ("train_data:", train_data.shape)
- 
-    if using_CV_flag == 0:
-        if using_car_ident_flag == 1:
-            nn.car2vect(train_data=train_data, train_label=train_label, test_data=test_data, test_label=test_label, test_car_ident=test_car_ident, no_neuron=1000, dropout_val=1, model_path=model_path, d_ident=nn.d_ident,d_embed=3, d_remain=nn.d_remain, no_neuron_embed=6000) # 1000, 3, 6000
-        else:
-            test_relative_err = nn.train_nn(train_data=train_data, train_label=train_label, test_data=test_data, test_label=test_label, no_neuron=6000, no_hidden_layer=2, dropout_val=1, model_path=model_path)
-         
-    
-    sys.exit (-1)
-=======
->>>>>>> b80ae4f1ff9c44331a1a9d4aac5176b20555a405
-
-    #sys.exit (-1)
  
     nn.car2vect(train_data=train_data, train_label=train_label, test_data=test_data, test_label=test_label, test_car_ident=test_car_ident, no_neuron=100, dropout_val=1, model_path=model_path, d_ident=nn.d_ident,d_embed=3, d_remain=nn.d_remain, no_neuron_embed=1000) # 1000, 3, 6000
-                 
-    
+        
+         
+       

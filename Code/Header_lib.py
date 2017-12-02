@@ -48,7 +48,7 @@ features = ["manufacture_code","rep_model_code","car_code","model_code","rating_
 #features = ["manufacture_code","rep_model_code","car_code","model_code","rating_code","car_type","year","trans_mode","vehicle_mile","cylinder_disp","rental_history","total_no_accident","recovery_fee","no_click","no_message_contact","no_call_contact", "option_navigation","option_sunLoop","option_smartKey","option_xenonLight","option_heatLineSheet","option_ventilationSheet","option_rearSensor","option_curtainAirbag","no_cover_side_recovery","no_cover_side_exchange"] # 26 features
 
 """ What type of dataset we will use"""
-dataset =  "full" # "full", or "partial", or "small"
+dataset =  "partial" # "full", or "partial", or "small"
 
 """ Using cross validation or not"""
 using_CV_flag = 0
@@ -181,7 +181,7 @@ print ('data set length:', input_no)
 print ("Output:", output)
 
 """ These below parameters used in Validation"""
-data_training_percentage = 0.8
+data_training_percentage = 0.9
 data_training_length     = int (0.5 + input_no * data_training_percentage)
 #print ('data_training_length', data_training_length)
 
@@ -189,7 +189,7 @@ data_validation_percentage = 0.0
 data_validation_length     = int (0.5 + input_no * data_validation_percentage)
 #print ('data_validation_length', data_validation_length)
 
-data_test_percentage = 0.2
+data_test_percentage = 0.1
 data_test_length     = int (0.5 + input_no * data_test_percentage)
 #print ('data_test_length', data_test_length)
 

@@ -144,11 +144,11 @@ class Dataset (Data_preprocessing, DataFrameImputer):
 
         
         # Shuffle dataset (dataframe)
-        #total_dataset = total_dataset.reindex(np.random.permutation(total_dataset.index))
+        total_dataset = total_dataset.reindex(np.random.permutation(total_dataset.index))
 
         
         # Sort by actual advertising date
-        total_dataset = total_dataset.sort_values ("actual_advertising_date", ascending=True)
+        #total_dataset = total_dataset.sort_values ("actual_advertising_date", ascending=True)
         
         # Remove the data points with price == 0
         #total_dataset = total_dataset[total_dataset["sale_state"] == "Sold-out"]
@@ -587,6 +587,13 @@ class Dataset (Data_preprocessing, DataFrameImputer):
         X = np.concatenate ((X_need_not_encoding, X_need_encoding, X_ident), axis=1)
         #X = np.concatenate ((X_need_not_encoding, X), axis=1)
 
+        scaler = StandardScaler()  
+        scaler.fit(X)  
+        X = scaler.transform(X)
+
+        print ("[Get data matrix car_ident_flag] X:", X[:2])
+        sys.exit (-1)
+
         d_remain = X.shape[1] - d_ident - 3
         print ("X.shape2", X.shape, d_remain, d_ident)
         # The first column of X should be 'set_flag'
@@ -814,13 +821,11 @@ class Support(Dataset):
         """
             Apply GradientBoostingRegressor
         """        
-        train_data_bar = self.get_expand_data (train_data)
-                
         reg_tree = ensemble.GradientBoostingRegressor(n_estimators = n_estimators, learning_rate = learning_rate, loss = loss)
         stime = time.time()
 
         print ("training...")
-        regr_tree.fit(train_data_bar,train_label)
+        reg_tree.fit(train_data, train_label)
         print("Time for GradientBoostingRegressor learning_rate 0.1 tree fitting: %.3f" % (time.time() - stime))
 
         # Testing
@@ -833,6 +838,7 @@ class Support(Dataset):
         predicted_test_label = self.get_predicted_label (reg_tree, test_data)
         test_err = self.get_err (err_type, predicted_test_label, test_label) 
         print ("[DecisionTreeRegressor] Relative err: train_err: %.3f %%, test_err: %.3f %%" % (train_err, test_err))
+        #sys.exit (-1)
 
         # assign set_flag and concatenate the dataset with both set_flag and price_2
         train_length = train_data.shape[0]
@@ -850,8 +856,8 @@ class Support(Dataset):
         columns = ['set_flag'] + ['price_2'] + features + ['price']
         index = [i for i in range (1, total_length + 1)]
         df = pd.DataFrame (data=total_dataset, index=index, columns=columns)
-        print (df)
-        sys.exit (-1)
+        return df
+        #print (df)
         
         
     def __str__(self):
