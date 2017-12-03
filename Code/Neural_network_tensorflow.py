@@ -179,11 +179,8 @@ class Tensor_NN(Support, Dataset):
         print ("train_length", train_length)
 
         """scaler = StandardScaler()  
-<<<<<<< HEAD
         scaler.fit(X_total_set)  
-=======
         scaler.fit(X_total_set)
->>>>>>> b6cdf274b026dfddcd9fcecd20dde584e21428b3
         X_total_set = scaler.transform(X_total_set)"""
             
 
@@ -733,56 +730,7 @@ class Tensor_NN(Support, Dataset):
 
             return epoch_test_relative_err_val
    
-    
-    '''def tree_GradientBoostingRegressor (self, train_data, train_label, test_data, test_label, n_estimators = 1000, learning_rate = 0.125, loss = 'lad'):
-        
-        """
-            Apply GradientBoostingRegressor
-        """        
-        reg_tree = ensemble.GradientBoostingRegressor(n_estimators = n_estimators, learning_rate = learning_rate, loss = loss)
-        stime = time.time()
 
-        print ("training...")
-        reg_tree.fit(train_data,train_label)
-        print("Time for GradientBoostingRegressor learning_rate 0.1 tree fitting: %.3f" % (time.time() - stime))
-
-        # Testing
-        print ("testing...")
-        err_type = "relative_err"
-        print (train_data.shape, train_label.shape)
-        predicted_train_label = self.get_predicted_label (reg_tree, train_data) 
-        train_err = self.get_err (err_type, predicted_train_label, train_label)
-        
-        predicted_test_label = self.get_predicted_label (reg_tree, test_data)
-        test_err = self.get_err (err_type, predicted_test_label, test_label) 
-        print ("[DecisionTreeRegressor] Relative err: train_err: %.3f %%, test_err: %.3f %%" % (train_err, test_err))
-        sys.exit (-1)
-
-        # assign set_flag and concatenate the dataset with both set_flag and price_2
-        train_length = train_data.shape[0]
-        test_length = test_data.shape[0]
-        train_set_flag = np.zeros ((train_length, 1))
-        test_set_flag = np.ones ((test_length, 1))
-        train_set = np.concatenate ((train_set_flag, train_label, train_data, train_label), axis = 1)
-        test_set = np.concatenate ((test_set_flag, predicted_test_label, test_data, test_label), axis = 1)
-        
-        # Concatenate to total_dataset
-        total_dataset = np.concatenate ((train_set, test_set), axis = 0)
-        total_length = total_dataset.shape[0]
-
-        # return expanded dataframe
-        columns = ['set_flag'] + ['price_2'] + features + ['price']
-        index = [i for i in range (1, total_length + 1)]
-        df = pd.DataFrame (data=total_dataset, index=index, columns=columns)
-        print (df[['set_flag','price_2','manufacture_code']])#.loc[:2])
-        return df
-<<<<<<< HEAD
-        #sys.exit (-1)'''
-
-=======
-        #sys.exit (-1)
-'''
->>>>>>> b6cdf274b026dfddcd9fcecd20dde584e21428b3
     #def test_CV (self, no_neuron, no_hidden_layer, dropout_val, model_path):
     def test_CV (self, model_path):
         
@@ -884,22 +832,10 @@ if __name__ == '__main__':
     print ("train_label:", train_label.shape)
     print ("test_data:", test_data.shape)
     print ("test_label:", test_label.shape)
-<<<<<<< HEAD
  
     nn.car2vect(train_data=train_data, train_label=train_label, test_data=test_data, test_label=test_label, test_car_ident=test_car_ident, no_neuron=100, dropout_val=1, model_path=model_path, d_ident=nn.d_ident,d_embed=3, d_remain=nn.d_remain, no_neuron_embed=1000) # 1000, 3, 6000
-        
-         
-       
-=======
 
-    print ("train_data:", train_data[:5])
-    print ("train_label:", train_label[:5])
-    print ("test_data:", test_data[:5])
-    print ("test_label:", test_label[:5])
 
-    #sys.exit (-1)
- 
-    nn.car2vect(train_data=train_data, train_label=train_label, test_data=test_data, test_label=test_label, test_car_ident=test_car_ident, no_neuron=1000, dropout_val=1, model_path=model_path, d_ident=nn.d_ident,d_embed=3, d_remain=nn.d_remain, no_neuron_embed=10000) # 1000, 3, 6000
-                 
-    
->>>>>>> b6cdf274b026dfddcd9fcecd20dde584e21428b3
+
+
+

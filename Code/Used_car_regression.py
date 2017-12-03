@@ -527,13 +527,6 @@ class Dataset (Data_preprocessing, DataFrameImputer):
         X = np.concatenate ((X_need_not_encoding, X_need_encoding, X_ident), axis=1)
         print ("[get_data_matrix_car_ident_flag] X:", X[:2])
 
-        scaler = StandardScaler()  
-        scaler.fit(X)  
-        X = scaler.transform(X)
-
-        print ("[Get data matrix car_ident_flag] X:", X[:2])
-        sys.exit (-1)
-
         d_remain = X.shape[1] - d_ident - 3
         print ("[get_data_matrix_car_ident_flag] X.shape", X.shape, "d_remain", d_remain, "d_ident", d_ident)
         # The first column of X should be 'set_flag'
@@ -778,7 +771,6 @@ class Support(Dataset):
         predicted_test_label = self.get_predicted_label (reg_tree, test_data)
         test_err = self.get_err (err_type, predicted_test_label, test_label) 
         print ("[DecisionTreeRegressor] Relative err: train_err: %.3f %%, test_err: %.3f %%" % (train_err, test_err))
-        #sys.exit (-1)
 
         # assign set_flag and concatenate the dataset with both set_flag and price_2
         train_length = train_data.shape[0]
