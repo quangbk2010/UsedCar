@@ -445,9 +445,9 @@ class Tensor_NN(Support, Dataset):
 
         #output1 = slim.fully_connected(x_ident, d_ident + 1, scope='input_embed', activation_fn=tf.nn.relu)
         output1 = slim.fully_connected(x_ident, no_neuron_embed, scope='input_embed', activation_fn=tf.nn.relu)
-        output2 = slim.fully_connected(output1, no_neuron_embed, scope='hidden_embed1', activation_fn=tf.nn.relu)
+        #output2 = slim.fully_connected(output1, no_neuron_embed, scope='hidden_embed1', activation_fn=tf.nn.relu)
         #output3 = slim.fully_connected(output2, no_neuron_embed, scope='hidden_embed2', activation_fn=tf.nn.relu)
-        x_embed = slim.fully_connected(output2, d_embed, scope='output_embed', activation_fn=tf.nn.relu) # 3-dimension of embeding NN
+        x_embed = slim.fully_connected(output1, d_embed, scope='output_embed', activation_fn=tf.nn.relu) # 3-dimension of embeding NN
         
         input3 = tf.concat ([x_remain, x_embed], 1)
 
