@@ -82,7 +82,7 @@ class Evaluation ():
             return 1
         return 0
     
-class Tensor_NN(Support,Dataset):
+class Tensor_NN(Support, Dataset):
 
     def __init__(self, args):
         #from args
@@ -104,6 +104,7 @@ class Tensor_NN(Support,Dataset):
         self.dim_label = args.dim_label
         self.no_hidden_layer = args.no_hidden_layer
         self.no_neuron = args.no_neuron
+        self.no_neuron_embed = args.no_neuron_embed
         
         self.model_dir = args.model_dir
         self.model_name = args.model_name
@@ -121,6 +122,8 @@ class Tensor_NN(Support,Dataset):
         train_y_filename = "./Dataframe/[" + dataset + "]train_y.h5"
         test_X_filename = "./Dataframe/[" + dataset + "]test_X.h5"
         test_y_filename = "./Dataframe/[" + dataset + "]test_y.h5"
+        car_ident_code_filename = "./Dataframe/[" + dataset + "]car_ident_code.h5"
+        dim_filename = "./Dataframe/[" + dataset + "]dim_ident_remain.h5"
         key = "df"
 
         if using_car_ident_flag == 1:
@@ -174,12 +177,17 @@ class Tensor_NN(Support,Dataset):
                 y_train_set_df = pd.DataFrame (self.y_train_set)
                 X_test_set_df = pd.DataFrame (self.X_test_set)
                 y_test_set_df = pd.DataFrame (self.y_test_set)
+                car_ident_code_set_df = pd.DataFrame (self.car_ident_code_total_set)
 
                 print ("Store these dataframes into coresponding hdf file")
                 X_train_set_df.to_hdf (train_X_filename, key)       
                 y_train_set_df.to_hdf (train_y_filename, key)       
                 X_test_set_df.to_hdf (test_X_filename, key)       
                 y_test_set_df.to_hdf (test_y_filename, key)       
+                car_ident_code_set_df.to_hdf (car_ident_code_filename, key)       
+                np.savetxt (dim_filename, (self.d_ident, self.d_remain), fmt="%d")
+
+
                 print ("Time for creating the sorted and expanded dataset, divide into train, test set: %.3f" % (time.time() - stime))        
             else:
                 print ("Reload the train, test dataset using HDF5 (Pytables)")
@@ -187,7 +195,16 @@ class Tensor_NN(Support,Dataset):
                 self.y_train_set = np.array (pd.read_hdf (train_y_filename, key))
                 self.X_test_set = np.array (pd.read_hdf (test_X_filename, key))    
                 self.y_test_set = np.array (pd.read_hdf (test_y_filename, key))      
+                self.car_ident_code_total_set = np.array (pd.read_hdf (car_ident_code_filename, key))      
+                dim_ident_remain_file = open(dim_filename,"r") 
+                self.d_ident = int (dim_ident_remain_file.readline())
+                self.d_remain = int (dim_ident_remain_file.readline())
+                #print (self.d_ident)
+                #print (self.d_remain)
+                #sys.exit (-1)
+
                 print ("Time for Loading and preprocessing sorted and expand dataset: %.3f" % (time.time() - stime)) 
+            #sys.exit (-1)
  
 
         else:
@@ -211,6 +228,7 @@ class Tensor_NN(Support,Dataset):
         print ("train_length", train_length)
 
         """scaler = StandardScaler()  
+        scaler.fit(X_total_set)  
         scaler.fit(X_total_set)
         X_total_set = scaler.transform(X_total_set)"""
             
@@ -415,7 +433,7 @@ class Tensor_NN(Support,Dataset):
                 + d_remain: the dimension of the remaining features (after one-hot encoding)
             - Purpose: Create the model of NN with using car2vect: from the one-hot encode of a car identification, use word2vect to embed it into a vector with small dimension.
         """
-    
+        print ("-----------build car2vect model") 
         #tf.reset_default_graph() 
 
         x_ident = tf.placeholder(tf.float32, [None, d_ident])
@@ -427,10 +445,10 @@ class Tensor_NN(Support,Dataset):
 
         #output1 = slim.fully_connected(x_ident, d_ident + 1, scope='input_embed', activation_fn=tf.nn.relu)
         output1 = slim.fully_connected(x_ident, no_neuron_embed, scope='input_embed', activation_fn=tf.nn.relu)
-        #output2 = slim.fully_connected(output1, no_neuron_embed, scope='hidden_embed1', activation_fn=tf.nn.relu)
+        output2 = slim.fully_connected(output1, no_neuron_embed, scope='hidden_embed1', activation_fn=tf.nn.relu)
         #output3 = slim.fully_connected(output2, no_neuron_embed, scope='hidden_embed2', activation_fn=tf.nn.relu)
-        x_embed = slim.fully_connected(output1, d_embed, scope='output_embed', activation_fn=tf.nn.relu) # 3-dimension of embeding NN
-
+        x_embed = slim.fully_connected(output2, d_embed, scope='output_embed', activation_fn=tf.nn.relu) # 3-dimension of embeding NN
+        
         input3 = tf.concat ([x_remain, x_embed], 1)
 
         #output3 = slim.fully_connected(input3, d_remain + d_embed + 1, scope='input_main', activation_fn=tf.nn.relu)
@@ -761,51 +779,7 @@ class Tensor_NN(Support,Dataset):
 
             return epoch_test_relative_err_val
    
-    
-    '''def tree_GradientBoostingRegressor (self, train_data, train_label, test_data, test_label, n_estimators = 1000, learning_rate = 0.125, loss = 'lad'):
-        
-        """
-            Apply GradientBoostingRegressor
-        """        
-        reg_tree = ensemble.GradientBoostingRegressor(n_estimators = n_estimators, learning_rate = learning_rate, loss = loss)
-        stime = time.time()
 
-        print ("training...")
-        reg_tree.fit(train_data,train_label)
-        print("Time for GradientBoostingRegressor learning_rate 0.1 tree fitting: %.3f" % (time.time() - stime))
-
-        # Testing
-        print ("testing...")
-        err_type = "relative_err"
-        print (train_data.shape, train_label.shape)
-        predicted_train_label = self.get_predicted_label (reg_tree, train_data) 
-        train_err = self.get_err (err_type, predicted_train_label, train_label)
-        
-        predicted_test_label = self.get_predicted_label (reg_tree, test_data)
-        test_err = self.get_err (err_type, predicted_test_label, test_label) 
-        print ("[DecisionTreeRegressor] Relative err: train_err: %.3f %%, test_err: %.3f %%" % (train_err, test_err))
-        sys.exit (-1)
-
-        # assign set_flag and concatenate the dataset with both set_flag and price_2
-        train_length = train_data.shape[0]
-        test_length = test_data.shape[0]
-        train_set_flag = np.zeros ((train_length, 1))
-        test_set_flag = np.ones ((test_length, 1))
-        train_set = np.concatenate ((train_set_flag, train_label, train_data, train_label), axis = 1)
-        test_set = np.concatenate ((test_set_flag, predicted_test_label, test_data, test_label), axis = 1)
-        
-        # Concatenate to total_dataset
-        total_dataset = np.concatenate ((train_set, test_set), axis = 0)
-        total_length = total_dataset.shape[0]
-
-        # return expanded dataframe
-        columns = ['set_flag'] + ['price_2'] + features + ['price']
-        index = [i for i in range (1, total_length + 1)]
-        df = pd.DataFrame (data=total_dataset, index=index, columns=columns)
-        print (df[['set_flag','price_2','manufacture_code']])#.loc[:2])
-        return df
-        #sys.exit (-1)
-'''
     #def test_CV (self, no_neuron, no_hidden_layer, dropout_val, model_path):
     def test_CV (self, model_path):
         
@@ -875,7 +849,8 @@ if __name__ == '__main__':
     parser.add_argument('--dim_data', type=int, default=24)
     parser.add_argument('--dim_label', type=int, default=1)
     parser.add_argument('--no_hidden_layer', type=int, default = 1) #not implement variabel network layer
-    parser.add_argument('--no_neuron', type=int, default = 1000)
+    parser.add_argument('--no_neuron', type=int, default = 6000)
+    parser.add_argument('--no_neuron_embed', type=int, default = 100)
     parser.add_argument('--k_fold', type=int, default = -1) # set it to -1 when don't want to use k-fold CV
 
     args = parser.parse_args()
@@ -907,14 +882,6 @@ if __name__ == '__main__':
     print ("train_label:", train_label.shape)
     print ("test_data:", test_data.shape)
     print ("test_label:", test_label.shape)
-
-    print ("train_data:", train_data[:5])
-    print ("train_label:", train_label[:5])
-    print ("test_data:", test_data[:5])
-    print ("test_label:", test_label[:5])
-
-    #sys.exit (-1)
  
-    nn.car2vect(train_data=train_data, train_label=train_label, test_data=test_data, test_label=test_label, test_car_ident=test_car_ident, no_neuron=1000, dropout_val=1, model_path=model_path, d_ident=nn.d_ident,d_embed=3, d_remain=nn.d_remain, no_neuron_embed=6000) # 1000, 3, 6000
-                 
-    
+    nn.car2vect(train_data=train_data, train_label=train_label, test_data=test_data, test_label=test_label, test_car_ident=test_car_ident, no_neuron=nn.no_neuron, dropout_val=1, model_path=model_path, d_ident=nn.d_ident,d_embed=3, d_remain=nn.d_remain, no_neuron_embed=nn.no_neuron_embed) # 1000, 3, 6000
+
