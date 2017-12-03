@@ -138,46 +138,55 @@ class Dataset (Data_preprocessing, DataFrameImputer):
         stime = time.time()
         self.headers = full_features
         dtype_dict = full_features_dict
-        total_dataset = pd.read_excel (dataset_excel_file, names = self.headers, converters = dtype_dict, header = 0)
+
+        filename = "./Dataframe/[" + dataset + "]total_dataframe_Initial.h5"
+        key = "df"
+        if os.path.isfile (filename) == False:
+            print ("Load dataset from excel file")
+            total_dataset = pd.read_excel (dataset_excel_file, names = self.headers, converters = dtype_dict, header = 0)
+            # Shuffle dataset (dataframe)
+            total_dataset = total_dataset.reindex(np.random.permutation(total_dataset.index))
+
+            
+            # Sort by actual advertising date
+            #total_dataset = total_dataset.sort_values ("actual_advertising_date", ascending=True)
+            
+            # Remove the data points with price == 0
+            #total_dataset = total_dataset[total_dataset["sale_state"] == "Sold-out"]
+            #print ("2.", total_dataset.shape)
+
+            # Remove the data points with price == 0
+            #total_dataset = total_dataset[total_dataset["price"] != 0]
+            #print ("3.", total_dataset.shape)
+
+            # Remove outliers
+            #total_dataset = total_dataset[np.abs(total_dataset["price"] - total_dataset["price"].mean()) / total_dataset["price"].std() < 1]
+            #print ("4.", total_dataset.shape)
+
+            # Impute missing values from here
+            total_dataset = DataFrameImputer().fit_transform (total_dataset)
+
+            # There are some columns with string values (E.g. Car type) -> need to label it as numerical labels
+            total_dataset = MultiColumnLabelEncoder(columns = feature_need_label).fit_transform(total_dataset)
+
+            # Standard scale dataset
+            """scaled_data_set = total_dataset.copy()
+            scaled_features = ['vehicle_mile', 'cylinder_disp','recovery_fee']
+            scaled_data_set = scaled_data_set[scaled_features]
+
+            scaler = StandardScaler()  
+            scaler.fit(scaled_data_set.values)  
+            total_dataset = scaler.transform(scaled_data_set.values)  """
+
+            print ("Store the dataframe into a hdf file")
+            total_dataset.to_hdf (filename, key)       
+            print ("Time for Loading dataset: %.3f" % (time.time() - stime))        
+        else:
+            print ("Reload dataset using HDF5 (Pytables)")
+            total_dataset = pd.read_hdf (filename, key)
+
         print ("1.", total_dataset.shape)
-
-        
-        # Shuffle dataset (dataframe)
-        total_dataset = total_dataset.reindex(np.random.permutation(total_dataset.index))
-
-        
-        # Sort by actual advertising date
-        #total_dataset = total_dataset.sort_values ("actual_advertising_date", ascending=True)
-        
-        # Remove the data points with price == 0
-        #total_dataset = total_dataset[total_dataset["sale_state"] == "Sold-out"]
-        #print ("2.", total_dataset.shape)
-
-        # Remove the data points with price == 0
-        #total_dataset = total_dataset[total_dataset["price"] != 0]
-        #print ("3.", total_dataset.shape)
-
-        # Remove outliers
-        #total_dataset = total_dataset[np.abs(total_dataset["price"] - total_dataset["price"].mean()) / total_dataset["price"].std() < 1]
-        #print ("4.", total_dataset.shape)
-
-        # Impute missing values from here
-        total_dataset = DataFrameImputer().fit_transform (total_dataset)
-
-        # There are some columns with string values (E.g. Car type) -> need to label it as numerical labels
-        total_dataset = MultiColumnLabelEncoder(columns = feature_need_label).fit_transform(total_dataset)
-
-        # Standard scale dataset
-        """scaled_data_set = total_dataset.copy()
-        scaled_features = ['vehicle_mile', 'cylinder_disp','recovery_fee']
-        scaled_data_set = scaled_data_set[scaled_features]
-
-        scaler = StandardScaler()  
-        scaler.fit(scaled_data_set.values)  
-        total_dataset = scaler.transform(scaled_data_set.values)  """
-
-
-        print ("Time for Loading dataset: %.3f" % (time.time() - stime))        
+        print ("Time for Loading and preprocessing dataset: %.3f" % (time.time() - stime))        
 
         self.total_dataset = total_dataset
     
@@ -754,14 +763,22 @@ class Support(Dataset):
         """
             Apply GradientBoostingRegressor
         """        
-        reg_tree = ensemble.GradientBoostingRegressor(n_estimators = n_estimators, learning_rate = learning_rate, loss = loss)
-        stime = time.time()
+        filename = "./Model/GradientBoostingTree/[" + dataset + "][GradientBoostingRegressor] finalized_model.sav"
+        if os.path.isfile (filename) == False:
+            reg_tree = ensemble.GradientBoostingRegressor(n_estimators = n_estimators, learning_rate = learning_rate, loss = loss)
+            stime = time.time()
 
-        print ("training...")
-        reg_tree.fit(train_data, train_label)
-        print("Time for GradientBoostingRegressor learning_rate 0.1 tree fitting: %.3f" % (time.time() - stime))
+            print ("training...")
+            reg_tree.fit(train_data, train_label)
+            print("Time for GradientBoostingRegressor learning_rate 0.1 tree fitting: %.3f" % (time.time() - stime))
+            # Save the model to disk
+            print ("save the model to disk")
+            pickle.dump(reg_tree, open(filename, 'wb'))
+        else:
+            # load the model from disk
+            print ("load the model from disk")
+            reg_tree = pickle.load(open(filename, 'rb')) 
 
-        # Testing
         print ("testing...")
         err_type = "relative_err"
         print (train_data.shape, train_label.shape)

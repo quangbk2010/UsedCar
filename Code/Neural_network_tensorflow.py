@@ -86,6 +86,7 @@ class Tensor_NN(Support,Dataset):
 
     def __init__(self, args):
         #from args
+        stime = time.time()
         self.gpu_idx = args.gpu_idx
 
         self.epoch = args.epoch
@@ -115,15 +116,29 @@ class Tensor_NN(Support,Dataset):
         self.feature_constraint = feature_constraint
         self.feature_constraint_values = feature_constraint_values
 
+        filename = "./Dataframe/[" + dataset + "]total_dataframe_SortedExpand.h5"
+        key = "df"
+
         if using_car_ident_flag == 1:
             (self.car_ident_code_total_set, self.X_total_set, self.y_total_set, self.X_train_set, self.y_train_set, self.X_test_set, self.y_test_set, self.d_ident, self.d_remain, self.car_ident_code_test_set) = self.get_data_label_car_ident (self.features, output)
             
         elif constraint_flag == 0:
             (self.X_total_set, self.y_total_set, self.X_train_set, self.y_train_set, self.X_test_set, self.y_test_set) = self.get_data_label (self.features, output)
-            expand_dataset = self.tree_GradientBoostingRegressor (self.X_train_set, self.y_train_set, self.X_test_set, self.y_test_set)
             
-            sorted_expand_dataset = expand_dataset.sort_values ("price_2", ascending=True)
-            #sorted_expand_dataset = expand_dataset.sort_values ("price", ascending=True)
+            if os.path.isfile (filename) == False:
+                expand_dataset = self.tree_GradientBoostingRegressor (self.X_train_set, self.y_train_set, self.X_test_set, self.y_test_set)
+            
+                #sorted_expand_dataset = expand_dataset.sort_values ("price", ascending=True)
+                sorted_expand_dataset = expand_dataset.sort_values ("price_2", ascending=True)
+                print ("Store the sorted expand dataframe into a hdf file")
+                sorted_expand_dataset.to_hdf (filename, key)       
+                print ("Time for creating the sorted and expanded dataset: %.3f" % (time.time() - stime))        
+            else:
+                print ("Reload the sorted expand dataset using HDF5 (Pytables)")
+                sorted_expand_dataset = pd.read_hdf (filename, key)
+                
+            #print (sorted_expand_dataset.loc[:3])
+            print ("Time for Loading and preprocessing sorted and expand dataset: %.3f" % (time.time() - stime)) 
 
             #print ("sorted_expand_dataset:", sorted_expand_dataset[['set_flag','price_2', 'price','manufacture_code']])
             self.car_ident_code_total_set, X_total_set, self.d_ident, self.d_remain = self.get_data_matrix_car_ident_flag (sorted_expand_dataset)
@@ -883,6 +898,6 @@ if __name__ == '__main__':
 
     #sys.exit (-1)
  
-    nn.car2vect(train_data=train_data, train_label=train_label, test_data=test_data, test_label=test_label, test_car_ident=test_car_ident, no_neuron=1000, dropout_val=1, model_path=model_path, d_ident=nn.d_ident,d_embed=3, d_remain=nn.d_remain, no_neuron_embed=10000) # 1000, 3, 6000
+    nn.car2vect(train_data=train_data, train_label=train_label, test_data=test_data, test_label=test_label, test_car_ident=test_car_ident, no_neuron=1000, dropout_val=1, model_path=model_path, d_ident=nn.d_ident,d_embed=3, d_remain=nn.d_remain, no_neuron_embed=6000) # 1000, 3, 6000
                  
     
