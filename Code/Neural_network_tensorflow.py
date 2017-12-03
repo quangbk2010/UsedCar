@@ -850,7 +850,7 @@ if __name__ == '__main__':
     parser.add_argument('--dim_label', type=int, default=1)
     parser.add_argument('--no_hidden_layer', type=int, default = 1) #not implement variabel network layer
     parser.add_argument('--no_neuron', type=int, default = 6000)
-    parser.add_argument('--no_neuron_embed', type=int, default = 100)
+    parser.add_argument('--no_neuron_embed', type=int, default = 1000)
     parser.add_argument('--k_fold', type=int, default = -1) # set it to -1 when don't want to use k-fold CV
 
     args = parser.parse_args()
