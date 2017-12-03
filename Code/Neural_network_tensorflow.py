@@ -86,6 +86,7 @@ class Tensor_NN(Support, Dataset):
 
     def __init__(self, args):
         #from args
+        stime = time.time()
         self.gpu_idx = args.gpu_idx
 
         self.epoch = args.epoch
@@ -115,47 +116,78 @@ class Tensor_NN(Support, Dataset):
         self.feature_constraint = feature_constraint
         self.feature_constraint_values = feature_constraint_values
 
+        sortedExpandSet = "./Dataframe/[" + dataset + "]total_dataframe_SortedExpand.h5"
+        train_X_filename = "./Dataframe/[" + dataset + "]train_X.h5"
+        train_y_filename = "./Dataframe/[" + dataset + "]train_y.h5"
+        test_X_filename = "./Dataframe/[" + dataset + "]test_X.h5"
+        test_y_filename = "./Dataframe/[" + dataset + "]test_y.h5"
+        key = "df"
+
         if using_car_ident_flag == 1:
             (self.car_ident_code_total_set, self.X_total_set, self.y_total_set, self.X_train_set, self.y_train_set, self.X_test_set, self.y_test_set, self.d_ident, self.d_remain, self.car_ident_code_test_set) = self.get_data_label_car_ident (self.features, output)
             
         elif constraint_flag == 0:
             (self.X_total_set, self.y_total_set, self.X_train_set, self.y_train_set, self.X_test_set, self.y_test_set) = self.get_data_label (self.features, output)
-            expand_dataset = self.tree_GradientBoostingRegressor (self.X_train_set, self.y_train_set, self.X_test_set, self.y_test_set)
             
-            sorted_expand_dataset = expand_dataset.sort_values ("price_2", ascending=True)
-            #sorted_expand_dataset = expand_dataset.sort_values ("price", ascending=True)
+            if os.path.isfile (train_X_filename) == False:
+                expand_dataset = self.tree_GradientBoostingRegressor (self.X_train_set, self.y_train_set, self.X_test_set, self.y_test_set)
+            
+                #sorted_expand_dataset = expand_dataset.sort_values ("price", ascending=True)
+                sorted_expand_dataset = expand_dataset.sort_values ("price_2", ascending=True)
 
-            #print ("sorted_expand_dataset:", sorted_expand_dataset[['set_flag','price_2', 'price','manufacture_code']])
-            self.car_ident_code_total_set, X_total_set, self.d_ident, self.d_remain = self.get_data_matrix_car_ident_flag (sorted_expand_dataset)
-            #print ("matrix 4:",X_total_set)
-            #sys.exit (-1)
-            train_set = X_total_set[X_total_set[:,0].astype(int)==0] # X_total_set here is 'set_flag' + 'price_2' + 'price' + 'X_remain' + 'X_ident'
-            X_train_set = train_set[:,3:]
-            train_length = X_train_set.shape[0]
-            train_price_2 = train_set[:,1]
-            train_price = train_set[:,2]
-            self.y_train_set = train_price.reshape (train_price.shape[0], 1)
-            print ("train:", self.X_train_set.shape, self.y_train_set.shape)
-            print ("d_ident:", self.d_ident, "d_remain:", self.d_remain)
+                #print ("Store the sorted expand dataframe into a hdf file")
+                #sorted_expand_dataset.to_hdf (filename, key)       
+                
+                #print (sorted_expand_dataset.loc[:3])
 
-            test_set = X_total_set[X_total_set[:,0].astype(int)==1] # X_total_set here is 'set_flag' + 'price_2' + 'price' + 'other features'
-            X_test_set = test_set[:,3:]
-            test_price_2 = test_set[:,1]
-            test_price = test_set[:,2]
-            self.y_test_set = test_price.reshape (test_price.shape[0], 1)
-            print ("test:", self.X_test_set.shape, self.y_test_set.shape)
+                #print ("sorted_expand_dataset:", sorted_expand_dataset[['set_flag','price_2', 'price','manufacture_code']])
+                self.car_ident_code_total_set, X_total_set, self.d_ident, self.d_remain = self.get_data_matrix_car_ident_flag (sorted_expand_dataset)
+                #print ("matrix 4:",X_total_set)
+                #sys.exit (-1)
+                train_set = X_total_set[X_total_set[:,0].astype(int)==0] # X_total_set here is 'set_flag' + 'price_2' + 'price' + 'X_remain' + 'X_ident'
+                X_train_set = train_set[:,3:]
+                train_length = X_train_set.shape[0]
+                train_price_2 = train_set[:,1]
+                train_price = train_set[:,2]
+                self.y_train_set = train_price.reshape (train_price.shape[0], 1)
+                print ("train:", self.X_train_set.shape, self.y_train_set.shape)
+                print ("d_ident:", self.d_ident, "d_remain:", self.d_remain)
 
-            X = np.concatenate ((X_train_set, X_test_set), axis = 0)
-            print ("pre_X", X[0])
+                test_set = X_total_set[X_total_set[:,0].astype(int)==1] # X_total_set here is 'set_flag' + 'price_2' + 'price' + 'other features'
+                X_test_set = test_set[:,3:]
+                test_price_2 = test_set[:,1]
+                test_price = test_set[:,2]
+                self.y_test_set = test_price.reshape (test_price.shape[0], 1)
+                print ("test:", self.X_test_set.shape, self.y_test_set.shape)
 
-            scaler = StandardScaler()  
-            X = scaler.fit_transform(X)
+                X = np.concatenate ((X_train_set, X_test_set), axis = 0)
+                print ("pre_X", X[0])
 
-            print ("aft_X", X[0])
-            self.X_train_set = X[:train_length]
-            self.X_test_set = X[train_length:]
-            #print ("price", test_price)
-            #sys.exit (-1)
+                scaler = StandardScaler()  
+                X = scaler.fit_transform(X)
+
+                print ("aft_X", X[0])
+                self.X_train_set = X[:train_length]
+                self.X_test_set = X[train_length:]
+
+                X_train_set_df = pd.DataFrame (self.X_train_set)
+                y_train_set_df = pd.DataFrame (self.y_train_set)
+                X_test_set_df = pd.DataFrame (self.X_test_set)
+                y_test_set_df = pd.DataFrame (self.y_test_set)
+
+                print ("Store these dataframes into coresponding hdf file")
+                X_train_set_df.to_hdf (train_X_filename, key)       
+                y_train_set_df.to_hdf (train_y_filename, key)       
+                X_test_set_df.to_hdf (test_X_filename, key)       
+                y_test_set_df.to_hdf (test_y_filename, key)       
+                print ("Time for creating the sorted and expanded dataset, divide into train, test set: %.3f" % (time.time() - stime))        
+            else:
+                print ("Reload the train, test dataset using HDF5 (Pytables)")
+                self.X_train_set = np.array (pd.read_hdf (train_X_filename, key))
+                self.y_train_set = np.array (pd.read_hdf (train_y_filename, key))
+                self.X_test_set = np.array (pd.read_hdf (test_X_filename, key))    
+                self.y_test_set = np.array (pd.read_hdf (test_y_filename, key))      
+                print ("Time for Loading and preprocessing sorted and expand dataset: %.3f" % (time.time() - stime)) 
  
 
         else:
@@ -839,3 +871,11 @@ if __name__ == '__main__':
 
 
 
+<<<<<<< HEAD
+=======
+    #sys.exit (-1)
+ 
+    nn.car2vect(train_data=train_data, train_label=train_label, test_data=test_data, test_label=test_label, test_car_ident=test_car_ident, no_neuron=1000, dropout_val=1, model_path=model_path, d_ident=nn.d_ident,d_embed=3, d_remain=nn.d_remain, no_neuron_embed=6000) # 1000, 3, 6000
+                 
+    
+>>>>>>> 61196e60794845ad84c32c2954c633b1ef8515da
