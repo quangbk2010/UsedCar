@@ -140,6 +140,7 @@ class Dataset (Data_preprocessing, DataFrameImputer):
         dtype_dict = full_features_dict
         #total_dataset = pd.read_excel (dataset_excel_file, names = self.headers, dtype = dtype_dict, header = 0)
         total_dataset = pd.read_excel (dataset_excel_file, names = self.headers, converters = dtype_dict, header = 0)
+        print ("1.", total_dataset.shape)
 
         
         # Shuffle dataset (dataframe)
@@ -149,11 +150,17 @@ class Dataset (Data_preprocessing, DataFrameImputer):
         # Sort by actual advertising date
         #total_dataset = total_dataset.sort_values ("actual_advertising_date", ascending=True)
         
+        # Constraint with only popular cars 
+        #total_dataset = total_dataset[total_dataset["manufacture_code"] < 106]
+        #print ("2.", total_dataset.shape)
+
         # Remove the data points with price == 0
         #total_dataset = total_dataset[total_dataset["sale_state"] == "Sold-out"]
+        #print ("3.", total_dataset.shape)
 
         # Remove the data points with price == 0
         total_dataset = total_dataset[total_dataset["price"] != 0]
+        print ("4.", total_dataset.shape)
 
         # Remove outliers
         if remove_outliers_flag == 1:
@@ -278,17 +285,17 @@ class Dataset (Data_preprocessing, DataFrameImputer):
 
 
     def encode_one_hot_car_ident (self, dataset):
-        #(count, car_ident_dict, car_ident_list) = self.count_car (dataset)
-        car_ident = self.create_car_ident (dataset)
-        car_ident_list = list (car_ident.reshape (car_ident.shape[0]))
-        print ("len of car_ident_list:", len (car_ident_list))
-        print ("no different car identification:", len (Counter(car_ident_list).keys()))
+        (count, car_ident_dict, car_ident_list) = self.count_car (dataset)
+        #car_ident = self.create_car_ident (dataset)
+        #car_ident_list = list (car_ident.reshape (car_ident.shape[0]))
+        #print ("len of car_ident_list:", len (car_ident_list))
+        #print ("no different car identification:", len (Counter(car_ident_list).keys()))
 
-        #print ("count:", count, "car_ident_list:", car_ident_list[:50])
+        print ("count:", count, "car_ident_list:", car_ident_list[:50])
         #sys.exit (-1)
         enc = OneHotEncoder(sparse = False)
-        #return enc.fit_transform (np.array (car_ident_list).reshape (len (car_ident_list), 1)) 
-        return enc.fit_transform (car_ident) 
+        return enc.fit_transform (np.array (car_ident_list).reshape (len (car_ident_list), 1)) 
+        #return enc.fit_transform (car_ident) 
 
     def impute_missing_values (self, total_data_array, feature, feature_array, strategy):
         #TODO: More appropriate method
@@ -745,17 +752,21 @@ class Training(Dataset):
         
         return regr
         
-    def tree_GradientBoostingRegressor (self, features, output, n_estimators = 500, learning_rate = 0.1, loss = 'ls'):
+    def tree_GradientBoostingRegressor (self, features, output, n_estimators = 1000, learning_rate = 0.1, loss = 'lad'):
         
         """
             Apply GradientBoostingRegressor
         """        
-        X_train_data = self.get_data_matrix (self.traning_dataset, features)
-        X_train_data_bar = self.get_expand_data (X_train_data)
-        y = self.get_data_array (self.traning_dataset, output)
+        train_data = self.get_data_matrix (self.training_dataset, features)
+        train_data_bar = self.get_expand_data (train_data)
+        train_label = self.get_data_array (self.traning_dataset, output)
                 
         regr = ensemble.GradientBoostingRegressor(n_estimators = n_estimators, learning_rate = learning_rate, loss = loss)
-        regr.fit(X_train_data_bar,y)
+        stime = time.time()
+        print ("training...")
+        regr.fit(train_data_bar,y)
+        print("Time for GradientBoostingRegressor learning_rate 0.1 tree fitting: %.3f" % (time.time() - stime))
+
         
         return regr
     

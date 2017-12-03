@@ -363,19 +363,20 @@ class Tensor_NN(Dataset):
         
         print ("build_car2vect_model: d_ident:", d_ident, "d_remain:", d_remain, "d_embed:", d_embed, "no_neuron_embed:", no_neuron_embed, "no_neuron_main:", no_neuron)
 
-        output1 = slim.fully_connected(x_ident, d_ident + 1, scope='input_embed', activation_fn=tf.nn.relu)
-        #output1 = slim.fully_connected(x_ident, no_neuron_embed, scope='input_embed', activation_fn=tf.nn.relu)
-        output2 = slim.fully_connected(output1, no_neuron_embed, scope='hidden_embed1', activation_fn=tf.nn.relu)
-        output3 = slim.fully_connected(output2, no_neuron_embed, scope='hidden_embed2', activation_fn=tf.nn.relu)
-        x_embed = slim.fully_connected(output3, d_embed, scope='output_embed', activation_fn=tf.nn.relu) # 3-dimension of embeding NN
+        #output1 = slim.fully_connected(x_ident, d_ident, scope='input_embed', activation_fn=tf.nn.relu)
+        output1 = slim.fully_connected(x_ident, no_neuron_embed, scope='input_embed', activation_fn=tf.nn.relu)
+        #output1 = slim.dropout(output1, 0.5, scope='dropout1')
+        #output2 = slim.fully_connected(output1, no_neuron_embed, scope='hidden_embed1', activation_fn=tf.nn.relu)
+        #output3 = slim.fully_connected(output2, no_neuron_embed, scope='hidden_embed2', activation_fn=tf.nn.relu)
+        x_embed = slim.fully_connected(output1, d_embed, scope='output_embed', activation_fn=tf.nn.relu) # 3-dimension of embeding NN
 
         input3 = tf.concat ([x_remain, x_embed], 1)
 
-        output3 = slim.fully_connected(input3, d_remain + d_embed + 1, scope='input_main', activation_fn=tf.nn.relu)
-        #output3 = slim.fully_connected(input3, no_neuron, scope='input_main', activation_fn=tf.nn.relu)
-        output4 = slim.fully_connected(output3, no_neuron, scope='hidden_main_1', activation_fn=tf.nn.relu)
-        output5 = slim.fully_connected(output4, no_neuron, scope='hidden_main_2', activation_fn=tf.nn.relu)
-        prediction = slim.fully_connected(output5, 1, scope='output_main') # 1-dimension of output
+        #output3 = slim.fully_connected(input3, d_remain + d_embed, scope='input_main', activation_fn=tf.nn.relu)
+        output3 = slim.fully_connected(input3, no_neuron, scope='input_main', activation_fn=tf.nn.relu)
+        #output4 = slim.fully_connected(output3, no_neuron, scope='hidden_main_1', activation_fn=tf.nn.relu)
+        #output5 = slim.fully_connected(output4, no_neuron, scope='hidden_main_2', activation_fn=tf.nn.relu)
+        prediction = slim.fully_connected(output3, 1, scope='output_main') # 1-dimension of output
 
 
         return x_ident, x_remain, Y, x_embed, prediction, dropout
@@ -401,7 +402,7 @@ class Tensor_NN(Dataset):
         num_batches_per_epoch = int(len(train_data) / self.batch_size)
         decay_steps = int(num_batches_per_epoch * self.decay_step)
         global_step = tf.Variable(0, trainable = False)
-        learning_rate = tf.train.exponential_decay(self.learning_rate, global_step, decay_steps, self.decay_rate, staircase = True)
+        learning_rate = tf.train.exponential_decay(self.learning_rate, global_step, decay_steps, self.decay_rate, staircase = True) # 0.00125#
 
         # Used for minimizing relative error
         loss = tf.reduce_mean (tf.divide (tf.abs (prediction - Y), Y)) 
@@ -443,20 +444,15 @@ class Tensor_NN(Dataset):
 
             print ("test car ident", test_car_ident[0])
             np.savetxt (x_ident_file_name_, test_car_ident, fmt="%d\t%d\t%d\t%d\t%s")  #[manufacture_codes,rep_model_codes,car_codes,model_codes,rating_codes, x_embed_val]
-            #sys.exit (-1)
-            """manufacture_codes = test_car_ident[0]
-            rep_model_codes = test_car_ident[1]
-            car_codes = test_car_ident[2]
-            model_codes = test_car_ident[3]
-            rating_codes = test_car_ident[4]"""
             
-
             print ("len train_data_ident:", train_data_ident_shuffled.shape)
             print ("len train_data_remain:", train_data_remain_shuffled.shape)
             print ("len train_label:", train_label_shuffled.shape)
 
-            #print ("train_data_remain[0]:", train_data_remain_shuffled[0])
-            #print ("train_label[0]:", train_label_shuffled[0])
+            print ("train_data_ident[0]:", train_data_ident_shuffled[0])
+            print ("train_data_remain[0]:", train_data_remain_shuffled[0])
+            print ("train_label[0]:", train_label_shuffled[0])
+            sys.exit (-1)
 
 
             total_batch = int((len(train_data)/self.batch_size) + 0.5)
@@ -785,7 +781,7 @@ if __name__ == '__main__':
     parser.add_argument('--epoch', type=int, default = 50) #2000 # 100
     parser.add_argument('--dropout', type=int, default = 1)
     parser.add_argument('--batch_size', type=int, default = 128)
-    parser.add_argument('--learning_rate', type=float, default=0.00125)
+    parser.add_argument('--learning_rate', type=float, default=0.0125)
     parser.add_argument('--decay_rate', type=float, default=0.5)
     parser.add_argument('--decay_step', type=int, default=100) #if decay_step > epoch, no exponential decay
 
