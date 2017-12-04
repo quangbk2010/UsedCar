@@ -869,9 +869,6 @@ if __name__ == '__main__':
     if not os.path.exists(args.dataframe_dir):
         os.makedirs(args.dataframe_dir)
 
-    if not os.path.exists(args.output_dir):
-        os.makedirs(args.output_dir)
-
     os.environ['CUDA_VISIBLE_DEVICES'] = args.gpu_idx
 
     # record the time when training starts
