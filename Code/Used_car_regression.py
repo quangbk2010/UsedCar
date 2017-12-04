@@ -139,7 +139,7 @@ class Dataset (Data_preprocessing, DataFrameImputer):
         self.headers = full_features
         dtype_dict = full_features_dict
 
-        filename = "./Dataframe/" + encode_car_ident_type + "/[" + dataset + "]total_dataframe_Initial.h5"
+        filename = "./Dataframe/[" + dataset + "]total_dataframe_Initial.h5"
         key = "df"
         if os.path.isfile (filename) == False:
             print ("Load dataset from excel file")
