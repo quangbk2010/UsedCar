@@ -283,6 +283,13 @@ class Dataset (Data_preprocessing, DataFrameImputer):
 
         return model_code_arr ** 2 + rating_code_arr
 
+    def encode_one_hot_car_ident_full (self, dataset):
+        """ 
+            Encode onehot each feature in car-ident, and concatenate these 5 codes into 1 vector, and use this to embed to x_embed with fewer dimension
+        """
+        enc = OneHotEncoder(sparse = False)
+        return enc.fit_transform (np.array (dataset[car_ident]))
+        
 
     def encode_one_hot_car_ident (self, dataset):
         (count, car_ident_dict, car_ident_list) = self.count_car (dataset)
@@ -522,7 +529,7 @@ class Dataset (Data_preprocessing, DataFrameImputer):
         car_ident_codes = np.array (dataset[car_ident])
         print ("car_ident_codes", car_ident_codes.shape)
 
-        X_ident = self.encode_one_hot_car_ident (dataset)
+        X_ident = self.encode_one_hot_car_ident_full (dataset)
         d_ident = X_ident.shape[1]
 
         X_ = np.array (dataset[feature_need_encoding])
