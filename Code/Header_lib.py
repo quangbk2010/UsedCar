@@ -62,7 +62,7 @@ using_one_hot_flag = 0 # 1-yes, 0-no
 using_car_ident_flag = 0 # 1-yes, 0-no
 
 """ Types of encoding car ident"""
-encode_car_ident_type = "Encode_single_car_ident" # Encode_single_car_ident or Encode_5features_car_ident
+encode_car_ident_type = "Encode_5features_car_ident" # Encode_single_car_ident or Encode_5features_car_ident
 
 """ Shuffle dataset or not"""
 using_shuffle_flag = 0
