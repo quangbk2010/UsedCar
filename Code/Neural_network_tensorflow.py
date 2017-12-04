@@ -864,7 +864,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     if not os.path.exists(args.tree_model_dir):
-        os.makedirs(args.model_dir)
+        os.makedirs(args.tree_model_dir)
 
     if not os.path.exists(args.dataframe_dir):
         os.makedirs(args.dataframe_dir)
