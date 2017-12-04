@@ -145,16 +145,22 @@ class Dataset (Data_preprocessing, DataFrameImputer):
         # Shuffle dataset (dataframe)
         #total_dataset = total_dataset.reindex(np.random.permutation(total_dataset.index))
 
-        
-        # Sort by actual advertising date
-        #total_dataset = total_dataset.sort_values ("actual_advertising_date", ascending=True)
-        
-        # Remove the data points with price == 0
+        # Remove the data points with sale_state is "Advertising" or only keep data points with sale_state is "Sold-out"
         #total_dataset = total_dataset[total_dataset["sale_state"] == "Sold-out"]
 
         # Remove the data points with price == 0
         total_dataset = total_dataset[total_dataset["price"] != 0]
 
+        
+        # Sort by price
+        total_dataset = total_dataset.sort_values ("price", ascending=True)
+        
+        # Sort by rating_code
+        total_dataset = total_dataset.sort_values ("rating_code", ascending=True)
+        
+        # Sort by model_code
+        total_dataset = total_dataset.sort_values ("model_code", ascending=True)
+        
         # Remove outliers
         if remove_outliers_flag == 1:
             df = total_dataset.copy()
@@ -278,17 +284,17 @@ class Dataset (Data_preprocessing, DataFrameImputer):
 
 
     def encode_one_hot_car_ident (self, dataset):
-        #(count, car_ident_dict, car_ident_list) = self.count_car (dataset)
-        car_ident = self.create_car_ident (dataset)
-        car_ident_list = list (car_ident.reshape (car_ident.shape[0]))
-        print ("len of car_ident_list:", len (car_ident_list))
-        print ("no different car identification:", len (Counter(car_ident_list).keys()))
+        (count, car_ident_dict, car_ident_list) = self.count_car (dataset)
+        #car_ident = self.create_car_ident (dataset)
+        #car_ident_list = list (car_ident.reshape (car_ident.shape[0]))
+        #print ("len of car_ident_list:", len (car_ident_list))
+        #print ("no different car identification:", len (Counter(car_ident_list).keys()))
 
-        #print ("count:", count, "car_ident_list:", car_ident_list[:50])
+        print ("count:", count, "car_ident_list:", car_ident_list[:50])
         #sys.exit (-1)
         enc = OneHotEncoder(sparse = False)
-        #return enc.fit_transform (np.array (car_ident_list).reshape (len (car_ident_list), 1)) 
-        return enc.fit_transform (car_ident) 
+        return enc.fit_transform (np.array (car_ident_list).reshape (len (car_ident_list), 1)) 
+        #return enc.fit_transform (car_ident) 
 
     def impute_missing_values (self, total_data_array, feature, feature_array, strategy):
         #TODO: More appropriate method
