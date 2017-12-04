@@ -424,7 +424,7 @@ class Tensor_NN(Support, Dataset):
 
         return X, Y, prediction, weights, dropout
 
-    def build_car2vect_model (self, no_neuron, no_neuron_embed, d_ident, d_embed, d_remain):
+    def build_car2vect_model (self, no_neuron, no_neuron_embed, d_ident, d_embed, d_remain, dropout_val):
         """
             - Args:
                 + no_neuron: the number of neuron in 'main' hiddenlayers.
@@ -439,14 +439,13 @@ class Tensor_NN(Support, Dataset):
         x_ident = tf.placeholder(tf.float32, [None, d_ident])
         x_remain = tf.placeholder(tf.float32, [None, d_remain])
         Y = tf.placeholder(tf.float32, [None, 1])
-        dropout = tf.placeholder(tf.float32, name='dropout')
 
         print ("build_car2vect_model: d_ident:", d_ident, "d_remain:", d_remain, "d_embed:", d_embed, "no_neuron_embed:", no_neuron_embed, "no_neuron_main:", no_neuron)
 
-        #output1 = slim.fully_connected(x_ident, d_ident + 1, scope='input_embed', activation_fn=tf.nn.relu)
-        output1 = slim.fully_connected(x_ident, no_neuron_embed, scope='input_embed', activation_fn=tf.nn.relu)
-        #output2 = slim.fully_connected(output1, no_neuron_embed, scope='hidden_embed1', activation_fn=tf.nn.relu)
-        #output3 = slim.fully_connected(output2, no_neuron_embed, scope='hidden_embed2', activation_fn=tf.nn.relu)
+        output1 = slim.fully_connected(x_ident, no_neuron_embed, scope='hidden_embed1', activation_fn=tf.nn.relu)
+        output1 = slim.dropout(net, dropout_val, scope='dropout_embed1')
+        #output2 = slim.fully_connected(output1, no_neuron_embed, scope='hidden_embed2', activation_fn=tf.nn.relu)
+        #output3 = slim.fully_connected(output2, no_neuron_embed, scope='hidden_embed3', activation_fn=tf.nn.relu)
         x_embed = slim.fully_connected(output1, d_embed, scope='output_embed', activation_fn=tf.nn.relu) # 3-dimension of embeding NN
         
         input3 = tf.concat ([x_remain, x_embed], 1)
@@ -455,8 +454,8 @@ class Tensor_NN(Support, Dataset):
         input3 = tf.div(tf.subtract(input3, mean), tf.sqrt(var))
 
         #output3 = slim.fully_connected(input3, d_remain + d_embed + 1, scope='input_main', activation_fn=tf.nn.relu)
-        output3 = slim.fully_connected(input3, no_neuron, scope='input_main', activation_fn=tf.nn.relu)
-        #output4 = slim.fully_connected(output3, no_neuron, scope='hidden_main_1', activation_fn=tf.nn.relu)
+        output3 = slim.fully_connected(input3, no_neuron, scope='hidden_main1', activation_fn=tf.nn.relu)
+        #output4 = slim.fully_connected(output3, no_neuron, scope='hidden_main2', activation_fn=tf.nn.relu)
         #output5 = slim.fully_connected(output4, no_neuron, scope='hidden_main_2', activation_fn=tf.nn.relu)
         prediction = slim.fully_connected(output3, 1, scope='output_main') # 1-dimension of output
 
@@ -467,7 +466,7 @@ class Tensor_NN(Support, Dataset):
 
         #building car embedding model
         if using_CV_flag == 0:
-            x_ident, x_remain, Y, x_embed, prediction, dropout = self.build_car2vect_model(no_neuron, no_neuron_embed, d_ident, d_embed, d_remain)
+            x_ident, x_remain, Y, x_embed, prediction = self.build_car2vect_model(no_neuron, no_neuron_embed, d_ident, d_embed, d_remain, self.dropout)
             x_ident_file_name_ = x_ident_file_name
             x_embed_file_name_ = x_embed_file_name
             mean_error_file_name_ = mean_error_file_name
