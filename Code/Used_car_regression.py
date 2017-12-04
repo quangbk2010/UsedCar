@@ -139,7 +139,7 @@ class Dataset (Data_preprocessing, DataFrameImputer):
         self.headers = full_features
         dtype_dict = full_features_dict
 
-        filename = "./Dataframe/[" + dataset + "]total_dataframe_Initial.h5"
+        filename = "./Dataframe/Encode_5features_car_ident/[" + dataset + "]total_dataframe_Initial.h5"
         key = "df"
         if os.path.isfile (filename) == False:
             print ("Load dataset from excel file")
@@ -770,7 +770,7 @@ class Support(Dataset):
         """
             Apply GradientBoostingRegressor
         """        
-        filename = "./Model/GradientBoostingTree/[" + dataset + "][GradientBoostingRegressor] finalized_model.sav"
+        filename = "./Model/GradientBoostingTree/Encode_5features_car_ident/[" + dataset + "][GradientBoostingRegressor] finalized_model.sav"
         if os.path.isfile (filename) == False:
             reg_tree = ensemble.GradientBoostingRegressor(n_estimators = n_estimators, learning_rate = learning_rate, loss = loss)
             stime = time.time()
