@@ -138,54 +138,54 @@ class Dataset (Data_preprocessing, DataFrameImputer):
         stime = time.time()
         self.headers = full_features
         dtype_dict = full_features_dict
-        #total_dataset = pd.read_excel (dataset_excel_file, names = self.headers, dtype = dtype_dict, header = 0)
-        total_dataset = pd.read_excel (dataset_excel_file, names = self.headers, converters = dtype_dict, header = 0)
 
-        
-        # Shuffle dataset (dataframe)
-        #total_dataset = total_dataset.reindex(np.random.permutation(total_dataset.index))
+        filename = "./Dataframe/[" + dataset + "]total_dataframe_Initial.h5"
+        key = "df"
+        if os.path.isfile (filename) == False:
+            print ("Load dataset from excel file")
+            total_dataset = pd.read_excel (dataset_excel_file, names = self.headers, converters = dtype_dict, header = 0)
+            # Shuffle dataset (dataframe)
+            total_dataset = total_dataset.reindex(np.random.permutation(total_dataset.index))
 
-        # Remove the data points with sale_state is "Advertising" or only keep data points with sale_state is "Sold-out"
-        #total_dataset = total_dataset[total_dataset["sale_state"] == "Sold-out"]
-
-        # Remove the data points with price == 0
-        total_dataset = total_dataset[total_dataset["price"] != 0]
-
-        
-        # Sort by price
-        total_dataset = total_dataset.sort_values ("price", ascending=True)
-        
-        # Sort by rating_code
-        total_dataset = total_dataset.sort_values ("rating_code", ascending=True)
-        
-        # Sort by model_code
-        total_dataset = total_dataset.sort_values ("model_code", ascending=True)
-        
-        # Remove outliers
-        if remove_outliers_flag == 1:
-            df = total_dataset.copy()
-            filt_df = df.copy()
-            for feature in feature_need_not_remove_outlier:
-                filt_df = filt_df.loc[:, filt_df.columns != feature]
             
-            filt_df = filt_df[filt_df.apply(lambda x: np.abs(x - x.mean()) / x.std() < 3).all(axis=1)]
+            # Sort by actual advertising date
+            #total_dataset = total_dataset.sort_values ("actual_advertising_date", ascending=True)
             
-            for feature in feature_need_not_remove_outlier:
-                filt_df = pd.concat([df.loc[:,feature], filt_df], axis=1)
+            # Remove the data points with price == 0
+            #total_dataset = total_dataset[total_dataset["sale_state"] == "Sold-out"]
+            #print ("2.", total_dataset.shape)
 
-            filt_df.dropna(inplace=True)
-            total_dataset = filt_df
+            # Remove the data points with price == 0
+            #total_dataset = total_dataset[total_dataset["price"] != 0]
+            #print ("3.", total_dataset.shape)
 
-        # Impute missing values from here
-        total_dataset = DataFrameImputer().fit_transform (total_dataset)
+            # Remove outliers
+            #total_dataset = total_dataset[np.abs(total_dataset["price"] - total_dataset["price"].mean()) / total_dataset["price"].std() < 1]
+            #print ("4.", total_dataset.shape)
 
-        # There are some columns with string values (E.g. Car type) -> need to label it as numerical labels
-        #le = LabelEncoder ()
-        #for feature in feature_need_label:
-        #    total_dataset[feature] = total_dataset[feature].apply(le.fit_transform)
-        total_dataset = MultiColumnLabelEncoder(columns = feature_need_label).fit_transform(total_dataset)
-        print ("Time for Loading dataset: %.3f" % (time.time() - stime))        
+            # Impute missing values from here
+            total_dataset = DataFrameImputer().fit_transform (total_dataset)
 
+            # There are some columns with string values (E.g. Car type) -> need to label it as numerical labels
+            total_dataset = MultiColumnLabelEncoder(columns = feature_need_label).fit_transform(total_dataset)
+
+            # Standard scale dataset
+            """scaled_data_set = total_dataset.copy()
+            scaled_features = ['vehicle_mile', 'cylinder_disp','recovery_fee']
+            scaled_data_set = scaled_data_set[scaled_features]
+
+            scaler = StandardScaler()  
+            scaler.fit(scaled_data_set.values)  
+            total_dataset = scaler.transform(scaled_data_set.values)  """
+
+            print ("Store the dataframe into a hdf file")
+            total_dataset.to_hdf (filename, key)       
+            print ("Time for Loading dataset: %.3f" % (time.time() - stime))        
+        else:
+            print ("Reload dataset using HDF5 (Pytables)")
+            total_dataset = pd.read_hdf (filename, key)
+   
+        print ("Time for Loading and preprocessing dataset: %.3f" % (time.time() - stime))
         self.total_dataset = total_dataset
     
     def get_total_dataset (self):
@@ -282,6 +282,13 @@ class Dataset (Data_preprocessing, DataFrameImputer):
 
         return model_code_arr ** 2 + rating_code_arr
 
+
+    def encode_one_hot_car_ident_full (self, dataset):
+        """ 
+            Encode onehot each feature in car-ident, and concatenate these 5 codes into 1 vector, and use this to embed to x_embed with fewer dimension
+        """
+        enc = OneHotEncoder(sparse = False)
+        return enc.fit_transform (np.array (dataset[car_ident]))
 
     def encode_one_hot_car_ident (self, dataset):
         (count, car_ident_dict, car_ident_list) = self.count_car (dataset)
@@ -471,35 +478,7 @@ class Dataset (Data_preprocessing, DataFrameImputer):
             
                 
         return np.array (data_array_with_constraint)
-    
-    '''def get_data_array_without_onehot_with_constraint_array (self, dataset, feature, feature_constraint_array, feature_constraint_value_array): 
-        """
-        dataset: training, validation, test, or total dataset
-        feature: is a element in feature list
-        constraint: only get the input that satify the constraint
-        feature_constraint: an array of features on the constraint
-        feature_constraint_value: an array of corresponding constraint values with feature in feature_constraint
-        return: an vector (1D numpy.array object)
-        """
-        if len (feature_constraint_array) != len (feature_constraint_value_array):
-            raise ValueError('Length of feature_constraint_array should equal to length of feature_constraint_value_array")
-        data_array_with_constraint = []# np.empty ([[]])
-        data_array = self.get_data_array_without_onehot (dataset, feature)#np.array ([dataset[feature]]).T
-        len_feature_constraint_array = len (feature_constraint_array)
-        
-        for j in range (len_feature_constraint_array): 
-            constraint_data_array = self.get_data_array_without_onehot (dataset, feature_constraint_array[j])#np.array ([dataset[feature_constraint]]).T
-            type_feature = type (feature_constraint_value)
-            
-            
-            len_constraint_data_array = len (constraint_data_array)
-            for i in range (len_constraint_data_array):
-                if type_feature == str and constraint_data_array[i] == feature_constraint_value:
-                    data_array_with_constraint.append (data_array[i])
-                elif type_feature == int and constraint_data_array[i] <= feature_constraint_value:
-                    data_array_with_constraint.append (data_array[i])
-        return np.array (data_array_with_constraint)'''
-    
+
     def get_data_matrix (self, dataset, features):
         """
         dataset: training, validation, test, or total dataset
@@ -507,20 +486,7 @@ class Dataset (Data_preprocessing, DataFrameImputer):
         => return: a matrix with rows are data points, columns are features values (nD numpy.array object)
         
         """
-        featureNo = len (features)
-        
-        """ NOTE!: The order of features are reversed due to concatenate() function => then we need to reverse it first"""
-        features_copy = features[:]
-        features_copy.reverse()
-        
-        X = self.get_data_array (dataset, features_copy[0])#np.array ([dataset[features[0]]]).T
-        for i in range (1, featureNo):
-            if features_copy[i] in self.headers:
-                a = self.get_data_array (dataset, features_copy[i])
-                X = np.concatenate ((self.get_data_array (dataset, features_copy[i]), X), axis = 1)
-            else:
-                break
-        return X
+        return np.array (dataset[features]) 
 
     def get_data_matrix_car_ident (self, dataset):
         """
@@ -528,35 +494,20 @@ class Dataset (Data_preprocessing, DataFrameImputer):
         => return: a matrix with rows are data points, columns are features values (nD numpy.array object)
         
         """
-        featureNo = len (features_remove_car_ident)
-        
-        """ NOTE!: The order of features are reversed due to concatenate() function => then we need to reverse it first"""
-        features_copy = features_remove_car_ident[:]
-        features_copy.reverse()
-        
-        X = self.encode_one_hot_car_ident (dataset)
-        d_ident = X.shape[1]
-
-        car_ident_codes = self.get_data_array (dataset, "rating_code")
-        for feature in ["model_code","car_code","rep_model_code","manufacture_code"]:
-            a = self.get_data_array (dataset, feature)
-            car_ident_codes = np.concatenate ((a, car_ident_codes), axis = 1) #(self.get_data_array (dataset, feature)
-
+        car_ident_codes = np.array (dataset[car_ident]) 
         print ("car_ident_codes", car_ident_codes.shape)
-        #sys.exit (-1)
 
-        print ("X.shape1", X.shape)
-        for i in range (0, featureNo):
-            if features_copy[i] in self.headers:
-                a = self.get_data_array (dataset, features_copy[i])
-                #print ("a.shape", a.shape)
-                X = np.concatenate ((a, X), axis = 1) #(self.get_data_array (dataset, features_copy[i])
-            else:
-                break
+        X1 = self.encode_one_hot_car_ident_full (dataset)
+        d_ident = X1.shape[1]
 
+        print ("X.shape1", X1.shape)
+        X2 = np.array (dataset[features_remove_car_ident]) 
+        X = np.concatenate ((X2, X1), axis = 1) 
+        
         d_remain = X.shape[1] - d_ident
         print ("X.shape2", X.shape, d_remain, d_ident)
         return (car_ident_codes, X, d_ident, d_remain)
+
 
     def get_data_matrix_with_constraint (self, dataset, features, feature_constraint, feature_constraint_value): 
         """

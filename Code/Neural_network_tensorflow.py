@@ -103,6 +103,7 @@ class Tensor_NN(Dataset):
         self.dim_label = args.dim_label
         self.no_hidden_layer = args.no_hidden_layer
         self.no_neuron = args.no_neuron
+        self.no_neuron_embed = args.no_neuron_embed
         
         self.model_dir = args.model_dir
         self.model_name = args.model_name
@@ -784,18 +785,19 @@ if __name__ == '__main__':
     parser.add_argument('--output_dir', type=str, default = '../Results')
 
     #hyper parameter
-    parser.add_argument('--epoch', type=int, default = 50) #2000 # 100
+    parser.add_argument('--epoch', type=int, default = 70) #2000 # 100
     parser.add_argument('--dropout', type=int, default = 1)
     parser.add_argument('--batch_size', type=int, default = 128)
     parser.add_argument('--learning_rate', type=float, default=0.00125)
     parser.add_argument('--decay_rate', type=float, default=0.5)
-    parser.add_argument('--decay_step', type=int, default=100) #if decay_step > epoch, no exponential decay
+    parser.add_argument('--decay_step', type=int, default=50) #if decay_step > epoch, no exponential decay
 
     #network parameter
     parser.add_argument('--dim_data', type=int, default=24)
     parser.add_argument('--dim_label', type=int, default=1)
     parser.add_argument('--no_hidden_layer', type=int, default = 1) #not implement variabel network layer
     parser.add_argument('--no_neuron', type=int, default = 1000)
+    parser.add_argument('--no_neuron_embed', type=int, default = 6000)
     parser.add_argument('--k_fold', type=int, default = -1) # set it to -1 when don't want to use k-fold CV
 
     args = parser.parse_args()
@@ -811,109 +813,21 @@ if __name__ == '__main__':
     # record the time when training starts
     start_time = time.time()
 
-    
     nn = Tensor_NN (args)
 
 
     model_path = nn.model_dir + '/' + nn.model_name
 
-    print ("Shape:", nn.X_total_set.shape, nn.y_total_set.shape)
-    if using_CV_flag == 1:
-        print ("Test CV:")
-        if nn.k_fold > 0:
-            nn.test_CV (model_path)
-        else:
-            print ("kfold < 0")
-        sys.exit (-1)
-
-    # otherwise, used for 1train-1test
-    print ("1train-1test:")
-    if nn.k_fold > 0:
-        print ("kfold > 0")
-        sys.exit (-1)
-
-    if using_shuffle_flag == 1:
-        concate_car_ident = np.concatenate ((nn.y_total_set, nn.car_ident_code_total_set), axis = 1) # car_ident_codes used only to draw embeded vector
-        total_set_car_ident = np.concatenate ((nn.X_total_set, concate_car_ident), axis = 1)
-        total_set = np.concatenate ((nn.X_total_set, nn.y_total_set), axis = 1)
-
-        len_total_set = total_set.shape[0]   
-        dim_data_label = total_set.shape[1]
-        dim_data_label_car_ident = total_set_car_ident.shape[1]
-
-        #print ("data before suffling:", total_set_car_ident[:5, dim_data_label:])
-        #print ("label before suffling:", nn.y_total_set[:])
-        #np.savetxt (total_set_shuffled_file_name + "_before", nn.y_total_set, fmt="%f")
-        train_length     = int (0.5 + len_total_set * data_training_percentage)
-        test_length     = int (0.5 + len_total_set * data_test_percentage)
-
-        total_set_shuffled = np.random.permutation(total_set_car_ident)
-        total_data_shuffled = total_set_shuffled [:, 0:dim_data_label-1]
-        total_label_shuffled = total_set_shuffled [:, dim_data_label-1:dim_data_label]
-
-        #print ("data after suffling:", total_set_shuffled[:5, dim_data_label:])
-        #print ("label after suffling:", total_label_shuffled[:])
-        #np.savetxt (total_set_shuffled_file_name, total_label_shuffled, fmt="%f")
-
-    if add_noise_flag == 1:
-        # Creating a noise with the same dimension, and add to price
-        SD = 5
-        mu, sigma = 0, 5
-        generator = nn.get_truncated_normal(mean=0.1, sd=0.1, low=-100000, upp=100000)
-        alpha = generator.rvs (total_set.shape[0]).reshape (total_set.shape[0], 1)
-        print ("alpha noise: ", "min:", np.min (alpha), "max:", np.max (alpha), "mean:", np.mean (alpha))
-        total_label_shuffled *= (1-alpha)
-
-    
-    if using_shuffle_flag == 1:
-        train_data  = total_data_shuffled[:train_length, :]
-        train_label = total_label_shuffled[:train_length, :]
-        
-        test_data  = total_data_shuffled[train_length:, :]
-        test_label = total_label_shuffled[train_length:, :]
-        test_car_ident = total_set_shuffled [train_length:, dim_data_label:] # car identification
-        np.savetxt (train_set_file_name, np.concatenate ((train_label, total_set_shuffled [:train_length, dim_data_label:]), axis=1), fmt = "%.2f\t%d\t%d\t%d\t%d\t%s")
-        np.savetxt (test_set_file_name, np.concatenate ((test_label, test_car_ident), axis=1), fmt = "%.2f\t%d\t%d\t%d\t%d\t%s")
-    else:
-        train_data = nn.X_train_set
-        train_label = nn.y_train_set
-        test_data = nn.X_test_set
-        test_label = nn.y_test_set
-        if using_car_ident_flag == 1:
-            test_car_ident = nn.car_ident_code_total_set[train_data.shape[0]:]
+    train_data = nn.X_train_set
+    train_label = nn.y_train_set
+    test_data = nn.X_test_set
+    test_label = nn.y_test_set
+    test_car_ident = nn.car_ident_code_total_set[train_data.shape[0]:]
 
     print ("train_data:", train_data.shape)
     print ("train_label:", train_label.shape)
     print ("test_data:", test_data.shape)
     print ("test_label:", test_label.shape)
-    print ("train_data:", train_data.shape)
  
-    if using_CV_flag == 0:
-        if using_car_ident_flag == 1:
-            nn.car2vect(train_data=train_data, train_label=train_label, test_data=test_data, test_label=test_label, test_car_ident=test_car_ident, no_neuron=1000, dropout_val=1, model_path=model_path, d_ident=nn.d_ident,d_embed=3, d_remain=nn.d_remain, no_neuron_embed=10000) # 1000, 3, 6000
-        else:
-            test_relative_err = nn.train_nn(train_data=train_data, train_label=train_label, test_data=test_data, test_label=test_label, no_neuron=6000, no_hidden_layer=2, dropout_val=1, model_path=model_path)
-         
-    
-    sys.exit (-1)
-
-    
-    # These lines below used for choosing hyper-param
-    txt = []
-    for no_hidden_layer in list_no_hidden_layer_h:  
-        for no_neuron in list_no_unit_in_a_layer_h:  
-            for dropout in list_dropout_h:
-                print ("no_hidden_layer: %d, no_neuron: %d, dropout: %.2f" % (no_hidden_layer, no_neuron, dropout))
-                if args.mode ==  'train':
-                    test_relative_err = nn.train_nn(train_data, train_label, test_data, test_label, no_neuron, no_hidden_layer, dropout, model_path)
-                    #test_relative_err = nn.test_CV (no_neuron, no_hidden_layer, dropout, model_path)
-                #elif args.mode == 'test':
-                    #test_relative_err = nn.test_nn(test_data, test_label, no_neuron, no_hidden_layer, model_path)
-                    txt.append ((no_hidden_layer, no_neuron, dropout, test_relative_err))
-                else:
-                    print('mode input is wrong')
-    np.savetxt (mean_err_file_name, txt, fmt="%d\t%d\t%.2f\t%f")
-    stop_time = time.time()
-    print ("Total time (s):", stop_time - start_time)
-
-
+    nn.car2vect(train_data=train_data, train_label=train_label, test_data=test_data, test_label=test_label, test_car_ident=test_car_ident, no_neuron=nn.no_neuron, dropout_val=1, model_path=model_path, d_ident=nn.d_ident,d_embed=3, d_remain=nn.d_remain, no_neuron_embed=nn.no_neuron_embed) # 1000, 3, 6000
+ 

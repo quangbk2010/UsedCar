@@ -27,6 +27,8 @@ from sklearn.model_selection import KFold, cross_val_score
 from sklearn.base import TransformerMixin
 from sklearn import tree
 from os import system
+import os
+import pickle
 import sys
 import subprocess
 from datetime import datetime
@@ -209,12 +211,14 @@ feature_need_impute = ["rating_code"]#, "car_type"]
 feature_need_remove_outlier = ["vehicle_mile", "no_click", "recovery_fee"]#, "price"]
 feature_need_scaler = ["vehicle_mile", "no_click", "recovery_fee", "price"]
 
-#feature_need_not_remove_outlier = features[:]
-#for feature in feature_need_remove_outlier:
-#    feature_need_not_remove_outlier.remove (feature)
-feature_need_not_remove_outlier = ["manufacture_code","rep_model_code","car_code","model_code","rating_code","car_type","actual_advertising_date","sale_date","year","trans_mode","fuel_type","price","sale_state","city","district","dealer_name","cylinder_disp","tolerance_history","sale_history","rental_history","no_severe_accident","no_severe_water_accident","no_moderate_water_accident","total_no_accident","no_message_contact","no_call_contact","option_navigation","option_sunLoop","option_smartKey","option_xenonLight","option_heatLineSheet","option_ventilationSheet","option_rearSensor","option_curtainAirbag","no_cover_side_recovery","no_cover_side_exchange","no_corrosive_part"]
+# list of features whether it needs remove outliers 
+feature_need_not_remove_outlier = [feature for feature in features if feature not in feature_need_remove_outlier] 
+car_ident = ["manufacture_code","rep_model_code","car_code","model_code","rating_code"]
+features_remove_car_ident = [feature for feature in features if feature not in car_ident] 
 
-features_remove_car_ident = ["car_type","year","trans_mode","fuel_type","vehicle_mile","cylinder_disp","tolerance_history","sale_history","rental_history","no_severe_accident","no_severe_water_accident","no_moderate_water_accident","total_no_accident","recovery_fee","no_click","no_message_contact","no_call_contact", "option_navigation","option_sunLoop","option_smartKey","option_xenonLight","option_heatLineSheet","option_ventilationSheet","option_rearSensor","option_curtainAirbag","no_cover_side_recovery","no_cover_side_exchange","no_corrosive_part"]# 28 features
+# list of features whether it needs one-hot encode
+feature_need_encoding = ["car_type", "trans_mode", "fuel_type"]
+features_not_need_encoding = [feature for feature in features_remove_car_ident if feature not in feature_need_encoding] 
 
 strategy_h = "most_frequent"
 
