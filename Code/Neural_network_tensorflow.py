@@ -460,7 +460,7 @@ class Tensor_NN(Support, Dataset):
         prediction = slim.fully_connected(output3, 1, scope='output_main') # 1-dimension of output
 
 
-        return x_ident, x_remain, Y, x_embed, prediction, dropout
+        return x_ident, x_remain, Y, x_embed, prediction
 
     def car2vect(self, train_data, train_label, test_data, test_label, test_car_ident, no_neuron, dropout_val, model_path, d_ident, d_embed, d_remain, no_neuron_embed): # Used for 1train-1test
 
@@ -570,7 +570,7 @@ class Tensor_NN(Support, Dataset):
 
                     if (left_num <= 0):
                         index_counter = 0
-                    _, training_rmse_val, training_mae_val, training_relative_err_val, training_smape_val = sess.run([optimizer, rmse, mae, relative_err, smape], feed_dict={x_ident: batch_x_ident, x_remain: batch_x_remain, Y: batch_y, dropout:dropout_val})
+                    _, training_rmse_val, training_mae_val, training_relative_err_val, training_smape_val = sess.run([optimizer, rmse, mae, relative_err, smape], feed_dict={x_ident: batch_x_ident, x_remain: batch_x_remain, Y: batch_y})
                     total_rmse += training_rmse_val
                     total_mae += training_mae_val
                     total_relative_err += training_relative_err_val
@@ -579,12 +579,12 @@ class Tensor_NN(Support, Dataset):
                     
                 print('\n\nEpoch: %04d' % (epoch + 1), "Avg. training rmse:", total_rmse/total_batch, "mae:", total_mae/total_batch, 'relative_err:', total_relative_err/total_batch, "smape:", total_smape/total_batch)
                 if epoch == 3:
-                    train_pred_y, train_x_embed_val = sess.run([prediction, x_embed], feed_dict={x_ident: train_data_ident_shuffled[:10], x_remain: train_data_remain_shuffled[:10], Y: train_label_shuffled[:10], dropout:self.dropout})
+                    train_pred_y, train_x_embed_val = sess.run([prediction, x_embed], feed_dict={x_ident: train_data_ident_shuffled[:10], x_remain: train_data_remain_shuffled[:10], Y: train_label_shuffled[:10]})
                     print ("Train: train_label:", train_label_shuffled[:10], train_pred_y[:10])
                     np.savetxt (train_x_embed_file_name + "_" + str (epoch), train_x_embed_val, fmt="%.2f\t%.2f\t%.2f")
 
                 
-                predicted_y, x_embed_val, epoch_test_rmse_val, epoch_test_mae_val, epoch_test_relative_err_val, epoch_test_smape_val = sess.run([prediction, x_embed, rmse, mae, relative_err, smape], feed_dict={x_ident: test_data_ident, x_remain: test_data_remain, Y: test_label, dropout:self.dropout})
+                predicted_y, x_embed_val, epoch_test_rmse_val, epoch_test_mae_val, epoch_test_relative_err_val, epoch_test_smape_val = sess.run([prediction, x_embed, rmse, mae, relative_err, smape], feed_dict={x_ident: test_data_ident, x_remain: test_data_remain, Y: test_label})
                 
                 print ("test: rmse", epoch_test_rmse_val)
                 print ("test: mae", epoch_test_mae_val)
