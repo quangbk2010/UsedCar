@@ -252,6 +252,7 @@ dotfile_name_h  = pre_file_name + " Best basic tree_"
 mean_error_file_name = pre_file_name + "Mean error.txt" # "Mean_rmse over K-fold CV.txt"#" Mean_rmse over K-fold CV_for_testing.txt"
 
 x_embed_file_name = pre_file_name + "Y embeded.txt" # store the vector after applying car2vect
+train_x_embed_file_name = pre_file_name + "[train] Y embeded.txt" # store the vector after applying car2vect
 x_ident_file_name = pre_file_name + "x identification.txt" # store the vector after applying car2vect
 
 y_predict_file_name = pre_file_name + "predicted " + output + ".txt" # store predicted value

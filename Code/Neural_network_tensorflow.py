@@ -450,6 +450,9 @@ class Tensor_NN(Support, Dataset):
         x_embed = slim.fully_connected(output1, d_embed, scope='output_embed', activation_fn=tf.nn.relu) # 3-dimension of embeding NN
         
         input3 = tf.concat ([x_remain, x_embed], 1)
+        # Normalize input3
+        mean, var = tf.nn.moments(input3, [1], keep_dims=True)
+        input3 = tf.div(tf.subtract(input3, mean), tf.sqrt(var))
 
         #output3 = slim.fully_connected(input3, d_remain + d_embed + 1, scope='input_main', activation_fn=tf.nn.relu)
         output3 = slim.fully_connected(input3, no_neuron, scope='input_main', activation_fn=tf.nn.relu)
@@ -576,6 +579,10 @@ class Tensor_NN(Support, Dataset):
                     
                     
                 print('\n\nEpoch: %04d' % (epoch + 1), "Avg. training rmse:", total_rmse/total_batch, "mae:", total_mae/total_batch, 'relative_err:', total_relative_err/total_batch, "smape:", total_smape/total_batch)
+                if epoch == 3:
+                    train_pred_y, train_x_embed_val = sess.run([prediction, x_embed], feed_dict={x_ident: train_data_ident_shuffled[:10], x_remain: train_data_remain_shuffled[:10], Y: train_label_shuffled[:10], dropout:self.dropout})
+                    print ("Train: train_label:", train_label_shuffled[:10], train_pred_y[:10])
+                    np.savetxt (train_x_embed_file_name + "_" + str (epoch), train_x_embed_val, fmt="%.2f\t%.2f\t%.2f")
 
                 
                 predicted_y, x_embed_val, epoch_test_rmse_val, epoch_test_mae_val, epoch_test_relative_err_val, epoch_test_smape_val = sess.run([prediction, x_embed, rmse, mae, relative_err, smape], feed_dict={x_ident: test_data_ident, x_remain: test_data_remain, Y: test_label, dropout:self.dropout})
@@ -838,7 +845,7 @@ if __name__ == '__main__':
     parser.add_argument('--output_dir', type=str, default = '../Results')
 
     #hyper parameter
-    parser.add_argument('--epoch', type=int, default = 50) #2000 # 100
+    parser.add_argument('--epoch', type=int, default = 10) #2000 # 100
     parser.add_argument('--dropout', type=int, default = 1)
     parser.add_argument('--batch_size', type=int, default = 128)
     parser.add_argument('--learning_rate', type=float, default=0.00125)
