@@ -139,7 +139,7 @@ class Dataset (Data_preprocessing, DataFrameImputer):
         self.headers = full_features
         dtype_dict = full_features_dict
 
-        filename = "./Dataframe/Encode_5features_car_ident/[" + dataset + "]total_dataframe_Initial.h5"
+        filename = "./Dataframe/" + encode_car_ident_type + "/[" + dataset + "]total_dataframe_Initial.h5"
         key = "df"
         if os.path.isfile (filename) == False:
             print ("Load dataset from excel file")
@@ -529,7 +529,11 @@ class Dataset (Data_preprocessing, DataFrameImputer):
         car_ident_codes = np.array (dataset[car_ident])
         print ("car_ident_codes", car_ident_codes.shape)
 
-        X_ident = self.encode_one_hot_car_ident_full (dataset)
+        if encode_car_ident_type == "Encode_5features_car_ident":
+            X_ident = self.encode_one_hot_car_ident_full (dataset)
+        else:
+            X_ident = self.encode_one_hot_car_ident (dataset)
+
         d_ident = X_ident.shape[1]
 
         X_ = np.array (dataset[feature_need_encoding])
@@ -770,7 +774,7 @@ class Support(Dataset):
         """
             Apply GradientBoostingRegressor
         """        
-        filename = "./Model/GradientBoostingTree/Encode_5features_car_ident/[" + dataset + "][GradientBoostingRegressor] finalized_model.sav"
+        filename = "./Model/GradientBoostingTree/" + encode_car_ident_type + "/[" + dataset + "][GradientBoostingRegressor] finalized_model.sav"
         if os.path.isfile (filename) == False:
             reg_tree = ensemble.GradientBoostingRegressor(n_estimators = n_estimators, learning_rate = learning_rate, loss = loss)
             stime = time.time()

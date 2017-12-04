@@ -117,13 +117,13 @@ class Tensor_NN(Support, Dataset):
         self.feature_constraint = feature_constraint
         self.feature_constraint_values = feature_constraint_values
 
-        sortedExpandSet = "./Dataframe/Encode_5features_car_ident/[" + dataset + "]total_dataframe_SortedExpand.h5"
-        train_X_filename = "./Dataframe/Encode_5features_car_ident/[" + dataset + "]train_X.h5"
-        train_y_filename = "./Dataframe/Encode_5features_car_ident/[" + dataset + "]train_y.h5"
-        test_X_filename = "./Dataframe/Encode_5features_car_ident/[" + dataset + "]test_X.h5"
-        test_y_filename = "./Dataframe/Encode_5features_car_ident/[" + dataset + "]test_y.h5"
-        car_ident_code_filename = "./Dataframe/Encode_5features_car_ident/[" + dataset + "]car_ident_code.h5"
-        dim_filename = "./Dataframe/Encode_5features_car_ident/[" + dataset + "]dim_ident_remain.h5"
+        sortedExpandSet = "./Dataframe/" + encode_car_ident_type + "/[" + dataset + "]total_dataframe_SortedExpand.h5"
+        train_X_filename = "./Dataframe/" + encode_car_ident_type + "/[" + dataset + "]train_X.h5"
+        train_y_filename = "./Dataframe/" + encode_car_ident_type + "/[" + dataset + "]train_y.h5"
+        test_X_filename = "./Dataframe/" + encode_car_ident_type + "/[" + dataset + "]test_X.h5"
+        test_y_filename = "./Dataframe/" + encode_car_ident_type + "/[" + dataset + "]test_y.h5"
+        car_ident_code_filename = "./Dataframe/" + encode_car_ident_type + "/[" + dataset + "]car_ident_code.h5"
+        dim_filename = "./Dataframe/" + encode_car_ident_type + "/[" + dataset + "]dim_ident_remain.h5"
         key = "df"
 
         if using_car_ident_flag == 1:
