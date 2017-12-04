@@ -842,6 +842,8 @@ if __name__ == '__main__':
     parser.add_argument('--mode', type=str, default='train')
     parser.add_argument('--saved_period', type=int, default=100, help='save checkpoint per X epoch') # 200
     parser.add_argument('--output_dir', type=str, default = '../Results')
+    parser.add_argument('--tree_model_dir', type=str, default = './Model/GradientBoostingTree/Encode_5features_car_ident')
+    parser.add_argument('--dataframe_dir', type=str, default = './Dataframe/Encode_5features_car_ident')
 
     #hyper parameter
     parser.add_argument('--epoch', type=int, default = 70) #2000 # 100
@@ -861,8 +863,11 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    if not os.path.exists(args.model_dir):
+    if not os.path.exists(args.tree_model_dir):
         os.makedirs(args.model_dir)
+
+    if not os.path.exists(args.dataframe_dir):
+        os.makedirs(args.dataframe_dir)
 
     if not os.path.exists(args.output_dir):
         os.makedirs(args.output_dir)
