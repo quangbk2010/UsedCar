@@ -363,9 +363,9 @@ class Tensor_NN(Dataset):
         #output3 = slim.dropout(output3, 0.5, scope='dropout3')
         x_embed = slim.fully_connected(output1, d_embed, scope='output_embed', activation_fn=tf.nn.relu) # 3-dimension of embeding NN
 
+        mean, var = tf.nn.moments(x_embed, [1], keep_dims=True)
+        x_embed = tf.div(tf.subtract(x_embed, mean), tf.sqrt(var))
         input3 = tf.concat ([x_remain, x_embed], 1)
-        mean, var = tf.nn.moments(input3, [1], keep_dims=True)
-        input3 = tf.div(tf.subtract(input3, mean), tf.sqrt(var))
 
         output3 = slim.fully_connected(input3, no_neuron, scope='hidden_main1', activation_fn=tf.nn.relu)
         #output4 = slim.fully_connected(output3, no_neuron, scope='hidden_main_2', activation_fn=tf.nn.relu)
@@ -779,7 +779,7 @@ if __name__ == '__main__':
     #hyper parameter
     parser.add_argument('--epoch', type=int, default = 70) #2000 # 100
     parser.add_argument('--dropout', type=int, default = 1)
-    parser.add_argument('--batch_size', type=int, default = 128)
+    parser.add_argument('--batch_size', type=int, default = 16)
     parser.add_argument('--learning_rate', type=float, default=0.00125)
     parser.add_argument('--decay_rate', type=float, default=0.5)
     parser.add_argument('--decay_step', type=int, default=50) #if decay_step > epoch, no exponential decay
