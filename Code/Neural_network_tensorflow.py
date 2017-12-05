@@ -349,10 +349,13 @@ class Tensor_NN(Dataset):
     
         #tf.reset_default_graph() 
 
+        #config = tf.ConfigProto()
+        #config.gpu_options.allocator_type ='BFC'
+        #config.gpu_options.per_process_gpu_memory_fraction = 1.0
+
         x_ident = tf.placeholder(tf.float32, [None, d_ident])
         x_remain = tf.placeholder(tf.float32, [None, d_remain])
         Y = tf.placeholder(tf.float32, [None, 1])
-        dropout = tf.placeholder(tf.float32, name='dropout')
 
         print ("build_car2vect_model: d_ident:", d_ident, "d_remain:", d_remain, "d_embed:", d_embed, "no_neuron_embed:", no_neuron_embed, "no_neuron_main:", no_neuron)
 
@@ -364,8 +367,6 @@ class Tensor_NN(Dataset):
         x_embed = slim.fully_connected(output1, d_embed, scope='output_embed', activation_fn=tf.nn.relu) # 3-dimension of embeding NN
 
         input3 = tf.concat ([x_remain, x_embed], 1)
-        mean, var = tf.nn.moments(input3, [1], keep_dims=True)
-        input3 = tf.div(tf.subtract(input3, mean), tf.sqrt(var))
 
         output3 = slim.fully_connected(input3, no_neuron, scope='hidden_main1', activation_fn=tf.nn.relu)
         #output4 = slim.fully_connected(output3, no_neuron, scope='hidden_main_2', activation_fn=tf.nn.relu)
@@ -373,14 +374,14 @@ class Tensor_NN(Dataset):
         prediction = slim.fully_connected(output3, 1, scope='output_main') # 1-dimension of output
 
 
-        return x_ident, x_remain, Y, x_embed, prediction, dropout
+        return x_ident, x_remain, Y, x_embed, prediction
 
-    def car2vect(self, train_data, train_label, test_data, test_label, test_car_ident, no_neuron, dropout_val, model_path, d_ident, d_embed, d_remain, no_neuron_embed): # Used for 1train-1test
-    #def car2vect(self, train_data, train_label, test_data, test_label, test_car_ident, dropout_val, model_path, d_ident, d_embed, d_remain, x_ident, x_remain, Y, x_embed, prediction, dropout, fold): # used for Cross-validation 
+    def car2vect(self, train_data, train_label, test_data, test_label, test_car_ident, no_neuron, model_path, d_ident, d_embed, d_remain, no_neuron_embed): # Used for 1train-1test
+    #def car2vect(self, train_data, train_label, test_data, test_label, test_car_ident, dropout_val, model_path, d_ident, d_embed, d_remain, x_ident, x_remain, Y, x_embed, prediction, fold): # used for Cross-validation 
 
         #building car embedding model
         if using_CV_flag == 0:
-            x_ident, x_remain, Y, x_embed, prediction, dropout = self.build_car2vect_model(no_neuron, no_neuron_embed, d_ident, d_embed, d_remain)
+            x_ident, x_remain, Y, x_embed, prediction = self.build_car2vect_model(no_neuron, no_neuron_embed, d_ident, d_embed, d_remain)
             x_ident_file_name_ = x_ident_file_name
             x_embed_file_name_ = x_embed_file_name
             mean_error_file_name_ = mean_error_file_name
@@ -405,14 +406,11 @@ class Tensor_NN(Dataset):
         optimizer = tf.train.AdamOptimizer(learning_rate).minimize(loss, global_step=global_step)
     
         # RMSE
-        rmse = tf.sqrt (tf.reduce_mean(tf.squared_difference(prediction, Y)))
-        mae = tf.reduce_mean (tf.abs (prediction - Y))
-        relative_err = tf.reduce_mean (tf.divide (tf.abs (prediction - Y), Y)) * 100 # there are problem when Y = 0 -> inf or nan answer
-        smape = tf.reduce_mean (tf.divide (tf.abs (prediction - Y), tf.abs (Y) + tf.abs (prediction) )) * 100
+        sum_se = tf.reduce_sum (tf.squared_difference(prediction, Y))
+        sum_ae = tf.reduce_sum (tf.abs (prediction - Y))
+        sum_relative_err = tf.reduce_sum (tf.divide (tf.abs (prediction - Y), Y)) * 100 # there are problem when Y = 0 -> inf or nan answer
+        sum_smape = tf.reduce_sum (tf.divide (tf.abs (prediction - Y), tf.abs (Y) + tf.abs (prediction) )) * 100
         
-        # Calculate root mean squared error as additional eval metric
-
-        #""" Initialize the variables with default values"""
         init = tf.global_variables_initializer()
 
         with tf.Session() as sess:
@@ -437,26 +435,16 @@ class Tensor_NN(Dataset):
             test_data_ident = test_data [:, d_remain:]
 
             print ("test car ident", test_car_ident[0])
-            np.savetxt (x_ident_file_name_, test_car_ident, fmt="%d\t%d\t%d\t%d\t%s")  #[manufacture_codes,rep_model_codes,car_codes,model_codes,rating_codes, x_embed_val]
-            #sys.exit (-1)
-            """manufacture_codes = test_car_ident[0]
-            rep_model_codes = test_car_ident[1]
-            car_codes = test_car_ident[2]
-            model_codes = test_car_ident[3]
-            rating_codes = test_car_ident[4]"""
-            
+            np.savetxt (x_ident_file_name_, test_car_ident, fmt="%d\t%d\t%d\t%d\t%s")  
 
             print ("len train_data_ident:", train_data_ident_shuffled.shape)
             print ("len train_data_remain:", train_data_remain_shuffled.shape)
             print ("len train_label:", train_label_shuffled.shape)
 
-            #print ("train_data_remain[0]:", train_data_remain_shuffled[0])
-            #print ("train_label[0]:", train_label_shuffled[0])
-
-
-            total_batch = int((len(train_data)/self.batch_size) + 0.5)
-
-            pre_epoch_test_relative_err_val = 0
+            len_train = len(train_data)
+            len_test  = len(test_data)
+            train_total_batch = int (np.ceil (float (len_train)/self.batch_size))
+            test_total_batch = int (np.ceil (float (len_test)/self.batch_size))
 
             epoch_list = [] 
             train_err_list = [] 
@@ -467,46 +455,78 @@ class Tensor_NN(Dataset):
 
             for epoch in range (self.epoch):
 
-                total_rmse = 0
-                total_mae = 0
+                # Train the model.
+                total_se = 0
+                total_ae = 0
                 total_relative_err = 0
                 total_smape = 0
-                index_counter = 0
-                left_num = len(train_data)
-                for i in range (total_batch):
-                    start_index = index_counter * self.batch_size
-                    #end_index = 0
-                    if(left_num < self.batch_size):
-                        end_index = index_counter * self.batch_size + left_num
+                start_index = 0
+                end_index = 0
+                for i in range (train_total_batch):
+                    if len_train - end_index < self.batch_size:
+                        end_index = len_train
                     else:
-                        end_index = (index_counter + 1) * self.batch_size
+                        end_index = (i+1) * self.batch_size
 
+                    #print (i, train_total_batch, start_index, end_index, len_train)
                     batch_x_ident = train_data_ident_shuffled [start_index : end_index]
                     batch_x_remain = train_data_remain_shuffled [start_index : end_index]
                     batch_y = train_label_shuffled [start_index : end_index]
-                    #print ("batch_x", batch_x)
-                    #print ("batch_y", batch_y)
-                    index_counter = index_counter + 1
-                    left_num = left_num - self.batch_size
 
-                    if (left_num <= 0):
-                        index_counter = 0
-# x_ident, x_remain, Y,
-                    _, training_rmse_val, training_mae_val, training_relative_err_val, training_smape_val = sess.run([optimizer, rmse, mae, relative_err, smape], feed_dict={x_ident: batch_x_ident, x_remain: batch_x_remain, Y: batch_y, dropout:dropout_val})
-                    total_rmse += training_rmse_val
-                    total_mae += training_mae_val
-                    total_relative_err += training_relative_err_val
-                    total_smape += training_smape_val
+                    start_index = end_index
+
+                    _, train_sum_se_val, train_sum_ae_val, train_sum_relative_err_val, train_sum_smape_val = sess.run([optimizer, sum_se, sum_ae, sum_relative_err, sum_smape], feed_dict={x_ident: batch_x_ident, x_remain: batch_x_remain, Y: batch_y})
+                    total_se += train_sum_se_val
+                    total_ae += train_sum_ae_val
+                    total_relative_err += train_sum_relative_err_val
+                    total_smape += train_sum_smape_val
+
+                assert end_index == len_train   
+
+                print('\n\nEpoch: %04d' % (epoch + 1), "Avg. training rmse:", np.sqrt (total_se/len_train), "mae:", total_ae/len_train, 'relative_err:', total_relative_err/len_train, "smape:", total_smape/len_train)
+
+                # Test the model.
+                # If we use 2 hidden layers, each has >= 10000 units -> resource exhausted, then we should divide it into batches and test on seperate one, and then calculate the average.
+                total_se = 0
+                total_ae = 0
+                total_relative_err = 0
+                total_smape = 0
+                start_index = 0
+                end_index = 0
+                total_predicted_y = np.zeros ((0, 1))
+                total_x_embed_val = np.zeros ((0, d_embed))
+
+                for i in range (test_total_batch):
+                    if len_test - end_index < self.batch_size:
+                        end_index = len_test
+                    else:
+                        end_index = (i+1) * self.batch_size
                     
-                    #a, b = sess.run([Y, prediction], feed_dict={x_ident: batch_x_ident, x_remain: batch_x_remain, Y: batch_y, dropout:dropout_val})
-                    #print ("truth:", a[0][0], "prediction:", b[0][0], "Err:", training_relative_err_val)
+                    batch_x_ident = test_data_ident [start_index : end_index]
+                    batch_x_remain = test_data_remain [start_index : end_index]
+                    batch_y = test_label [start_index : end_index]
 
-                #print('Epoch: %04d' % (epoch + 1), 'Avg. rmse = {:.3f}'.format(total_rmse / total_batch), 'learning_rate = {:.5f}'.format(lr))
-                print('\n\nEpoch: %04d' % (epoch + 1), "Avg. training rmse:", total_rmse/total_batch, "mae:", total_mae/total_batch, 'relative_err:', total_relative_err/total_batch, "smape:", total_smape/total_batch)
+                    start_index = end_index
 
-                #sys.exit (-1)
-                
-                predicted_y, x_embed_val, epoch_test_rmse_val, epoch_test_mae_val, epoch_test_relative_err_val, epoch_test_smape_val = sess.run([prediction, x_embed, rmse, mae, relative_err, smape], feed_dict={x_ident: test_data_ident, x_remain: test_data_remain, Y: test_label, dropout:self.dropout})
+                    predicted_y, x_embed_val, test_sum_se_val, test_sum_ae_val, test_sum_relative_err_val, test_sum_smape_val = sess.run([prediction, x_embed, sum_se, sum_ae, sum_relative_err, sum_smape], feed_dict={x_ident: batch_x_ident, x_remain: batch_x_remain, Y: batch_y})
+
+                    total_predicted_y = np.concatenate ((total_predicted_y, predicted_y))
+                    total_x_embed_val = np.concatenate ((total_x_embed_val, x_embed_val))
+                    total_se += test_sum_se_val
+                    total_ae += test_sum_ae_val
+                    total_relative_err += test_sum_relative_err_val
+                    total_smape += test_sum_smape_val
+
+                assert end_index == len_test   
+
+                predicted_y = total_predicted_y
+                x_embed_val = total_x_embed_val
+                epoch_test_rmse_val = np.sqrt (total_se/len_test)
+                epoch_test_mae_val = total_ae/len_test
+                epoch_test_relative_err_val = total_relative_err/len_test
+                epoch_test_smape_val = total_smape/len_test
+                #predicted_y, x_embed_val, epoch_test_rmse_val, epoch_test_mae_val, epoch_test_relative_err_val, epoch_test_smape_val = sess.run([prediction, x_embed, rmse, mae, relative_err, smape], feed_dict={x_ident: test_data_ident, x_remain: test_data_remain, Y: test_label})
+
                 
                 print ("test: rmse", epoch_test_rmse_val)
                 print ("test: mae", epoch_test_mae_val)
@@ -515,7 +535,7 @@ class Tensor_NN(Dataset):
                 print ("truth:", test_label[:10], "prediction:", predicted_y[:10])
 
                 epoch_list.append (epoch)
-                train_err_list.append (total_relative_err/total_batch)
+                train_err_list.append (total_relative_err/test_total_batch)
                 rmse_list.append (epoch_test_rmse_val)
                 mae_list.append (epoch_test_mae_val)
                 rel_err_list.append (epoch_test_relative_err_val)
@@ -821,5 +841,5 @@ if __name__ == '__main__':
     print ("test_data:", test_data.shape)
     print ("test_label:", test_label.shape)
  
-    nn.car2vect(train_data=train_data, train_label=train_label, test_data=test_data, test_label=test_label, test_car_ident=test_car_ident, no_neuron=nn.no_neuron, dropout_val=1, model_path=model_path, d_ident=nn.d_ident,d_embed=3, d_remain=nn.d_remain, no_neuron_embed=nn.no_neuron_embed) # 1000, 3, 6000
+    nn.car2vect(train_data=train_data, train_label=train_label, test_data=test_data, test_label=test_label, test_car_ident=test_car_ident, no_neuron=nn.no_neuron, model_path=model_path, d_ident=nn.d_ident,d_embed=3, d_remain=nn.d_remain, no_neuron_embed=nn.no_neuron_embed) # 1000, 3, 6000
  
