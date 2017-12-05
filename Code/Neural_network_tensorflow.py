@@ -354,30 +354,21 @@ class Tensor_NN(Dataset):
         Y = tf.placeholder(tf.float32, [None, 1])
         dropout = tf.placeholder(tf.float32, name='dropout')
 
-        """output1 = slim.fully_connected(x_ident, no_neuron_embed, scope='hidden1', activation_fn=tf.nn.relu)
-        x_embed = slim.fully_connected(output1, d_embed, scope='hidden2', activation_fn=tf.nn.relu) # 3-dimension of embeding NN
-
-        input3 = tf.concat ([x_remain, x_embed], 1)
-
-        output3 = slim.fully_connected(input3, no_neuron, scope='hidden3', activation_fn=tf.nn.relu)
-        prediction = slim.fully_connected(output3, 1, scope='output') # 1-dimension of output"""
-        
         print ("build_car2vect_model: d_ident:", d_ident, "d_remain:", d_remain, "d_embed:", d_embed, "no_neuron_embed:", no_neuron_embed, "no_neuron_main:", no_neuron)
 
-        #output1 = slim.fully_connected(x_ident, d_ident, scope='input_embed', activation_fn=tf.nn.relu)
-        output1 = slim.fully_connected(x_ident, no_neuron_embed, scope='input_embed', activation_fn=tf.nn.relu)
-        #output2 = slim.fully_connected(output1, no_neuron_embed, scope='hidden_embed1', activation_fn=tf.nn.relu)
+        output1 = slim.fully_connected(x_ident, no_neuron_embed, scope='hidden_embed1', activation_fn=tf.nn.relu)
+        #output2 = slim.fully_connected(output1, no_neuron_embed, scope='hidden_embed2', activation_fn=tf.nn.relu)
         #output2 = slim.dropout(output2, 0.5, scope='dropout2')
-        #output3 = slim.fully_connected(output2, no_neuron_embed, scope='hidden_embed2', activation_fn=tf.nn.relu)
+        #output3 = slim.fully_connected(output2, no_neuron_embed, scope='hidden_embed3', activation_fn=tf.nn.relu)
         #output3 = slim.dropout(output3, 0.5, scope='dropout3')
         x_embed = slim.fully_connected(output1, d_embed, scope='output_embed', activation_fn=tf.nn.relu) # 3-dimension of embeding NN
 
         input3 = tf.concat ([x_remain, x_embed], 1)
 
         #output3 = slim.fully_connected(input3, d_remain + d_embed, scope='input_main', activation_fn=tf.nn.relu)
-        output3 = slim.fully_connected(input3, no_neuron, scope='input_main', activation_fn=tf.nn.relu)
-        #output4 = slim.fully_connected(output3, no_neuron, scope='hidden_main_1', activation_fn=tf.nn.relu)
-        #output5 = slim.fully_connected(output4, no_neuron, scope='hidden_main_2', activation_fn=tf.nn.relu)
+        output3 = slim.fully_connected(input3, no_neuron, scope='hidden_main1', activation_fn=tf.nn.relu)
+        #output4 = slim.fully_connected(output3, no_neuron, scope='hidden_main_2', activation_fn=tf.nn.relu)
+        #output5 = slim.fully_connected(output4, no_neuron, scope='hidden_main_3', activation_fn=tf.nn.relu)
         prediction = slim.fully_connected(output3, 1, scope='output_main') # 1-dimension of output
 
 
