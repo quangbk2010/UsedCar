@@ -851,7 +851,7 @@ if __name__ == '__main__':
     parser.add_argument('--batch_size', type=int, default = 128)
     parser.add_argument('--learning_rate', type=float, default=0.00125)
     parser.add_argument('--decay_rate', type=float, default=0.5)
-    parser.add_argument('--decay_step', type=int, default=100) #if decay_step > epoch, no exponential decay
+    parser.add_argument('--decay_step', type=int, default=50) #if decay_step > epoch, no exponential decay
 
     #network parameter
     parser.add_argument('--dim_data', type=int, default=24)
