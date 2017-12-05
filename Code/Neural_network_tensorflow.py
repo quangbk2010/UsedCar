@@ -364,8 +364,9 @@ class Tensor_NN(Dataset):
         x_embed = slim.fully_connected(output1, d_embed, scope='output_embed', activation_fn=tf.nn.relu) # 3-dimension of embeding NN
 
         input3 = tf.concat ([x_remain, x_embed], 1)
+        mean, var = tf.nn.moments(input3, [1], keep_dims=True)
+        input3 = tf.div(tf.subtract(input3, mean), tf.sqrt(var))
 
-        #output3 = slim.fully_connected(input3, d_remain + d_embed, scope='input_main', activation_fn=tf.nn.relu)
         output3 = slim.fully_connected(input3, no_neuron, scope='hidden_main1', activation_fn=tf.nn.relu)
         #output4 = slim.fully_connected(output3, no_neuron, scope='hidden_main_2', activation_fn=tf.nn.relu)
         #output5 = slim.fully_connected(output4, no_neuron, scope='hidden_main_3', activation_fn=tf.nn.relu)
