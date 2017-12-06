@@ -204,12 +204,9 @@ class Tensor_NN(Dataset):
         train_length     = int (0.5 + len_total_set * data_training_percentage)
         #test_length     = int (0.5 + len_total_set * data_test_percentage)
 
-        scaler = StandardScaler()  
+        """scaler = StandardScaler()  
         scaler.fit(X_total_set)  
-        X_total_set = scaler.transform(X_total_set)
-        """for feature in feature_need_scaler:
-            X_total_set[feature] = scaler.fit_transform(X_total_set[feature])  """
-            
+        X_total_set = scaler.transform(X_total_set)"""
 
         if output == "price":
             y_total_set = self.get_data_array (self.total_dataset, output)
@@ -349,10 +346,6 @@ class Tensor_NN(Dataset):
     
         #tf.reset_default_graph() 
 
-        #config = tf.ConfigProto()
-        #config.gpu_options.allocator_type ='BFC'
-        #config.gpu_options.per_process_gpu_memory_fraction = 1.0
-
         x_ident = tf.placeholder(tf.float32, [None, d_ident])
         x_remain = tf.placeholder(tf.float32, [None, d_remain])
         Y = tf.placeholder(tf.float32, [None, 1])
@@ -405,7 +398,7 @@ class Tensor_NN(Dataset):
 
         optimizer = tf.train.AdamOptimizer(learning_rate).minimize(loss, global_step=global_step)
     
-        # RMSE
+        # Declare error functions
         sum_se = tf.reduce_sum (tf.squared_difference(prediction, Y))
         sum_ae = tf.reduce_sum (tf.abs (prediction - Y))
         sum_relative_err = tf.reduce_sum (tf.divide (tf.abs (prediction - Y), Y)) * 100 # there are problem when Y = 0 -> inf or nan answer
