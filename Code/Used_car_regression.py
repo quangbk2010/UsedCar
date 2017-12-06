@@ -151,7 +151,7 @@ class Dataset (Data_preprocessing, DataFrameImputer):
             # Sort by actual advertising date
             #total_dataset = total_dataset.sort_values ("actual_advertising_date", ascending=True)
             
-            # Remove the data points with price == 0
+            # Remove the data points with sale_state == "advertising"
             #total_dataset = total_dataset[total_dataset["sale_state"] == "Sold-out"]
             #print ("2.", total_dataset.shape)
 
