@@ -142,9 +142,9 @@ class Tensor_NN(Dataset):
         train_length     = int (0.5 + len_total_set * data_training_percentage)
         #test_length     = int (0.5 + len_total_set * data_test_percentage)
 
-        scaler = StandardScaler()  
+        """scaler = StandardScaler()  
         scaler.fit(X_total_set)  
-        X_total_set = scaler.transform(X_total_set)  
+        X_total_set = scaler.transform(X_total_set)"""
             
 
         if output == "price":
@@ -204,12 +204,9 @@ class Tensor_NN(Dataset):
         train_length     = int (0.5 + len_total_set * data_training_percentage)
         #test_length     = int (0.5 + len_total_set * data_test_percentage)
 
-        scaler = StandardScaler()  
+        """scaler = StandardScaler()  
         scaler.fit(X_total_set)  
-        X_total_set = scaler.transform(X_total_set)
-        """for feature in feature_need_scaler:
-            X_total_set[feature] = scaler.fit_transform(X_total_set[feature])  """
-            
+        X_total_set = scaler.transform(X_total_set)"""
 
         if output == "price":
             y_total_set = self.get_data_array (self.total_dataset, output)
@@ -349,10 +346,6 @@ class Tensor_NN(Dataset):
     
         #tf.reset_default_graph() 
 
-        #config = tf.ConfigProto()
-        #config.gpu_options.allocator_type ='BFC'
-        #config.gpu_options.per_process_gpu_memory_fraction = 1.0
-
         x_ident = tf.placeholder(tf.float32, [None, d_ident])
         x_remain = tf.placeholder(tf.float32, [None, d_remain])
         Y = tf.placeholder(tf.float32, [None, 1])
@@ -360,11 +353,15 @@ class Tensor_NN(Dataset):
         print ("build_car2vect_model: d_ident:", d_ident, "d_remain:", d_remain, "d_embed:", d_embed, "no_neuron_embed:", no_neuron_embed, "no_neuron_main:", no_neuron)
 
         output1 = slim.fully_connected(x_ident, no_neuron_embed, scope='hidden_embed1', activation_fn=tf.nn.relu)
+        #output1 = slim.dropout(output1, nn.dropout, scope='dropout2')
         output2 = slim.fully_connected(output1, no_neuron_embed, scope='hidden_embed2', activation_fn=tf.nn.relu)
-        #output2 = slim.dropout(output2, 0.5, scope='dropout2')
+        #output2 = slim.dropout(output2, nn.dropout, scope='dropout2')
         #output3 = slim.fully_connected(output2, no_neuron_embed, scope='hidden_embed3', activation_fn=tf.nn.relu)
-        #output3 = slim.dropout(output3, 0.5, scope='dropout3')
+        #output3 = slim.dropout(output3, nn.dropout, scope='dropout3')
         x_embed = slim.fully_connected(output2, d_embed, scope='output_embed', activation_fn=tf.nn.relu) # 3-dimension of embeding NN
+
+        mean, var = tf.nn.moments (x_embed, [0], keep_dims=True)
+        x_embed = tf.div(tf.subtract(x_embed, mean), tf.sqrt(var))
 
         input3 = tf.concat ([x_remain, x_embed], 1)
 
@@ -405,7 +402,7 @@ class Tensor_NN(Dataset):
 
         optimizer = tf.train.AdamOptimizer(learning_rate).minimize(loss, global_step=global_step)
     
-        # RMSE
+        # Declare error functions
         sum_se = tf.reduce_sum (tf.squared_difference(prediction, Y))
         sum_ae = tf.reduce_sum (tf.abs (prediction - Y))
         sum_relative_err = tf.reduce_sum (tf.divide (tf.abs (prediction - Y), Y)) * 100 # there are problem when Y = 0 -> inf or nan answer
@@ -581,8 +578,8 @@ class Tensor_NN(Dataset):
 
             return epoch_test_relative_err_val
 
-    #def train_nn(self, train_data, train_label, test_data, test_label, no_neuron, no_hidden_layer, dropout_val, model_path): # Used for 1train-1test
-    def train_nn(self, train_data, train_label, test_data, test_label, dropout_val, model_path, X, Y, prediction, weights, dropout, fold): # used for Cross-validation 
+    def train_nn(self, train_data, train_label, test_data, test_label, no_neuron, no_hidden_layer, dropout_val, model_path): # Used for 1train-1test
+    #def train_nn(self, train_data, train_label, test_data, test_label, dropout_val, model_path, X, Y, prediction, weights, dropout, fold): # used for Cross-validation 
        
         #building car embedding model
         if using_CV_flag == 0:
@@ -797,7 +794,7 @@ if __name__ == '__main__':
 
     #hyper parameter
     parser.add_argument('--epoch', type=int, default = 70) #2000 # 100
-    parser.add_argument('--dropout', type=int, default = 1)
+    parser.add_argument('--dropout', type=float, default = 1)
     parser.add_argument('--batch_size', type=int, default = 128)
     parser.add_argument('--learning_rate', type=float, default=0.00125)
     parser.add_argument('--decay_rate', type=float, default=0.5)
@@ -833,12 +830,16 @@ if __name__ == '__main__':
     train_label = nn.y_train_set
     test_data = nn.X_test_set
     test_label = nn.y_test_set
-    test_car_ident = nn.car_ident_code_total_set[train_data.shape[0]:]
+    if using_car_ident_flag == 1:
+        test_car_ident = nn.car_ident_code_total_set[train_data.shape[0]:]
 
     print ("train_data:", train_data.shape)
     print ("train_label:", train_label.shape)
     print ("test_data:", test_data.shape)
     print ("test_label:", test_label.shape)
  
-    nn.car2vect(train_data=train_data, train_label=train_label, test_data=test_data, test_label=test_label, test_car_ident=test_car_ident, no_neuron=nn.no_neuron, model_path=model_path, d_ident=nn.d_ident,d_embed=3, d_remain=nn.d_remain, no_neuron_embed=nn.no_neuron_embed) # 1000, 3, 6000
- 
+    if using_car_ident_flag == 1:
+        nn.car2vect(train_data=train_data, train_label=train_label, test_data=test_data, test_label=test_label, test_car_ident=test_car_ident, no_neuron=nn.no_neuron, model_path=model_path, d_ident=nn.d_ident,d_embed=3, d_remain=nn.d_remain, no_neuron_embed=nn.no_neuron_embed) # 1000, 3, 6000
+    else:
+        nn.train_nn (train_data=train_data, train_label=train_label, test_data=test_data, test_label=test_label, no_neuron=nn.no_neuron, model_path=model_path, no_hidden_layer = 2, dropout_val=nn.dropout)
+     

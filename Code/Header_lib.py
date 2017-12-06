@@ -209,7 +209,6 @@ else:
 feature_need_label = ["car_type", "trans_mode", "fuel_type"]
 feature_need_impute = ["rating_code"]#, "car_type"]
 feature_need_remove_outlier = ["vehicle_mile", "no_click", "recovery_fee"]#, "price"]
-feature_need_scaler = ["vehicle_mile", "no_click", "recovery_fee", "price"]
 
 # list of features whether it needs remove outliers 
 feature_need_not_remove_outlier = [feature for feature in features if feature not in feature_need_remove_outlier] 
