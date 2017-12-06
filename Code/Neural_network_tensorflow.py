@@ -142,9 +142,9 @@ class Tensor_NN(Dataset):
         train_length     = int (0.5 + len_total_set * data_training_percentage)
         #test_length     = int (0.5 + len_total_set * data_test_percentage)
 
-        scaler = StandardScaler()  
+        """scaler = StandardScaler()  
         scaler.fit(X_total_set)  
-        X_total_set = scaler.transform(X_total_set)  
+        X_total_set = scaler.transform(X_total_set)"""
             
 
         if output == "price":
@@ -353,12 +353,12 @@ class Tensor_NN(Dataset):
         print ("build_car2vect_model: d_ident:", d_ident, "d_remain:", d_remain, "d_embed:", d_embed, "no_neuron_embed:", no_neuron_embed, "no_neuron_main:", no_neuron)
 
         output1 = slim.fully_connected(x_ident, no_neuron_embed, scope='hidden_embed1', activation_fn=tf.nn.relu)
-        output1 = slim.dropout(output1, nn.dropout, scope='dropout2')
-        output2 = slim.fully_connected(output1, no_neuron_embed, scope='hidden_embed2', activation_fn=tf.nn.relu)
-        output2 = slim.dropout(output2, nn.dropout, scope='dropout2')
-        output3 = slim.fully_connected(output2, no_neuron_embed, scope='hidden_embed3', activation_fn=tf.nn.relu)
-        output3 = slim.dropout(output3, nn.dropout, scope='dropout3')
-        x_embed = slim.fully_connected(output3, d_embed, scope='output_embed', activation_fn=tf.nn.relu) # 3-dimension of embeding NN
+        #output1 = slim.dropout(output1, nn.dropout, scope='dropout2')
+        #output2 = slim.fully_connected(output1, no_neuron_embed, scope='hidden_embed2', activation_fn=tf.nn.relu)
+        #output2 = slim.dropout(output2, nn.dropout, scope='dropout2')
+        #output3 = slim.fully_connected(output2, no_neuron_embed, scope='hidden_embed3', activation_fn=tf.nn.relu)
+        #output3 = slim.dropout(output3, nn.dropout, scope='dropout3')
+        x_embed = slim.fully_connected(output1, d_embed, scope='output_embed', activation_fn=tf.nn.relu) # 3-dimension of embeding NN
 
         input3 = tf.concat ([x_remain, x_embed], 1)
 
