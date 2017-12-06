@@ -791,7 +791,7 @@ if __name__ == '__main__':
 
     #hyper parameter
     parser.add_argument('--epoch', type=int, default = 70) #2000 # 100
-    parser.add_argument('--dropout', type=int, default = 1)
+    parser.add_argument('--dropout', type=float, default = 1)
     parser.add_argument('--batch_size', type=int, default = 128)
     parser.add_argument('--learning_rate', type=float, default=0.00125)
     parser.add_argument('--decay_rate', type=float, default=0.5)
