@@ -485,7 +485,13 @@ class Dataset (Data_preprocessing, DataFrameImputer):
         features: an array contains name of features 
         => return: a matrix with rows are data points, columns are features values (nD numpy.array object)
         
-        """
+        """ 
+        X1 = np.array (dataset[car_ident + feature_need_encoding]) 
+        enc = OneHotEncoder(sparse = False)
+        X1 = enc.fit_transform (X1)
+
+        X2 = np.array (dataset[features_not_need_encoding]) 
+        X = np.concatenate ((X2, X1), axis = 1) 
         return np.array (dataset[features]) 
 
     def get_data_matrix_car_ident (self, dataset):
@@ -501,8 +507,12 @@ class Dataset (Data_preprocessing, DataFrameImputer):
         d_ident = X1.shape[1]
 
         print ("X.shape1", X1.shape)
-        X2 = np.array (dataset[features_remove_car_ident]) 
-        X = np.concatenate ((X2, X1), axis = 1) 
+        X2 = np.array (dataset[feature_need_encoding]) 
+        enc = OneHotEncoder(sparse = False)
+        X2 = enc.fit_transform (X2)
+
+        X3 = np.array (dataset[features_not_need_encoding]) 
+        X = np.concatenate ((X3, X2, X1), axis = 1) 
         
         d_remain = X.shape[1] - d_ident
         print ("X.shape2", X.shape, d_remain, d_ident)
