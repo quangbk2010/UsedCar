@@ -352,14 +352,16 @@ class Tensor_NN(Dataset):
 
         print ("build_car2vect_model: d_ident:", d_ident, "d_remain:", d_remain, "d_embed:", d_embed, "no_neuron_embed:", no_neuron_embed, "no_neuron_main:", no_neuron)
 
-        output1 = slim.fully_connected(x_ident, no_neuron_embed, scope='hidden_embed1', activation_fn=tf.nn.sigmoid)
+        output1 = slim.fully_connected(x_ident, no_neuron_embed, scope='hidden_embed1', activation_fn=tf.nn.relu)
         #output1 = slim.dropout(output1, nn.dropout, scope='dropout2')
         #output2 = slim.fully_connected(output1, no_neuron_embed, scope='hidden_embed2', activation_fn=tf.nn.relu)
         #output2 = slim.dropout(output2, nn.dropout, scope='dropout2')
         #output3 = slim.fully_connected(output2, no_neuron_embed, scope='hidden_embed3', activation_fn=tf.nn.relu)
         #output3 = slim.dropout(output3, nn.dropout, scope='dropout3')
-        #x_embed = slim.fully_connected(output1, d_embed, scope='output_embed', activation_fn=tf.nn.relu) # 3-dimension of embeding NN
-        x_embed = slim.fully_connected(output1, d_embed, scope='output_embed', activation_fn=tf.nn.sigmoid) # 3-dimension of embeding NN
+        x_embed = slim.fully_connected(output1, d_embed, scope='output_embed', activation_fn=tf.nn.relu) # 3-dimension of embeding NN
+
+        mean, var = tf.nn.moments (x_embed, [0], keep_dims=true)
+        x_embed = tf.div(tf.subtract(x_embed, mean), tf.sqrt(var))
 
         input3 = tf.concat ([x_remain, x_embed], 1)
 
