@@ -204,12 +204,9 @@ class Tensor_NN(Dataset):
         train_length     = int (0.5 + len_total_set * data_training_percentage)
         #test_length     = int (0.5 + len_total_set * data_test_percentage)
 
-        scaler = StandardScaler()  
+        """scaler = StandardScaler()  
         scaler.fit(X_total_set)  
-        X_total_set = scaler.transform(X_total_set)
-        """for feature in feature_need_scaler:
-            X_total_set[feature] = scaler.fit_transform(X_total_set[feature])  """
-            
+        X_total_set = scaler.transform(X_total_set)"""
 
         if output == "price":
             y_total_set = self.get_data_array (self.total_dataset, output)
@@ -349,10 +346,6 @@ class Tensor_NN(Dataset):
     
         #tf.reset_default_graph() 
 
-        #config = tf.ConfigProto()
-        #config.gpu_options.allocator_type ='BFC'
-        #config.gpu_options.per_process_gpu_memory_fraction = 1.0
-
         x_ident = tf.placeholder(tf.float32, [None, d_ident])
         x_remain = tf.placeholder(tf.float32, [None, d_remain])
         Y = tf.placeholder(tf.float32, [None, 1])
@@ -405,7 +398,7 @@ class Tensor_NN(Dataset):
 
         optimizer = tf.train.AdamOptimizer(learning_rate).minimize(loss, global_step=global_step)
     
-        # RMSE
+        # Declare error functions
         sum_se = tf.reduce_sum (tf.squared_difference(prediction, Y))
         sum_ae = tf.reduce_sum (tf.abs (prediction - Y))
         sum_relative_err = tf.reduce_sum (tf.divide (tf.abs (prediction - Y), Y)) * 100 # there are problem when Y = 0 -> inf or nan answer
@@ -483,7 +476,11 @@ class Tensor_NN(Dataset):
 
                 assert end_index == len_train   
 
-                print('\n\nEpoch: %04d' % (epoch + 1), "Avg. training rmse:", np.sqrt (total_se/len_train), "mae:", total_ae/len_train, 'relative_err:', total_relative_err/len_train, "smape:", total_smape/len_train)
+                epoch_train_rmse_val = np.sqrt (total_se/len_train)
+                epoch_train_mae_val = total_ae/len_train
+                epoch_train_relative_err_val = total_relative_err/len_train
+                epoch_train_smape_val = total_smape/len_train
+                print('\n\nEpoch: %04d' % (epoch + 1), "Avg. training rmse:", epoch_train_rmse_val, "mae:", epoch_train_mae_val, 'relative_err:', epoch_train_relative_err_val, "smape:", epoch_train_smape_val)
 
                 # Test the model.
                 # If we use 2 hidden layers, each has >= 10000 units -> resource exhausted, then we should divide it into batches and test on seperate one, and then calculate the average.
@@ -535,7 +532,7 @@ class Tensor_NN(Dataset):
                 print ("truth:", test_label[:10], "prediction:", predicted_y[:10])
 
                 epoch_list.append (epoch)
-                train_err_list.append (total_relative_err/test_total_batch)
+                train_err_list.append (epoch_train_relative_err_val)
                 rmse_list.append (epoch_test_rmse_val)
                 mae_list.append (epoch_test_mae_val)
                 rel_err_list.append (epoch_test_relative_err_val)
@@ -547,11 +544,6 @@ class Tensor_NN(Dataset):
                 line['truth'] = test_label.reshape (test_label.shape[0])
                 line['pred'] = predicted_y.reshape (predicted_y.shape[0])
                 np.savetxt(y_predict_file_name_ + "_" + str (epoch), line, fmt="%.2f\t%.2f")
-
-                #sys.exit (-1)
-                #if epoch_test_relative_err_val > pre_epoch_test_relative_err_val and pre_epoch_test_relative_err_val != 0:
-                    #break
-                #pre_epoch_test_relative_err_val = epoch_test_relative_err_val
 
                 #TODO: training data permutation
                 train_set_shuffled = np.random.permutation(train_set)
