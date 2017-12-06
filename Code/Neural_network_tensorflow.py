@@ -358,7 +358,7 @@ class Tensor_NN(Dataset):
         #output2 = slim.dropout(output2, nn.dropout, scope='dropout2')
         #output3 = slim.fully_connected(output2, no_neuron_embed, scope='hidden_embed3', activation_fn=tf.nn.relu)
         #output3 = slim.dropout(output3, nn.dropout, scope='dropout3')
-        x_embed = slim.fully_connected(output2, d_embed, scope='output_embed', activation_fn=tf.nn.relu) # 3-dimension of embeding NN
+        x_embed = slim.fully_connected(output1, d_embed, scope='output_embed', activation_fn=tf.nn.relu) # 3-dimension of embeding NN
 
         mean, var = tf.nn.moments (x_embed, [0], keep_dims=True)
         x_embed = tf.div(tf.subtract(x_embed, mean), tf.sqrt(var))
