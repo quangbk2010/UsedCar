@@ -838,5 +838,5 @@ if __name__ == '__main__':
     if using_car_ident_flag == 1:
         nn.car2vect(train_data=train_data, train_label=train_label, test_data=test_data, test_label=test_label, test_car_ident=test_car_ident, no_neuron=nn.no_neuron, model_path=model_path, d_ident=nn.d_ident,d_embed=3, d_remain=nn.d_remain, no_neuron_embed=nn.no_neuron_embed) # 1000, 3, 6000
     else:
-        nn.train_nn (train_data=train_data, train_label=train_label, test_data=test_data, test_label=test_label, no_neuron=nn.no_neuron, model_path=model_path, no_neuron_embed=nn.no_neuron_embed, dropout_val=nn.dropout)
+        nn.train_nn (train_data=train_data, train_label=train_label, test_data=test_data, test_label=test_label, no_neuron=nn.no_neuron, model_path=model_path, no_hidden_layer = 2, dropout_val=nn.dropout)
      
