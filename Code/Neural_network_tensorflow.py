@@ -302,8 +302,10 @@ class Tensor_NN(Dataset):
         Y = tf.placeholder(tf.float32, [None, 1])
 
         net = slim.fully_connected(X, no_unit, scope='hidden_layer1', activation_fn=tf.nn.relu)
+        net = slim.dropout(net, nn.dropout, scope='dropout1')
         for i in range (1, no_hidden_layer):
             net = slim.fully_connected(net, no_unit, scope='hidden_layer'+str(i+1), activation_fn=tf.nn.relu)
+            net = slim.dropout(net, nn.dropout, scope='dropout'+str(i+1))
 
         prediction = slim.fully_connected(net, 1, scope='output_layer')
 
