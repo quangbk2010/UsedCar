@@ -362,7 +362,7 @@ class Tensor_NN(Dataset):
 
         #mean, var = tf.nn.moments (x_embed, [0], keep_dims=True)
         #x_embed = tf.div(tf.subtract(x_embed, mean), tf.sqrt(var))
-        x_embed = tf.div (x_embed - tf.min (x_embed), tf.max (x_embed) - tf.min (x_embed))
+        x_embed = tf.div (x_embed - tf.reduce_min (x_embed), tf.reduce_max (x_embed) - tf.reduce_min (x_embed))
 
         input3 = tf.concat ([x_remain, x_embed], 1)
 
