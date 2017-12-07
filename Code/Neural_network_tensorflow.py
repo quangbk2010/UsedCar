@@ -353,7 +353,7 @@ class Tensor_NN(Dataset):
         print ("build_car2vect_model: d_ident:", d_ident, "d_remain:", d_remain, "d_embed:", d_embed, "no_neuron_embed:", no_neuron_embed, "no_neuron_main:", no_neuron)
 
         output1 = slim.fully_connected(x_ident, no_neuron_embed, scope='hidden_embed1', activation_fn=tf.nn.relu)
-        output1 = slim.dropout(output1, nn.dropout, scope='dropout1')
+        #output1 = slim.dropout(output1, nn.dropout, scope='dropout1')
         #output2 = slim.fully_connected(output1, no_neuron_embed, scope='hidden_embed2', activation_fn=tf.nn.relu)
         #output2 = slim.dropout(output2, nn.dropout, scope='dropout2')
         #output3 = slim.fully_connected(output2, no_neuron_embed, scope='hidden_embed3', activation_fn=tf.nn.relu)
@@ -488,7 +488,7 @@ class Tensor_NN(Dataset):
 
                 # Test the model.
                 # If we use 2 hidden layers, each has >= 10000 units -> resource exhausted, then we should divide it into batches and test on seperate one, and then calculate the average.
-                total_se = 0
+                """total_se = 0
                 total_ae = 0
                 total_relative_err = 0
                 total_smape = 0
@@ -525,8 +525,8 @@ class Tensor_NN(Dataset):
                 epoch_test_rmse_val = np.sqrt (total_se/len_test)
                 epoch_test_mae_val = total_ae/len_test
                 epoch_test_relative_err_val = total_relative_err/len_test
-                epoch_test_smape_val = total_smape/len_test
-                #predicted_y, x_embed_val, epoch_test_rmse_val, epoch_test_mae_val, epoch_test_relative_err_val, epoch_test_smape_val = sess.run([prediction, x_embed, rmse, mae, relative_err, smape], feed_dict={x_ident: test_data_ident, x_remain: test_data_remain, Y: test_label})
+                epoch_test_smape_val = total_smape/len_test"""
+                predicted_y, x_embed_val, epoch_test_rmse_val, epoch_test_mae_val, epoch_test_relative_err_val, epoch_test_smape_val = sess.run([prediction, x_embed, rmse, mae, relative_err, smape], feed_dict={x_ident: test_data_ident, x_remain: test_data_remain, Y: test_label})
 
                 
                 print ("test: rmse", epoch_test_rmse_val)
