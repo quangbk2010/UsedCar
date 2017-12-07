@@ -407,6 +407,10 @@ class Tensor_NN(Dataset):
         sum_ae = tf.reduce_sum (tf.abs (prediction - Y))
         sum_relative_err = tf.reduce_sum (tf.divide (tf.abs (prediction - Y), Y)) * 100 # there are problem when Y = 0 -> inf or nan answer
         sum_smape = tf.reduce_sum (tf.divide (tf.abs (prediction - Y), tf.abs (Y) + tf.abs (prediction) )) * 100
+        rmse = tf.sqrt (tf.reduce_mean (tf.squared_difference(prediction, Y)))
+        mae = tf.reduce_mean (tf.abs (prediction - Y))
+        relative_err = tf.reduce_mean (tf.divide (tf.abs (prediction - Y), Y)) * 100 # there are problem when Y = 0 -> inf or nan answer
+        smape = tf.reduce_mean (tf.divide (tf.abs (prediction - Y), tf.abs (Y) + tf.abs (prediction) )) * 100
         
         init = tf.global_variables_initializer()
 
