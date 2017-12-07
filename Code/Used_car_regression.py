@@ -485,10 +485,12 @@ class Dataset (Data_preprocessing, DataFrameImputer):
         X1 = np.array (dataset[car_ident + feature_need_encoding]) 
         enc = OneHotEncoder(sparse = False)
         X1 = enc.fit_transform (X1)
+        print ("X1.shape", X1.shape)
 
         X2 = np.array (dataset[features_not_need_encoding]) 
         X = np.concatenate ((X2, X1), axis = 1) 
-        return np.array (dataset[features]) 
+        print ("X2.shape", X2.shape)
+        return X 
 
     def get_data_matrix_car_ident (self, dataset):
         """
@@ -500,6 +502,8 @@ class Dataset (Data_preprocessing, DataFrameImputer):
         print ("car_ident_codes", car_ident_codes.shape)
 
         X1 = self.encode_one_hot_car_ident_full (dataset)
+
+        # Concatenate 
         d_ident = X1.shape[1]
 
         print ("X.shape1", X1.shape)
