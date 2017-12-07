@@ -152,8 +152,8 @@ class Dataset (Data_preprocessing, DataFrameImputer):
             #total_dataset = total_dataset.sort_values ("actual_advertising_date", ascending=True)
             
             # Remove the data points with sale_state == "advertising"
-            #total_dataset = total_dataset[total_dataset["sale_state"] == "Sold-out"]
-            #print ("2.", total_dataset.shape)
+            total_dataset = total_dataset[total_dataset["sale_state"] == "Sold-out"]
+            print ("2.", total_dataset.shape)
 
             # Remove the data points with price == 0
             #total_dataset = total_dataset[total_dataset["price"] != 0]
@@ -170,7 +170,8 @@ class Dataset (Data_preprocessing, DataFrameImputer):
             total_dataset = MultiColumnLabelEncoder(columns = feature_need_label).fit_transform(total_dataset)
 
             # Standard scale dataset
-            scaler = StandardScaler()  
+            #scaler = StandardScaler()  
+            scaler = RobustScaler()
             total_dataset[features_not_need_encoding] = scaler.fit_transform (total_dataset[features_not_need_encoding])
 
             print ("Store the dataframe into a hdf file")

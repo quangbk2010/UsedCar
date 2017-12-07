@@ -12,7 +12,7 @@ import numpy as np
 import pandas as pd
 import time
 from sklearn import linear_model, ensemble
-from sklearn.preprocessing import OneHotEncoder, StandardScaler, Imputer, LabelEncoder  
+from sklearn.preprocessing import OneHotEncoder, StandardScaler, RobustScaler, MinMaxScaler, Imputer, LabelEncoder  
 import matplotlib.pyplot as plt
 from scipy.stats.stats import pearsonr
 from scipy import stats
