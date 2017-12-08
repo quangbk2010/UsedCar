@@ -151,12 +151,9 @@ class Dataset (Data_preprocessing, DataFrameImputer):
             # Sort by actual advertising date
             #total_dataset = total_dataset.sort_values ("actual_advertising_date", ascending=True)
             
-            # Remove the data points with price == 0
+            # Remove the data points with sale_state == "advertising"
             #total_dataset = total_dataset[total_dataset["sale_state"] == "Sold-out"]
             #print ("2.", total_dataset.shape)
-            # Remove the data points with sale_state == "advertising"
-            total_dataset = total_dataset[total_dataset["sale_state"] == "Sold-out"]
-            print ("2.", total_dataset.shape)
 
             # Remove the data points with price == 0
             #total_dataset = total_dataset[total_dataset["price"] != 0]
@@ -193,30 +190,6 @@ class Dataset (Data_preprocessing, DataFrameImputer):
             print ("Reload dataset using HDF5 (Pytables)")
             total_dataset = pd.read_hdf (filename, key)
 
-        print ("1.", total_dataset.shape)
-        print ("Time for Loading and preprocessing dataset: %.3f" % (time.time() - stime))        
-
-            # Remove outliers
-            #total_dataset = total_dataset[np.abs(total_dataset["price"] - total_dataset["price"].mean()) / total_dataset["price"].std() < 1]
-            #print ("4.", total_dataset.shape)
-
-            # Impute missing values from here
-            total_dataset = DataFrameImputer().fit_transform (total_dataset)
-
-            # There are some columns with string values (E.g. Car type) -> need to label it as numerical labels
-            total_dataset = MultiColumnLabelEncoder(columns = feature_need_label).fit_transform(total_dataset)
-
-            # Standard scale dataset
-            #scaler = StandardScaler()  
-            scaler = RobustScaler()
-            total_dataset[features_not_need_encoding] = scaler.fit_transform (total_dataset[features_not_need_encoding])
-
-            print ("Store the dataframe into a hdf file")
-            total_dataset.to_hdf (filename, key)       
-            print ("Time for Loading dataset: %.3f" % (time.time() - stime))        
-        else:
-            print ("Reload dataset using HDF5 (Pytables)")
-            total_dataset = pd.read_hdf (filename, key)
    
         print ("Time for Loading and preprocessing dataset: %.3f" % (time.time() - stime))
         self.total_dataset = total_dataset
@@ -225,22 +198,6 @@ class Dataset (Data_preprocessing, DataFrameImputer):
         
         return self.total_dataset
     
-    """def get_training_dataset (self):
-        
-        self.traning_dataset = self.total_dataset.head (n = data_training_length)
-        return self.traning_dataset
-        # or return self.total_dataset[0:data_training_length]
-    
-    def get_validation_dataset (self):
-        
-        self.validation_dataset = self.total_dataset[data_training_length:data_training_length + data_validation_length]
-        #print ('test:', self.validation_dataset)
-        return self.validation_dataset
-    
-    def get_test_dataset (self):
-        
-        self.test_dataset = self.total_dataset.tail (data_test_length)
-        return self.test_dataset""" 
     
     def encode_one_hot_feature (self, total_data_array, feature, feature_array):
         """
@@ -260,10 +217,6 @@ class Dataset (Data_preprocessing, DataFrameImputer):
         #print ('encoded:', enc.transform (feature_array.T))
         return enc.transform (feature_array.T)
         
-        """X = np.array ([[128], [101], [105], [102], [109], [160], [101], [101], [102]])
-        print ('X = ', X)
-        print ('feature arr: ', feature_array)
-        print (enc.fit_transform (feature_array.T))"""
     
     def count_car (self, dataset):    
         """
@@ -338,37 +291,6 @@ class Dataset (Data_preprocessing, DataFrameImputer):
         return enc.fit_transform (np.array (car_ident_list).reshape (len (car_ident_list), 1)) 
         #return enc.fit_transform (car_ident) 
 
-    def impute_missing_values (self, total_data_array, feature, feature_array, strategy):
-        #TODO: More appropriate method
-        """
-        There are some columns with missing values ("NaN") -> need to impute those
-            + by mean values
-            + by median values
-            + by most_frequent value
-        
-        feature_array: numpy array of feature 
-        return the array of data without missing values
-        """
-        print ("Impute missing.")
-        imp = Imputer(missing_values='NaN', strategy=strategy, axis=1)
-        #data_array = np.array ([self.get_total_dataset()[feature]])
-        imp.fit (total_data_array)
-        """imp = DataFrameImputer ()
-        imp.fit (pd.DataFrame (total_data_array))"""
-        return imp.transform (feature_array) 
-
-    def label_str_values (self, total_data_array, feature, feature_array):
-        """
-        There are some columns with string values (E.g. Car type) -> need to label it as numerical labels
-        """
-        #print ("Label str values.", feature)
-        le = LabelEncoder ()
-        #data_array = np.array ([self.get_total_dataset()[feature]])
-        #data_array = self.impute_missing_values (feature, data_array, strategy_h)
-
-        #print (total_data_array.shape, feature_array.shape)
-        le.fit (total_data_array.reshape (total_data_array.shape[1], ))
-        return le.transform (feature_array.reshape (feature_array.shape[1], )).reshape(1, feature_array.shape[1])
 
     def get_data_array (self, dataset, feature):  
         """
@@ -380,23 +302,6 @@ class Dataset (Data_preprocessing, DataFrameImputer):
         data_array = np.array ([dataset[feature]])
         total_data_array = data_array
 
-        """if feature in feature_need_impute:
-            #print ("@@")
-            total_data_array = self.impute_missing_values (total_data_array, feature, total_data_array, strategy_h)
-            if total_data_array.shape[0] != data_array.shape[0]:
-                data_array = self.impute_missing_values (total_data_array, feature, data_array, strategy_h)
-            else:
-                data_array = total_data_array"""
-
-        #print ("1.", data_array)
-        """if feature in feature_need_label:
-            total_data_array = self.label_str_values (total_data_array, feature, total_data_array)
-            if total_data_array.shape[0] != data_array.shape[0]:
-                data_array = self.label_str_values (total_data_array, feature, data_array)
-            else:
-                data_array = total_data_array
-            #print ("2.", data_array)"""
-        
         if using_one_hot_flag == 1:
             if feature in feature_need_encoding:
                 if total_data_array.shape[0] != data_array.shape[0]:
@@ -433,35 +338,6 @@ class Dataset (Data_preprocessing, DataFrameImputer):
         #print ("constraint:", np.array (data_array_with_constraint).shape, "feature:", feature)
         return np.array (data_array_with_constraint)
     
-    def get_data_array_remove_outliers (self, dataset, feature, window, all_outlier_index):
-        """
-        - Purpose: remove outliers by removing all data points with values of the corresponding feature which are out of the range from mean to +- window * SD (standard deviation)
-        """
-        data_array = self.get_data_array (dataset, feature)#np.array ([dataset[feature]]).T
-        #print ("before remove outliers:", data_array.shape)
-        len_data_array = data_array.shape[0]
-
-        mean_data_array = np.mean (data_array)
-        std_data_array = np.std (data_array)
-        print ("mean:", mean_data_array, "std:", std_data_array)
-
-        data_array_without_outliers = []
-        outlier_index = []
-
-        for i in range (len_data_array):
-            if i not in all_outlier_index:
-                if data_array[i] <= (mean_data_array + window * std_data_array) and data_array[i] >= (mean_data_array - window * std_data_array):
-                    data_array_without_outliers.append (data_array[i])
-                else:
-                    #print ("---", data_array[i])
-                    outlier_index.append (i)
-        a = np.array (data_array_without_outliers)
-        #print ("after remove outliers:", a.shape, "mean:", np.mean (a), "std:", np.std (a))
-        #sys.exit (-1)
-
-        
-        return (np.array (data_array_without_outliers), outlier_index)
-        
     
     def get_sale_duration_array (self, dataset):
         """
@@ -514,7 +390,6 @@ class Dataset (Data_preprocessing, DataFrameImputer):
         return np.array (data_array_with_constraint)
     
         
-
     def get_data_matrix (self, dataset, features):
         """
         dataset: training, validation, test, or total dataset
@@ -522,16 +397,15 @@ class Dataset (Data_preprocessing, DataFrameImputer):
         => return: a matrix with rows are data points, columns are features values (nD numpy.array object)
         
         """
-        return np.array (dataset[features])
-        """ 
-        X1 = np.array (dataset[car_ident + feature_need_encoding]) 
+        X = np.array (dataset[features])
+        """X1 = np.array (dataset[car_ident + feature_need_encoding]) 
         enc = OneHotEncoder(sparse = False)
         X1 = enc.fit_transform (X1)
         print ("X1.shape", X1.shape)
 
         X2 = np.array (dataset[features_not_need_encoding]) 
         X = np.concatenate ((X2, X1), axis = 1) 
-        print ("X2.shape", X2.shape)
+        print ("X2.shape", X2.shape)"""
         return X 
 
     def get_data_matrix_car_ident (self, dataset):
@@ -540,25 +414,10 @@ class Dataset (Data_preprocessing, DataFrameImputer):
         => return: a matrix with rows are data points, columns are features values (nD numpy.array object)
         
         """
-        featureNo = len (features_remove_car_ident)
-        
-        """ NOTE!: The order of features are reversed due to concatenate() function => then we need to reverse it first"""
-        features_copy = features_remove_car_ident[:]
-        features_copy.reverse()
-
         car_ident_codes = np.array (dataset[car_ident]) 
         print ("car_ident_codes", car_ident_codes.shape)
 
         X1 = self.encode_one_hot_car_ident (dataset)
-        d_ident = X1.shape[1]
-
-        print ("X.shape1", X1.shape)
-        X2 = np.array (dataset[features_remove_car_ident]) 
-        X = np.concatenate ((X2, X1), axis = 1) 
-        car_ident_codes = np.array (dataset[car_ident]) 
-        print ("car_ident_codes", car_ident_codes.shape)
-
-        X1 = self.encode_one_hot_car_ident_full (dataset)
 
         # Concatenate 
         d_ident = X1.shape[1]

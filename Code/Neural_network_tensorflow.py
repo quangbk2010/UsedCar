@@ -414,22 +414,6 @@ class Tensor_NN(Support, Dataset):
         x_ident = tf.placeholder(tf.float32, [None, d_ident])
         x_remain = tf.placeholder(tf.float32, [None, d_remain])
         Y = tf.placeholder(tf.float32, [None, 1])
-        dropout = tf.placeholder(tf.float32, name='dropout')
-
-        print ("build_car2vect_model: d_ident:", d_ident, "d_remain:", d_remain, "d_embed:", d_embed, "no_neuron_embed:", no_neuron_embed, "no_neuron_main:", no_neuron)
-
-        #output1 = slim.fully_connected(x_ident, d_ident + 1, scope='input_embed', activation_fn=tf.nn.relu)
-        output1 = slim.fully_connected(x_ident, no_neuron_embed, scope='input_embed', activation_fn=tf.nn.relu)
-        output2 = slim.fully_connected(output1, no_neuron_embed, scope='hidden_embed1', activation_fn=tf.nn.relu)
-        #output3 = slim.fully_connected(output2, no_neuron_embed, scope='hidden_embed2', activation_fn=tf.nn.relu)
-        x_embed = slim.fully_connected(output2, d_embed, scope='output_embed', activation_fn=tf.nn.relu) # 3-dimension of embeding NN
-        
-        input3 = tf.concat ([x_remain, x_embed], 1)
-
-        #output3 = slim.fully_connected(input3, d_remain + d_embed + 1, scope='input_main', activation_fn=tf.nn.relu)
-        output3 = slim.fully_connected(input3, no_neuron, scope='input_main', activation_fn=tf.nn.relu)
-        #output4 = slim.fully_connected(output3, no_neuron, scope='hidden_main_1', activation_fn=tf.nn.relu)
-        #output5 = slim.fully_connected(output4, no_neuron, scope='hidden_main_2', activation_fn=tf.nn.relu)
 
         print ("build_car2vect_model: d_ident:", d_ident, "d_remain:", d_remain, "d_embed:", d_embed, "no_neuron_embed:", no_neuron_embed, "no_neuron_main:", no_neuron)
 
@@ -437,21 +421,20 @@ class Tensor_NN(Support, Dataset):
         #output1 = slim.dropout(output1, nn.dropout, scope='dropout1')
         #output2 = slim.fully_connected(output1, no_neuron_embed, scope='hidden_embed2', activation_fn=tf.nn.relu)
         #output2 = slim.dropout(output2, nn.dropout, scope='dropout2')
-        #output3 = slim.fully_connected(output2, no_neuron_embed, scope='hidden_embed3', activation_fn=tf.nn.relu)
-        #output3 = slim.dropout(output3, nn.dropout, scope='dropout3')
+
         x_embed = slim.fully_connected(output1, d_embed, scope='output_embed', activation_fn=tf.nn.relu) # 3-dimension of embeding NN
 
         #mean, var = tf.nn.moments (x_embed, [0], keep_dims=True)
         #x_embed = tf.div(tf.subtract(x_embed, mean), tf.sqrt(var))
         #x_embed = tf.div (x_embed - tf.reduce_min (x_embed), tf.reduce_max (x_embed) - tf.reduce_min (x_embed))
-
+        
         input3 = tf.concat ([x_remain, x_embed], 1)
 
-        output3 = slim.fully_connected(input3, no_neuron, scope='hidden_main1', activation_fn=tf.nn.relu)
-        #output4 = slim.fully_connected(output3, no_neuron, scope='hidden_main_2', activation_fn=tf.nn.relu)
-        #output5 = slim.fully_connected(output4, no_neuron, scope='hidden_main_3', activation_fn=tf.nn.relu)
-        prediction = slim.fully_connected(output3, 1, scope='output_main') # 1-dimension of output
+        output3 = slim.fully_connected(input3, no_neuron, scope='hidden_main_1', activation_fn=tf.nn.relu)
+        #output4 = slim.fully_connected(output3, no_neuron, scope='hidden_main_1', activation_fn=tf.nn.relu)
+        #output5 = slim.fully_connected(output4, no_neuron, scope='hidden_main_2', activation_fn=tf.nn.relu)
 
+        prediction = slim.fully_connected(output3, 1, scope='output_main') # 1-dimension of output
 
         return x_ident, x_remain, Y, x_embed, prediction
 
@@ -563,24 +546,6 @@ class Tensor_NN(Support, Dataset):
                     batch_x_ident = train_data_ident_shuffled [start_index : end_index]
                     batch_x_remain = train_data_remain_shuffled [start_index : end_index]
                     batch_y = train_label_shuffled [start_index : end_index]
-                    #print ("batch_x", batch_x)
-                    #print ("batch_y", batch_y)
-                    index_counter = index_counter + 1
-                    left_num = left_num - self.batch_size
-
-                    if (left_num <= 0):
-                        index_counter = 0
-                    _, training_rmse_val, training_mae_val, training_relative_err_val, training_smape_val = sess.run([optimizer, rmse, mae, relative_err, smape], feed_dict={x_ident: batch_x_ident, x_remain: batch_x_remain, Y: batch_y, dropout:dropout_val})
-                    total_rmse += training_rmse_val
-                    total_mae += training_mae_val
-                    total_relative_err += training_relative_err_val
-                    total_smape += training_smape_val
-                    
-                    
-                print('\n\nEpoch: %04d' % (epoch + 1), "Avg. training rmse:", total_rmse/total_batch, "mae:", total_mae/total_batch, 'relative_err:', total_relative_err/total_batch, "smape:", total_smape/total_batch)
-
-                
-                predicted_y, x_embed_val, epoch_test_rmse_val, epoch_test_mae_val, epoch_test_relative_err_val, epoch_test_smape_val = sess.run([prediction, x_embed, rmse, mae, relative_err, smape], feed_dict={x_ident: test_data_ident, x_remain: test_data_remain, Y: test_label, dropout:self.dropout})
 
                     start_index = end_index
 
@@ -900,11 +865,9 @@ if __name__ == '__main__':
     #network parameter
     parser.add_argument('--dim_data', type=int, default=24)
     parser.add_argument('--dim_label', type=int, default=1)
-    parser.add_argument('--no_hidden_layer', type=int, default = 1) #not implement variabel network layer
+    parser.add_argument('--no_hidden_layer', type=int, default = 1) 
     parser.add_argument('--no_neuron', type=int, default = 6000)
     parser.add_argument('--no_neuron_embed', type=int, default = 100)
-    parser.add_argument('--no_neuron', type=int, default = 1000)
-    parser.add_argument('--no_neuron_embed', type=int, default = 6000)
     parser.add_argument('--k_fold', type=int, default = -1) # set it to -1 when don't want to use k-fold CV
 
     args = parser.parse_args()
@@ -938,7 +901,6 @@ if __name__ == '__main__':
     print ("test_data:", test_data.shape)
     print ("test_label:", test_label.shape)
  
-    nn.car2vect(train_data=train_data, train_label=train_label, test_data=test_data, test_label=test_label, test_car_ident=test_car_ident, no_neuron=nn.no_neuron, dropout_val=1, model_path=model_path, d_ident=nn.d_ident,d_embed=3, d_remain=nn.d_remain, no_neuron_embed=nn.no_neuron_embed) # 1000, 3, 6000
 
     if using_car_ident_flag == 1:
         nn.car2vect(train_data=train_data, train_label=train_label, test_data=test_data, test_label=test_label, test_car_ident=test_car_ident, no_neuron=nn.no_neuron, model_path=model_path, d_ident=nn.d_ident,d_embed=3, d_remain=nn.d_remain, no_neuron_embed=nn.no_neuron_embed) # 1000, 3, 6000

@@ -43,23 +43,23 @@ from collections import Counter
 machine = "Server" #"Ubuntu" # or "Mac" or "Windows" or "Server"
 
 """ Features"""
-output = "sale_duration"#"sale_duration" #"price"
+output = "price"#"sale_duration" #"price"
 #features = ["manufacture_code","rep_model_code","car_code","model_code","vehicle_mile","no_severe_accident","no_severe_water_accident","no_moderate_water_accident","total_no_accident","recovery_fee","no_click","no_message_contact","no_call_contact", "option_navigation","option_sunLoop","option_smartKey","option_xenonLight","option_heatLineSheet","option_ventilationSheet","option_rearSensor","option_curtainAirbag","no_cover_side_recovery","no_cover_side_exchange","no_corrosive_part"]#,"rep_model_code","car_code","model_code",
 features = ["manufacture_code","rep_model_code","car_code","model_code","rating_code","car_type","year","trans_mode","fuel_type","vehicle_mile","cylinder_disp","tolerance_history","sale_history","rental_history","no_severe_accident","no_severe_water_accident","no_moderate_water_accident","total_no_accident","recovery_fee","no_click","no_message_contact","no_call_contact", "option_navigation","option_sunLoop","option_smartKey","option_xenonLight","option_heatLineSheet","option_ventilationSheet","option_rearSensor","option_curtainAirbag","no_cover_side_recovery","no_cover_side_exchange","no_corrosive_part"]# 33 features
 #features = ["price", "manufacture_code","rep_model_code","car_code","model_code","rating_code","car_type","year","trans_mode","fuel_type","vehicle_mile","cylinder_disp","tolerance_history","sale_history","rental_history","no_severe_accident","no_severe_water_accident","no_moderate_water_accident","total_no_accident","recovery_fee","no_click","no_message_contact","no_call_contact", "option_navigation","option_sunLoop","option_smartKey","option_xenonLight","option_heatLineSheet","option_ventilationSheet","option_rearSensor","option_curtainAirbag","no_cover_side_recovery","no_cover_side_exchange","no_corrosive_part"]# try 33 features + price -> predict sale duration
 #features = ["manufacture_code","rep_model_code","car_code","model_code","rating_code","car_type","year","trans_mode","vehicle_mile","cylinder_disp","rental_history","total_no_accident","recovery_fee","no_click","no_message_contact","no_call_contact", "option_navigation","option_sunLoop","option_smartKey","option_xenonLight","option_heatLineSheet","option_ventilationSheet","option_rearSensor","option_curtainAirbag","no_cover_side_recovery","no_cover_side_exchange"] # 26 features
 
 """ What type of dataset we will use"""
-dataset =  "partial" # "full", or "partial", or "small"
+dataset =  "full" # "full", or "partial", or "small"
 
 """ Using cross validation or not"""
 using_CV_flag = 0
 
 """ Using onehot or not"""
-using_one_hot_flag = 1 # 1-yes, 0-no
+using_one_hot_flag = 0 # 1-yes, 0-no
 
 """ Encode onehot for car indent"""
-using_car_ident_flag = 0 # 1-yes, 0-no
+using_car_ident_flag = 1 # 1-yes, 0-no
 
 """ Add noise to label of dataset or not to verify results"""
 add_noise_flag = 0
@@ -200,12 +200,9 @@ else:
 
 feature_need_label = ["car_type", "trans_mode", "fuel_type"]
 feature_need_impute = ["rating_code"]#, "car_type"]
-<<<<<<< HEAD
 feature_need_remove_outlier = ["price"] #"vehicle_mile", "no_click", "recovery_fee"]#, 
 feature_need_scaler = ["vehicle_mile", "no_click", "recovery_fee", "price"]
-=======
 feature_need_remove_outlier = ["vehicle_mile", "no_click", "recovery_fee"]#, "price"]
->>>>>>> banana2
 
 # list of features whether it needs remove outliers 
 feature_need_not_remove_outlier = [feature for feature in features if feature not in feature_need_remove_outlier] 
