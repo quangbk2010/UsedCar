@@ -228,17 +228,13 @@ class Tensor_NN(Support, Dataset):
 
         """scaler = StandardScaler()  
         scaler.fit(X_total_set)  
-<<<<<<< HEAD
         scaler.fit(X_total_set)
-=======
->>>>>>> banana2
         X_total_set = scaler.transform(X_total_set)"""
             
 
         if output == "price":
             y_total_set = self.get_data_array (self.total_dataset, output)
         elif output == "sale_duration":
-            X_total_set = self.get_data_matrix_with_constraint (self.total_dataset, features, "sale_state", "Sold-out") 
             y_total_set = self.get_sale_duration_array (self.total_dataset)
         #print ("test:", self.total_dataset.shape, X_total_set.shape, y_total_set.shape)
         #print (y_total_set[:10])
@@ -299,6 +295,8 @@ class Tensor_NN(Support, Dataset):
 
         if output == "price":
             y_total_set = self.get_data_array (self.total_dataset, output)
+        elif output == "sale_duration":
+            y_total_set = self.get_sale_duration_array (self.total_dataset)
         #print ("test:", self.total_dataset.shape, X_total_set.shape, y_total_set.shape)
         #print (y_total_set[:10])
         #sys.exit (-1)
@@ -416,7 +414,6 @@ class Tensor_NN(Support, Dataset):
         x_ident = tf.placeholder(tf.float32, [None, d_ident])
         x_remain = tf.placeholder(tf.float32, [None, d_remain])
         Y = tf.placeholder(tf.float32, [None, 1])
-<<<<<<< HEAD
         dropout = tf.placeholder(tf.float32, name='dropout')
 
         print ("build_car2vect_model: d_ident:", d_ident, "d_remain:", d_remain, "d_embed:", d_embed, "no_neuron_embed:", no_neuron_embed, "no_neuron_main:", no_neuron)
@@ -433,7 +430,6 @@ class Tensor_NN(Support, Dataset):
         output3 = slim.fully_connected(input3, no_neuron, scope='input_main', activation_fn=tf.nn.relu)
         #output4 = slim.fully_connected(output3, no_neuron, scope='hidden_main_1', activation_fn=tf.nn.relu)
         #output5 = slim.fully_connected(output4, no_neuron, scope='hidden_main_2', activation_fn=tf.nn.relu)
-=======
 
         print ("build_car2vect_model: d_ident:", d_ident, "d_remain:", d_remain, "d_embed:", d_embed, "no_neuron_embed:", no_neuron_embed, "no_neuron_main:", no_neuron)
 
@@ -454,18 +450,13 @@ class Tensor_NN(Support, Dataset):
         output3 = slim.fully_connected(input3, no_neuron, scope='hidden_main1', activation_fn=tf.nn.relu)
         #output4 = slim.fully_connected(output3, no_neuron, scope='hidden_main_2', activation_fn=tf.nn.relu)
         #output5 = slim.fully_connected(output4, no_neuron, scope='hidden_main_3', activation_fn=tf.nn.relu)
->>>>>>> banana2
         prediction = slim.fully_connected(output3, 1, scope='output_main') # 1-dimension of output
 
 
         return x_ident, x_remain, Y, x_embed, prediction
 
-<<<<<<< HEAD
-    def car2vect(self, train_data, train_label, test_data, test_label, test_car_ident, no_neuron, dropout_val, model_path, d_ident, d_embed, d_remain, no_neuron_embed): # Used for 1train-1test
-=======
     def car2vect(self, train_data, train_label, test_data, test_label, test_car_ident, no_neuron, model_path, d_ident, d_embed, d_remain, no_neuron_embed): # Used for 1train-1test
     #def car2vect(self, train_data, train_label, test_data, test_label, test_car_ident, dropout_val, model_path, d_ident, d_embed, d_remain, x_ident, x_remain, Y, x_embed, prediction, fold): # used for Cross-validation 
->>>>>>> banana2
 
         #building car embedding model
         if using_CV_flag == 0:
@@ -504,12 +495,9 @@ class Tensor_NN(Support, Dataset):
         relative_err = tf.reduce_mean (tf.divide (tf.abs (prediction - Y), Y)) * 100 
         smape = tf.reduce_mean (tf.divide (tf.abs (prediction - Y), tf.abs (Y) + tf.abs (prediction) )) * 100
         
-<<<<<<< HEAD
         # Calculate root mean squared error as additional eval metric
 
         """ Initialize the variables with default values"""
-=======
->>>>>>> banana2
         init = tf.global_variables_initializer()
 
         with tf.Session() as sess:
@@ -542,16 +530,13 @@ class Tensor_NN(Support, Dataset):
             print ("len train_data_remain:", train_data_remain_shuffled.shape)
             print ("len train_label:", train_label_shuffled.shape)
 
-<<<<<<< HEAD
             total_batch = int((len(train_data)/self.batch_size) + 0.5)
 
             pre_epoch_test_relative_err_val = 0
-=======
             len_train = len(train_data)
             len_test  = len(test_data)
             train_total_batch = int (np.ceil (float (len_train)/self.batch_size))
             test_total_batch = int (np.ceil (float (len_test)/self.batch_size))
->>>>>>> banana2
 
             epoch_list = [] 
             train_err_list = [] 
@@ -578,7 +563,6 @@ class Tensor_NN(Support, Dataset):
                     batch_x_ident = train_data_ident_shuffled [start_index : end_index]
                     batch_x_remain = train_data_remain_shuffled [start_index : end_index]
                     batch_y = train_label_shuffled [start_index : end_index]
-<<<<<<< HEAD
                     #print ("batch_x", batch_x)
                     #print ("batch_y", batch_y)
                     index_counter = index_counter + 1
@@ -597,7 +581,6 @@ class Tensor_NN(Support, Dataset):
 
                 
                 predicted_y, x_embed_val, epoch_test_rmse_val, epoch_test_mae_val, epoch_test_relative_err_val, epoch_test_smape_val = sess.run([prediction, x_embed, rmse, mae, relative_err, smape], feed_dict={x_ident: test_data_ident, x_remain: test_data_remain, Y: test_label, dropout:self.dropout})
-=======
 
                     start_index = end_index
 
@@ -657,7 +640,6 @@ class Tensor_NN(Support, Dataset):
                 epoch_test_smape_val = total_smape/len_test
                 #predicted_y, x_embed_val, epoch_test_rmse_val, epoch_test_mae_val, epoch_test_relative_err_val, epoch_test_smape_val = sess.run([prediction, x_embed, rmse, mae, relative_err, smape], feed_dict={x_ident: test_data_ident, x_remain: test_data_remain, Y: test_label})
 
->>>>>>> banana2
                 
                 print ("test: rmse", epoch_test_rmse_val)
                 print ("test: mae", epoch_test_mae_val)
@@ -919,13 +901,10 @@ if __name__ == '__main__':
     parser.add_argument('--dim_data', type=int, default=24)
     parser.add_argument('--dim_label', type=int, default=1)
     parser.add_argument('--no_hidden_layer', type=int, default = 1) #not implement variabel network layer
-<<<<<<< HEAD
     parser.add_argument('--no_neuron', type=int, default = 6000)
     parser.add_argument('--no_neuron_embed', type=int, default = 100)
-=======
     parser.add_argument('--no_neuron', type=int, default = 1000)
     parser.add_argument('--no_neuron_embed', type=int, default = 6000)
->>>>>>> banana2
     parser.add_argument('--k_fold', type=int, default = -1) # set it to -1 when don't want to use k-fold CV
 
     args = parser.parse_args()
@@ -950,25 +929,19 @@ if __name__ == '__main__':
     train_label = nn.y_train_set
     test_data = nn.X_test_set
     test_label = nn.y_test_set
-<<<<<<< HEAD
     test_car_ident = nn.car_ident_code_total_set[train_data.shape[0]:]
-=======
     if using_car_ident_flag == 1:
         test_car_ident = nn.car_ident_code_total_set[train_data.shape[0]:]
->>>>>>> banana2
 
     print ("train_data:", train_data.shape)
     print ("train_label:", train_label.shape)
     print ("test_data:", test_data.shape)
     print ("test_label:", test_label.shape)
  
-<<<<<<< HEAD
     nn.car2vect(train_data=train_data, train_label=train_label, test_data=test_data, test_label=test_label, test_car_ident=test_car_ident, no_neuron=nn.no_neuron, dropout_val=1, model_path=model_path, d_ident=nn.d_ident,d_embed=3, d_remain=nn.d_remain, no_neuron_embed=nn.no_neuron_embed) # 1000, 3, 6000
 
-=======
     if using_car_ident_flag == 1:
         nn.car2vect(train_data=train_data, train_label=train_label, test_data=test_data, test_label=test_label, test_car_ident=test_car_ident, no_neuron=nn.no_neuron, model_path=model_path, d_ident=nn.d_ident,d_embed=3, d_remain=nn.d_remain, no_neuron_embed=nn.no_neuron_embed) # 1000, 3, 6000
     else:
         nn.train_nn (train_data=train_data, train_label=train_label, test_data=test_data, test_label=test_label, no_neuron=nn.no_neuron, no_hidden_layer = nn.no_hidden_layer, dropout_val=nn.dropout, model_path=model_path)
      
->>>>>>> banana2
