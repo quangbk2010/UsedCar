@@ -101,7 +101,6 @@ class Tensor_NN(Support, Dataset):
         self.saved_period = args.saved_period
 
         self.dim_data = args.dim_data
-        self.dim_label = args.dim_label
         self.no_hidden_layer = args.no_hidden_layer
         self.no_neuron = args.no_neuron
         self.no_neuron_embed = args.no_neuron_embed
@@ -229,7 +228,10 @@ class Tensor_NN(Support, Dataset):
 
         """scaler = StandardScaler()  
         scaler.fit(X_total_set)  
+<<<<<<< HEAD
         scaler.fit(X_total_set)
+=======
+>>>>>>> banana2
         X_total_set = scaler.transform(X_total_set)"""
             
 
@@ -291,12 +293,9 @@ class Tensor_NN(Support, Dataset):
         train_length     = int (0.5 + len_total_set * data_training_percentage)
         #test_length     = int (0.5 + len_total_set * data_test_percentage)
 
-        scaler = StandardScaler()  
+        """scaler = StandardScaler()  
         scaler.fit(X_total_set)  
-        X_total_set = scaler.transform(X_total_set)
-        """for feature in feature_need_scaler:
-            X_total_set[feature] = scaler.fit_transform(X_total_set[feature])  """
-            
+        X_total_set = scaler.transform(X_total_set)"""
 
         if output == "price":
             y_total_set = self.get_data_array (self.total_dataset, output)
@@ -388,41 +387,19 @@ class Tensor_NN(Support, Dataset):
 
 
 
-    def build_model (self, dim_data, dim_label, no_unit_in_a_hidden_layer, no_hidden_layer):#dim_label = 1x
-        weights = []
-
+    def build_model (self, dim_data, no_unit, no_hidden_layer):#dim_label = 1x
         X = tf.placeholder(tf.float32, [None, dim_data])
-        Y = tf.placeholder(tf.float32, [None, dim_label])
+        Y = tf.placeholder(tf.float32, [None, 1])
 
-        dropout = tf.placeholder(tf.float32, name='dropout')
+        net = slim.fully_connected(X, no_unit, scope='hidden_layer1', activation_fn=tf.nn.relu)
+        net = slim.dropout(net, nn.dropout, scope='dropout1')
+        for i in range (1, no_hidden_layer):
+            net = slim.fully_connected(net, no_unit, scope='hidden_layer'+str(i+1), activation_fn=tf.nn.relu)
+            net = slim.dropout(net, nn.dropout, scope='dropout'+str(i+1))
 
-        # Input layer
-        W1 = tf.Variable(tf.random_normal([dim_data, no_unit_in_a_hidden_layer], stddev=0.01))
-        B1 = tf.Variable(tf.random_normal([no_unit_in_a_hidden_layer], stddev=0.01))
-        L1 = tf.nn.relu(tf.nn.bias_add(tf.matmul(X, W1), B1))
+        prediction = slim.fully_connected(net, 1, scope='output_layer')
 
-        weights.append (W1)
-        weights.append (B1)
-
-        # Hidden layers
-        L2_hat = L1
-        for i in range (no_hidden_layer):
-            W2 = tf.Variable(tf.random_normal([no_unit_in_a_hidden_layer, no_unit_in_a_hidden_layer], stddev=0.01))
-            B2 = tf.Variable(tf.random_normal([no_unit_in_a_hidden_layer], stddev=0.01))
-            L2 = tf.nn.relu(tf.nn.bias_add(tf.matmul(L2_hat, W2), B2))
-            L2_hat = tf.nn.dropout(L2, dropout, name='relu_dropout')
-            weights.append (W2)
-            weights.append (B2)
-
-        # Output layer
-        W3 = tf.Variable(tf.random_normal([no_unit_in_a_hidden_layer, dim_label], stddev=0.01))
-        B3 = tf.Variable(tf.random_normal([dim_label], stddev=0.01))
-        prediction = tf.nn.bias_add(tf.matmul(L2_hat, W3), B3)
-
-        weights.append(W3)
-        weights.append(B3)
-
-        return X, Y, prediction, weights, dropout
+        return X, Y, prediction
 
     def build_car2vect_model (self, no_neuron, no_neuron_embed, d_ident, d_embed, d_remain):
         """
@@ -439,6 +416,7 @@ class Tensor_NN(Support, Dataset):
         x_ident = tf.placeholder(tf.float32, [None, d_ident])
         x_remain = tf.placeholder(tf.float32, [None, d_remain])
         Y = tf.placeholder(tf.float32, [None, 1])
+<<<<<<< HEAD
         dropout = tf.placeholder(tf.float32, name='dropout')
 
         print ("build_car2vect_model: d_ident:", d_ident, "d_remain:", d_remain, "d_embed:", d_embed, "no_neuron_embed:", no_neuron_embed, "no_neuron_main:", no_neuron)
@@ -455,16 +433,43 @@ class Tensor_NN(Support, Dataset):
         output3 = slim.fully_connected(input3, no_neuron, scope='input_main', activation_fn=tf.nn.relu)
         #output4 = slim.fully_connected(output3, no_neuron, scope='hidden_main_1', activation_fn=tf.nn.relu)
         #output5 = slim.fully_connected(output4, no_neuron, scope='hidden_main_2', activation_fn=tf.nn.relu)
+=======
+
+        print ("build_car2vect_model: d_ident:", d_ident, "d_remain:", d_remain, "d_embed:", d_embed, "no_neuron_embed:", no_neuron_embed, "no_neuron_main:", no_neuron)
+
+        output1 = slim.fully_connected(x_ident, no_neuron_embed, scope='hidden_embed1', activation_fn=tf.nn.relu)
+        #output1 = slim.dropout(output1, nn.dropout, scope='dropout1')
+        #output2 = slim.fully_connected(output1, no_neuron_embed, scope='hidden_embed2', activation_fn=tf.nn.relu)
+        #output2 = slim.dropout(output2, nn.dropout, scope='dropout2')
+        #output3 = slim.fully_connected(output2, no_neuron_embed, scope='hidden_embed3', activation_fn=tf.nn.relu)
+        #output3 = slim.dropout(output3, nn.dropout, scope='dropout3')
+        x_embed = slim.fully_connected(output1, d_embed, scope='output_embed', activation_fn=tf.nn.relu) # 3-dimension of embeding NN
+
+        #mean, var = tf.nn.moments (x_embed, [0], keep_dims=True)
+        #x_embed = tf.div(tf.subtract(x_embed, mean), tf.sqrt(var))
+        #x_embed = tf.div (x_embed - tf.reduce_min (x_embed), tf.reduce_max (x_embed) - tf.reduce_min (x_embed))
+
+        input3 = tf.concat ([x_remain, x_embed], 1)
+
+        output3 = slim.fully_connected(input3, no_neuron, scope='hidden_main1', activation_fn=tf.nn.relu)
+        #output4 = slim.fully_connected(output3, no_neuron, scope='hidden_main_2', activation_fn=tf.nn.relu)
+        #output5 = slim.fully_connected(output4, no_neuron, scope='hidden_main_3', activation_fn=tf.nn.relu)
+>>>>>>> banana2
         prediction = slim.fully_connected(output3, 1, scope='output_main') # 1-dimension of output
 
 
-        return x_ident, x_remain, Y, x_embed, prediction, dropout
+        return x_ident, x_remain, Y, x_embed, prediction
 
+<<<<<<< HEAD
     def car2vect(self, train_data, train_label, test_data, test_label, test_car_ident, no_neuron, dropout_val, model_path, d_ident, d_embed, d_remain, no_neuron_embed): # Used for 1train-1test
+=======
+    def car2vect(self, train_data, train_label, test_data, test_label, test_car_ident, no_neuron, model_path, d_ident, d_embed, d_remain, no_neuron_embed): # Used for 1train-1test
+    #def car2vect(self, train_data, train_label, test_data, test_label, test_car_ident, dropout_val, model_path, d_ident, d_embed, d_remain, x_ident, x_remain, Y, x_embed, prediction, fold): # used for Cross-validation 
+>>>>>>> banana2
 
         #building car embedding model
         if using_CV_flag == 0:
-            x_ident, x_remain, Y, x_embed, prediction, dropout = self.build_car2vect_model(no_neuron, no_neuron_embed, d_ident, d_embed, d_remain)
+            x_ident, x_remain, Y, x_embed, prediction = self.build_car2vect_model(no_neuron, no_neuron_embed, d_ident, d_embed, d_remain)
             x_ident_file_name_ = x_ident_file_name
             x_embed_file_name_ = x_embed_file_name
             mean_error_file_name_ = mean_error_file_name
@@ -483,20 +488,28 @@ class Tensor_NN(Support, Dataset):
         learning_rate = tf.train.exponential_decay(self.learning_rate, global_step, decay_steps, self.decay_rate, staircase = True)
 
         # Used for minimizing relative error
-        loss = tf.reduce_mean (tf.divide (tf.abs (prediction - Y), Y)) 
+        #lamb = 1e-6
+        loss = tf.reduce_mean (tf.divide (tf.abs (prediction - Y), Y)) #+ lamb * tf.reduce_mean (tf.norm (x_embed, axis=0, keep_dims=True))
         #loss = tf.reduce_mean (tf.divide (tf.abs (prediction - Y), tf.abs (Y) + tf.abs (prediction) ))
 
         optimizer = tf.train.AdamOptimizer(learning_rate).minimize(loss, global_step=global_step)
     
-        # RMSE
-        rmse = tf.sqrt (tf.reduce_mean(tf.squared_difference(prediction, Y)))
+        # Declare error functions
+        sum_se = tf.reduce_sum (tf.squared_difference(prediction, Y))
+        sum_ae = tf.reduce_sum (tf.abs (prediction - Y))
+        sum_relative_err = tf.reduce_sum (tf.divide (tf.abs (prediction - Y), Y)) * 100 
+        sum_smape = tf.reduce_sum (tf.divide (tf.abs (prediction - Y), tf.abs (Y) + tf.abs (prediction) )) * 100
+        rmse = tf.sqrt (tf.reduce_mean (tf.squared_difference(prediction, Y)))
         mae = tf.reduce_mean (tf.abs (prediction - Y))
-        relative_err = tf.reduce_mean (tf.divide (tf.abs (prediction - Y), Y)) * 100 # there are problem when Y = 0 -> inf or nan answer
+        relative_err = tf.reduce_mean (tf.divide (tf.abs (prediction - Y), Y)) * 100 
         smape = tf.reduce_mean (tf.divide (tf.abs (prediction - Y), tf.abs (Y) + tf.abs (prediction) )) * 100
         
+<<<<<<< HEAD
         # Calculate root mean squared error as additional eval metric
 
         """ Initialize the variables with default values"""
+=======
+>>>>>>> banana2
         init = tf.global_variables_initializer()
 
         with tf.Session() as sess:
@@ -510,9 +523,7 @@ class Tensor_NN(Support, Dataset):
             start_time = time.time()
 
             train_set = np.concatenate ((train_data, train_label), axis = 1)
-
             train_set_shuffled = np.random.permutation(train_set)
-
             train_data_remain_shuffled = train_set_shuffled [:, 0:d_remain]
             train_data_ident_shuffled = train_set_shuffled [:, d_remain:train_data.shape[1]]
             train_label_shuffled = train_set_shuffled [:, train_data.shape[1]:]
@@ -531,9 +542,16 @@ class Tensor_NN(Support, Dataset):
             print ("len train_data_remain:", train_data_remain_shuffled.shape)
             print ("len train_label:", train_label_shuffled.shape)
 
+<<<<<<< HEAD
             total_batch = int((len(train_data)/self.batch_size) + 0.5)
 
             pre_epoch_test_relative_err_val = 0
+=======
+            len_train = len(train_data)
+            len_test  = len(test_data)
+            train_total_batch = int (np.ceil (float (len_train)/self.batch_size))
+            test_total_batch = int (np.ceil (float (len_test)/self.batch_size))
+>>>>>>> banana2
 
             epoch_list = [] 
             train_err_list = [] 
@@ -544,23 +562,23 @@ class Tensor_NN(Support, Dataset):
 
             for epoch in range (self.epoch):
 
-                total_rmse = 0
-                total_mae = 0
+                # Train the model.
+                total_se = 0
+                total_ae = 0
                 total_relative_err = 0
                 total_smape = 0
-                index_counter = 0
-                left_num = len(train_data)
-                for i in range (total_batch):
-                    start_index = index_counter * self.batch_size
-                    #end_index = 0
-                    if(left_num < self.batch_size):
-                        end_index = index_counter * self.batch_size + left_num
+                start_index = 0
+                end_index = 0
+                for i in range (train_total_batch):
+                    if len_train - end_index < self.batch_size:
+                        end_index = len_train
                     else:
-                        end_index = (index_counter + 1) * self.batch_size
+                        end_index = (i+1) * self.batch_size
 
                     batch_x_ident = train_data_ident_shuffled [start_index : end_index]
                     batch_x_remain = train_data_remain_shuffled [start_index : end_index]
                     batch_y = train_label_shuffled [start_index : end_index]
+<<<<<<< HEAD
                     #print ("batch_x", batch_x)
                     #print ("batch_y", batch_y)
                     index_counter = index_counter + 1
@@ -579,6 +597,67 @@ class Tensor_NN(Support, Dataset):
 
                 
                 predicted_y, x_embed_val, epoch_test_rmse_val, epoch_test_mae_val, epoch_test_relative_err_val, epoch_test_smape_val = sess.run([prediction, x_embed, rmse, mae, relative_err, smape], feed_dict={x_ident: test_data_ident, x_remain: test_data_remain, Y: test_label, dropout:self.dropout})
+=======
+
+                    start_index = end_index
+
+                    _, train_sum_se_val, train_sum_ae_val, train_sum_relative_err_val, train_sum_smape_val = sess.run([optimizer, sum_se, sum_ae, sum_relative_err, sum_smape], feed_dict={x_ident: batch_x_ident, x_remain: batch_x_remain, Y: batch_y})
+                    total_se += train_sum_se_val
+                    total_ae += train_sum_ae_val
+                    total_relative_err += train_sum_relative_err_val
+                    total_smape += train_sum_smape_val
+
+                assert end_index == len_train   
+
+                epoch_train_rmse_val = np.sqrt (total_se/len_train)
+                epoch_train_mae_val = total_ae/len_train
+                epoch_train_relative_err_val = total_relative_err/len_train
+                epoch_train_smape_val = total_smape/len_train
+                print('\n\nEpoch: %04d' % (epoch + 1), "Avg. training rmse:", epoch_train_rmse_val, "mae:", epoch_train_mae_val, 'relative_err:', epoch_train_relative_err_val, "smape:", epoch_train_smape_val)
+
+                # Test the model.
+                # If we use 2 hidden layers, each has >= 10000 units -> resource exhausted, then we should divide it into batches and test on seperate one, and then calculate the average.
+                total_se = 0
+                total_ae = 0
+                total_relative_err = 0
+                total_smape = 0
+                start_index = 0
+                end_index = 0
+                total_predicted_y = np.zeros ((0, 1))
+                total_x_embed_val = np.zeros ((0, d_embed))
+
+                for i in range (test_total_batch):
+                    if len_test - end_index < self.batch_size:
+                        end_index = len_test
+                    else:
+                        end_index = (i+1) * self.batch_size
+                    
+                    batch_x_ident = test_data_ident [start_index : end_index]
+                    batch_x_remain = test_data_remain [start_index : end_index]
+                    batch_y = test_label [start_index : end_index]
+
+                    start_index = end_index
+
+                    predicted_y, x_embed_val, test_sum_se_val, test_sum_ae_val, test_sum_relative_err_val, test_sum_smape_val = sess.run([prediction, x_embed, sum_se, sum_ae, sum_relative_err, sum_smape], feed_dict={x_ident: batch_x_ident, x_remain: batch_x_remain, Y: batch_y})
+
+                    total_predicted_y = np.concatenate ((total_predicted_y, predicted_y))
+                    total_x_embed_val = np.concatenate ((total_x_embed_val, x_embed_val))
+                    total_se += test_sum_se_val
+                    total_ae += test_sum_ae_val
+                    total_relative_err += test_sum_relative_err_val
+                    total_smape += test_sum_smape_val
+
+                assert end_index == len_test   
+
+                predicted_y = total_predicted_y
+                x_embed_val = total_x_embed_val
+                epoch_test_rmse_val = np.sqrt (total_se/len_test)
+                epoch_test_mae_val = total_ae/len_test
+                epoch_test_relative_err_val = total_relative_err/len_test
+                epoch_test_smape_val = total_smape/len_test
+                #predicted_y, x_embed_val, epoch_test_rmse_val, epoch_test_mae_val, epoch_test_relative_err_val, epoch_test_smape_val = sess.run([prediction, x_embed, rmse, mae, relative_err, smape], feed_dict={x_ident: test_data_ident, x_remain: test_data_remain, Y: test_label})
+
+>>>>>>> banana2
                 
                 print ("test: rmse", epoch_test_rmse_val)
                 print ("test: mae", epoch_test_mae_val)
@@ -587,7 +666,7 @@ class Tensor_NN(Support, Dataset):
                 print ("truth:", test_label[:10], "prediction:", predicted_y[:10])
 
                 epoch_list.append (epoch)
-                train_err_list.append (total_relative_err/total_batch)
+                train_err_list.append (epoch_train_relative_err_val)
                 rmse_list.append (epoch_test_rmse_val)
                 mae_list.append (epoch_test_mae_val)
                 rel_err_list.append (epoch_test_relative_err_val)
@@ -623,12 +702,12 @@ class Tensor_NN(Support, Dataset):
 
             return epoch_test_relative_err_val
 
-    #def train_nn(self, train_data, train_label, test_data, test_label, no_neuron, no_hidden_layer, dropout_val, model_path): # Used for 1train-1test
-    def train_nn(self, train_data, train_label, test_data, test_label, dropout_val, model_path, X, Y, prediction, weights, dropout, fold): # used for Cross-validation 
+    def train_nn(self, train_data, train_label, test_data, test_label, no_neuron, no_hidden_layer, dropout_val, model_path): # Used for 1train-1test
+    #def train_nn(self, train_data, train_label, test_data, test_label, dropout_val, model_path, X, Y, prediction, weights, dropout, fold): # used for Cross-validation 
        
         #building car embedding model
         if using_CV_flag == 0:
-            X, Y, prediction, weights, dropout = self.build_model(train_data.shape[1], self.dim_label, no_neuron, no_hidden_layer) 
+            X, Y, prediction = self.build_model(train_data.shape[1], no_neuron, no_hidden_layer) 
             mean_error_file_name_ = mean_error_file_name
             y_predict_file_name_ = y_predict_file_name
         else:
@@ -640,29 +719,24 @@ class Tensor_NN(Support, Dataset):
         num_batches_per_epoch = int(len(train_data) / self.batch_size)
         decay_steps = int(num_batches_per_epoch * self.decay_step)
         global_step = tf.Variable(0, trainable = False)
-        #learning_rate = self.learning_rate
         learning_rate = tf.train.exponential_decay(self.learning_rate, global_step, decay_steps, self.decay_rate, staircase = True)
-
-        # Used for minimizing RMSE
-        #loss = tf.reduce_mean(tf.squared_difference(prediction, Y))
 
         # Used for minimizing relative error
         loss = tf.reduce_mean (tf.divide (tf.abs (prediction - Y), Y)) #protect when Y = 0
-
-        # Used for minimizing SMAPE
         #loss = tf.reduce_mean (tf.divide (tf.abs (prediction - Y), tf.abs (Y) + tf.abs (prediction) ))
 
         optimizer = tf.train.AdamOptimizer(learning_rate).minimize(loss, global_step=global_step)
     
-        # RMSE
+        # Declare error functions
+        sum_se = tf.reduce_sum (tf.squared_difference(prediction, Y))
+        sum_ae = tf.reduce_sum (tf.abs (prediction - Y))
+        sum_relative_err = tf.reduce_sum (tf.divide (tf.abs (prediction - Y), Y)) * 100 
+        sum_smape = tf.reduce_sum (tf.divide (tf.abs (prediction - Y), tf.abs (Y) + tf.abs (prediction) )) * 100
         rmse = tf.sqrt (tf.reduce_mean(tf.squared_difference(prediction, Y)))
         mae = tf.reduce_mean (tf.abs (prediction - Y))
-        relative_err = tf.reduce_mean (tf.divide (tf.abs (prediction - Y), (Y))) * 100 # there are problem when Y = 0 -> inf or nan answer
+        relative_err = tf.reduce_mean (tf.divide (tf.abs (prediction - Y), (Y))) * 100 
         smape = tf.reduce_mean (tf.divide (tf.abs (prediction - Y), tf.abs (Y) + tf.abs (prediction) )) * 100
         
-        # Calculate root mean squared error as additional eval metric
-
-        """ Initialize the variables with default values"""
         init = tf.global_variables_initializer()
 
         with tf.Session() as sess:
@@ -680,10 +754,10 @@ class Tensor_NN(Support, Dataset):
             train_data_shuffled = train_set_shuffled [:, 0:train_data.shape[1]]
             train_label_shuffled = train_set_shuffled [:, train_data.shape[1]:]
 
-            #print ("len train:", train_data.shape)
-            total_batch = int((len(train_data)/self.batch_size) + 0.5)
-
-            pre_epoch_test_relative_err_val = 0
+            len_train = len(train_data)
+            len_test  = len(test_data)
+            train_total_batch = int (np.ceil (float (len_train)/self.batch_size))
+            test_total_batch = int (np.ceil (float (len_test)/self.batch_size))
 
             epoch_list = [] 
             train_err_list = [] 
@@ -694,44 +768,40 @@ class Tensor_NN(Support, Dataset):
 
             for epoch in range (self.epoch):
 
-                total_rmse = 0
-                total_mae = 0
+                # Train the model.
+                total_se = 0
+                total_ae = 0
                 total_relative_err = 0
                 total_smape = 0
-                index_counter = 0
-                left_num = len(train_data)
-                for i in range (total_batch):
-                    start_index = index_counter * self.batch_size
-                    #end_index = 0
-                    if(left_num < self.batch_size):
-                        end_index = index_counter * self.batch_size + left_num
+                start_index = 0
+                end_index = 0
+                for i in range (train_total_batch):
+                    if len_train - end_index < self.batch_size:
+                        end_index = len_train
                     else:
-                        end_index = (index_counter + 1) * self.batch_size
+                        end_index = (i+1) * self.batch_size
 
                     batch_x = train_data_shuffled [start_index : end_index]
                     batch_y = train_label_shuffled [start_index : end_index]
-                    #print ("batch_x", batch_x)
-                    #print ("batch_y", batch_y)
-                    index_counter = index_counter + 1
-                    left_num = left_num - self.batch_size
 
-                    if (left_num <= 0):
-                        index_counter = 0
+                    start_index = end_index
 
-                    #_, cost_val, lr = sess.run([optimizer, cost, learning_rate], feed_dict={X: batch_x, Y: batch_y})
-                    _, training_rmse_val, training_mae_val, training_relative_err_val, training_smape_val = sess.run([optimizer, rmse, mae, relative_err, smape], feed_dict={X: batch_x, Y: batch_y, dropout:dropout_val})
-                    total_rmse += training_rmse_val
-                    total_mae += training_mae_val
-                    total_relative_err += training_relative_err_val
-                    total_smape += training_smape_val
+                    _, train_sum_se_val, train_sum_ae_val, train_sum_relative_err_val, train_sum_smape_val = sess.run([optimizer, sum_se, sum_ae, sum_relative_err, sum_smape], feed_dict={X: batch_x, Y: batch_y})
+                    total_se += train_sum_se_val
+                    total_ae += train_sum_ae_val
+                    total_relative_err += train_sum_relative_err_val
+                    total_smape += train_sum_smape_val
                     
-                    a, b = sess.run([Y, prediction], feed_dict={X: batch_x, Y: batch_y, dropout:dropout_val})
-                    #print ("truth:", a[0][0], "prediction:", b[0][0], "Err:", training_relative_err_val)
+                assert end_index == len_train   
 
-                #print('Epoch: %04d' % (epoch + 1), 'Avg. rmse = {:.3f}'.format(total_rmse / total_batch), 'learning_rate = {:.5f}'.format(lr))
-                print('\n\nEpoch: %04d' % (epoch + 1), "Avg. training rmse:", total_rmse/total_batch, "mae:", total_mae/total_batch, 'relative_err:', total_relative_err/total_batch, "smape:", total_smape/total_batch)
+                epoch_train_rmse_val = np.sqrt (total_se/len_train)
+                epoch_train_mae_val = total_ae/len_train
+                epoch_train_relative_err_val = total_relative_err/len_train
+                epoch_train_smape_val = total_smape/len_train
+                print('\n\nEpoch: %04d' % (epoch + 1), "Avg. training rmse:", epoch_train_rmse_val, "mae:", epoch_train_mae_val, 'relative_err:', epoch_train_relative_err_val, "smape:", epoch_train_smape_val)
                 
-                predicted_y, epoch_test_rmse_val, epoch_test_mae_val, epoch_test_relative_err_val, epoch_test_smape_val = sess.run([prediction, rmse, mae, relative_err, smape], feed_dict={X: test_data, Y: test_label, dropout:self.dropout})
+                # Test the model.
+                predicted_y, epoch_test_rmse_val, epoch_test_mae_val, epoch_test_relative_err_val, epoch_test_smape_val = sess.run([prediction, rmse, mae, relative_err, smape], feed_dict={X: test_data, Y: test_label})
                 
                 print ("test: rmse", epoch_test_rmse_val)
                 print ("test: mae", epoch_test_mae_val)
@@ -740,7 +810,7 @@ class Tensor_NN(Support, Dataset):
                 print ("truth:", test_label[:10], "prediction:", predicted_y[:10])
 
                 epoch_list.append (epoch)
-                train_err_list.append (total_relative_err/total_batch)
+                train_err_list.append (epoch_train_relative_err_val)
                 rmse_list.append (epoch_test_rmse_val)
                 mae_list.append (epoch_test_mae_val)
                 rel_err_list.append (epoch_test_relative_err_val)
@@ -838,19 +908,24 @@ if __name__ == '__main__':
     parser.add_argument('--output_dir', type=str, default = '../Results')
 
     #hyper parameter
-    parser.add_argument('--epoch', type=int, default = 50) #2000 # 100
-    parser.add_argument('--dropout', type=int, default = 1)
+    parser.add_argument('--epoch', type=int, default = 70) #2000 # 100
+    parser.add_argument('--dropout', type=float, default = 1)
     parser.add_argument('--batch_size', type=int, default = 128)
     parser.add_argument('--learning_rate', type=float, default=0.00125)
     parser.add_argument('--decay_rate', type=float, default=0.5)
-    parser.add_argument('--decay_step', type=int, default=100) #if decay_step > epoch, no exponential decay
+    parser.add_argument('--decay_step', type=int, default=50) #if decay_step > epoch, no exponential decay
 
     #network parameter
     parser.add_argument('--dim_data', type=int, default=24)
     parser.add_argument('--dim_label', type=int, default=1)
     parser.add_argument('--no_hidden_layer', type=int, default = 1) #not implement variabel network layer
+<<<<<<< HEAD
     parser.add_argument('--no_neuron', type=int, default = 6000)
     parser.add_argument('--no_neuron_embed', type=int, default = 100)
+=======
+    parser.add_argument('--no_neuron', type=int, default = 1000)
+    parser.add_argument('--no_neuron_embed', type=int, default = 6000)
+>>>>>>> banana2
     parser.add_argument('--k_fold', type=int, default = -1) # set it to -1 when don't want to use k-fold CV
 
     args = parser.parse_args()
@@ -866,7 +941,6 @@ if __name__ == '__main__':
     # record the time when training starts
     start_time = time.time()
 
-    
     nn = Tensor_NN (args)
 
 
@@ -876,12 +950,25 @@ if __name__ == '__main__':
     train_label = nn.y_train_set
     test_data = nn.X_test_set
     test_label = nn.y_test_set
+<<<<<<< HEAD
     test_car_ident = nn.car_ident_code_total_set[train_data.shape[0]:]
+=======
+    if using_car_ident_flag == 1:
+        test_car_ident = nn.car_ident_code_total_set[train_data.shape[0]:]
+>>>>>>> banana2
 
     print ("train_data:", train_data.shape)
     print ("train_label:", train_label.shape)
     print ("test_data:", test_data.shape)
     print ("test_label:", test_label.shape)
  
+<<<<<<< HEAD
     nn.car2vect(train_data=train_data, train_label=train_label, test_data=test_data, test_label=test_label, test_car_ident=test_car_ident, no_neuron=nn.no_neuron, dropout_val=1, model_path=model_path, d_ident=nn.d_ident,d_embed=3, d_remain=nn.d_remain, no_neuron_embed=nn.no_neuron_embed) # 1000, 3, 6000
 
+=======
+    if using_car_ident_flag == 1:
+        nn.car2vect(train_data=train_data, train_label=train_label, test_data=test_data, test_label=test_label, test_car_ident=test_car_ident, no_neuron=nn.no_neuron, model_path=model_path, d_ident=nn.d_ident,d_embed=3, d_remain=nn.d_remain, no_neuron_embed=nn.no_neuron_embed) # 1000, 3, 6000
+    else:
+        nn.train_nn (train_data=train_data, train_label=train_label, test_data=test_data, test_label=test_label, no_neuron=nn.no_neuron, no_hidden_layer = nn.no_hidden_layer, dropout_val=nn.dropout, model_path=model_path)
+     
+>>>>>>> banana2
