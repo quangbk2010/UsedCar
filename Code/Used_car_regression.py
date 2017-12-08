@@ -163,6 +163,11 @@ class Dataset (Data_preprocessing, DataFrameImputer):
             #total_dataset = total_dataset[np.abs(total_dataset["price"] - total_dataset["price"].mean()) / total_dataset["price"].std() < 1]
             #print ("4.", total_dataset.shape)
 
+            # Remove the data points with sale duration = 0
+            diff_date = total_dataset["sale_date"]-total_dataset["actual_advertising_date"]
+            total_dataset = total_dataset[diff_date != 0] 
+            print ("5.", total_dataset.shape)
+
             # Impute missing values from here
             total_dataset = DataFrameImputer().fit_transform (total_dataset)
 
@@ -428,18 +433,14 @@ class Dataset (Data_preprocessing, DataFrameImputer):
             + dataset: training, validation, test, or total dataset
         - Return: an vector oof sale duration as a numpy.array object
         """
-        #print ("dataset", dataset)
-        actual_advertising_date_array = self.get_data_array_with_constraint (dataset, "actual_advertising_date", "sale_state", "Sold-out")
-        sale_date_array = self.get_data_array_with_constraint (dataset, "sale_date", "sale_state", "Sold-out")
-        #print ("advertising date:", actual_advertising_date_array[:10])
-        #print ("sale date:", sale_date_array[:10])
-        #actual_advertising_date_array = self.get_data_array (dataset, "actual_advertising_date")
-        #sale_date_array = self.get_data_array (dataset, "sale_date")
+        actual_advertising_date_array = np.array ([dataset ["actual_advertising_date"]]).T 
+        sale_date_array = np.array ([dataset ["sale_date"]]).T 
+        
         length = len (sale_date_array)
         
         sale_duration_array = np.empty((length, 1))
         for i in range (length):
-            sale_duration_array[i] = self.get_days_between (actual_advertising_date_array[i][0], sale_date_array[i][0])
+            sale_duration_array[i] = self.get_days_between (actual_advertising_date_array[i][0], sale_date_array[i][0]) 
         
         return sale_duration_array
         

@@ -149,7 +149,6 @@ class Tensor_NN(Dataset):
         if output == "price":
             y_total_set = self.get_data_array (self.total_dataset, output)
         elif output == "sale_duration":
-            X_total_set = self.get_data_matrix_with_constraint (self.total_dataset, features, "sale_state", "Sold-out") 
             y_total_set = self.get_sale_duration_array (self.total_dataset)
         #print ("test:", self.total_dataset.shape, X_total_set.shape, y_total_set.shape)
         #print (y_total_set[:10])
@@ -209,6 +208,8 @@ class Tensor_NN(Dataset):
 
         if output == "price":
             y_total_set = self.get_data_array (self.total_dataset, output)
+        elif output == "sale_duration":
+            y_total_set = self.get_sale_duration_array (self.total_dataset)
         #print ("test:", self.total_dataset.shape, X_total_set.shape, y_total_set.shape)
         #print (y_total_set[:10])
         #sys.exit (-1)
@@ -297,7 +298,7 @@ class Tensor_NN(Dataset):
 
 
 
-    def build_model (self, dim_data, no_unit, no_hidden_layer):#dim_label = 1x
+    def build_model (self, dim_data, no_unit, no_hidden_layer):
         X = tf.placeholder(tf.float32, [None, dim_data])
         Y = tf.placeholder(tf.float32, [None, 1])
 
@@ -352,7 +353,7 @@ class Tensor_NN(Dataset):
         return x_ident, x_remain, Y, x_embed, prediction
 
     def car2vect(self, train_data, train_label, test_data, test_label, test_car_ident, no_neuron, model_path, d_ident, d_embed, d_remain, no_neuron_embed): # Used for 1train-1test
-    #def car2vect(self, train_data, train_label, test_data, test_label, test_car_ident, dropout_val, model_path, d_ident, d_embed, d_remain, x_ident, x_remain, Y, x_embed, prediction, fold): # used for Cross-validation 
+    #def car2vect(self, train_data, train_label, test_data, test_label, test_car_ident, model_path, d_ident, d_embed, d_remain, x_ident, x_remain, Y, x_embed, prediction, fold): # used for Cross-validation 
 
         #building car embedding model
         if using_CV_flag == 0:
@@ -558,8 +559,8 @@ class Tensor_NN(Dataset):
 
             return epoch_test_relative_err_val
 
-    def train_nn(self, train_data, train_label, test_data, test_label, no_neuron, no_hidden_layer, dropout_val, model_path): # Used for 1train-1test
-    #def train_nn(self, train_data, train_label, test_data, test_label, dropout_val, model_path, X, Y, prediction, weights, dropout, fold): # used for Cross-validation 
+    def train_nn(self, train_data, train_label, test_data, test_label, no_neuron, no_hidden_layer, model_path): # Used for 1train-1test
+    #def train_nn(self, train_data, train_label, test_data, test_label, model_path, X, Y, prediction, weights, fold): # used for Cross-validation 
        
         #building car embedding model
         if using_CV_flag == 0:
@@ -774,7 +775,7 @@ if __name__ == '__main__':
     #network parameter
     parser.add_argument('--dim_data', type=int, default=24)
     parser.add_argument('--dim_label', type=int, default=1)
-    parser.add_argument('--no_hidden_layer', type=int, default = 1) #not implement variabel network layer
+    parser.add_argument('--no_hidden_layer', type=int, default = 1) 
     parser.add_argument('--no_neuron', type=int, default = 1000)
     parser.add_argument('--no_neuron_embed', type=int, default = 6000)
     parser.add_argument('--k_fold', type=int, default = -1) # set it to -1 when don't want to use k-fold CV
@@ -812,5 +813,5 @@ if __name__ == '__main__':
     if using_car_ident_flag == 1:
         nn.car2vect(train_data=train_data, train_label=train_label, test_data=test_data, test_label=test_label, test_car_ident=test_car_ident, no_neuron=nn.no_neuron, model_path=model_path, d_ident=nn.d_ident,d_embed=3, d_remain=nn.d_remain, no_neuron_embed=nn.no_neuron_embed) # 1000, 3, 6000
     else:
-        nn.train_nn (train_data=train_data, train_label=train_label, test_data=test_data, test_label=test_label, no_neuron=nn.no_neuron, no_hidden_layer = nn.no_hidden_layer, dropout_val=nn.dropout, model_path=model_path)
+        nn.train_nn (train_data=train_data, train_label=train_label, test_data=test_data, test_label=test_label, no_neuron=nn.no_neuron, no_hidden_layer = nn.no_hidden_layer, model_path=model_path)
      
