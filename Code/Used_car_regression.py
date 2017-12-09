@@ -152,8 +152,8 @@ class Dataset (Data_preprocessing, DataFrameImputer):
             #total_dataset = total_dataset.sort_values ("actual_advertising_date", ascending=True)
             
             # Remove the data points with sale_state == "advertising"
-            #total_dataset = total_dataset[total_dataset["sale_state"] == "Sold-out"]
-            #print ("2.", total_dataset.shape)
+            total_dataset = total_dataset[total_dataset["sale_state"] == "Sold-out"]
+            print ("2.", total_dataset.shape)
 
             # Remove the data points with price == 0
             #total_dataset = total_dataset[total_dataset["price"] != 0]
@@ -163,6 +163,11 @@ class Dataset (Data_preprocessing, DataFrameImputer):
             #total_dataset = total_dataset[np.abs(total_dataset["price"] - total_dataset["price"].mean()) / total_dataset["price"].std() < 1]
             #print ("4.", total_dataset.shape)
 
+            # Remove the data points with sale duration = 0
+            diff_date = total_dataset["sale_date"]-total_dataset["actual_advertising_date"]
+            total_dataset = total_dataset[diff_date != 0] 
+            print ("5.", total_dataset.shape)
+
             # Impute missing values from here
             total_dataset = DataFrameImputer().fit_transform (total_dataset)
 
@@ -170,7 +175,8 @@ class Dataset (Data_preprocessing, DataFrameImputer):
             total_dataset = MultiColumnLabelEncoder(columns = feature_need_label).fit_transform(total_dataset)
 
             # Standard scale dataset
-            scaler = StandardScaler()  
+            #scaler = StandardScaler()  
+            scaler = RobustScaler()
             total_dataset[features_not_need_encoding] = scaler.fit_transform (total_dataset[features_not_need_encoding])
 
             print ("Store the dataframe into a hdf file")
@@ -427,18 +433,14 @@ class Dataset (Data_preprocessing, DataFrameImputer):
             + dataset: training, validation, test, or total dataset
         - Return: an vector oof sale duration as a numpy.array object
         """
-        #print ("dataset", dataset)
-        actual_advertising_date_array = self.get_data_array_with_constraint (dataset, "actual_advertising_date", "sale_state", "Sold-out")
-        sale_date_array = self.get_data_array_with_constraint (dataset, "sale_date", "sale_state", "Sold-out")
-        #print ("advertising date:", actual_advertising_date_array[:10])
-        #print ("sale date:", sale_date_array[:10])
-        #actual_advertising_date_array = self.get_data_array (dataset, "actual_advertising_date")
-        #sale_date_array = self.get_data_array (dataset, "sale_date")
+        actual_advertising_date_array = np.array ([dataset ["actual_advertising_date"]]).T 
+        sale_date_array = np.array ([dataset ["sale_date"]]).T 
+        
         length = len (sale_date_array)
         
         sale_duration_array = np.empty((length, 1))
         for i in range (length):
-            sale_duration_array[i] = self.get_days_between (actual_advertising_date_array[i][0], sale_date_array[i][0])
+            sale_duration_array[i] = self.get_days_between (actual_advertising_date_array[i][0], sale_date_array[i][0]) 
         
         return sale_duration_array
         
@@ -484,10 +486,12 @@ class Dataset (Data_preprocessing, DataFrameImputer):
         X1 = np.array (dataset[car_ident + feature_need_encoding]) 
         enc = OneHotEncoder(sparse = False)
         X1 = enc.fit_transform (X1)
+        print ("X1.shape", X1.shape)
 
         X2 = np.array (dataset[features_not_need_encoding]) 
         X = np.concatenate ((X2, X1), axis = 1) 
-        return np.array (dataset[features]) 
+        print ("X2.shape", X2.shape)
+        return X 
 
     def get_data_matrix_car_ident (self, dataset):
         """
@@ -499,6 +503,8 @@ class Dataset (Data_preprocessing, DataFrameImputer):
         print ("car_ident_codes", car_ident_codes.shape)
 
         X1 = self.encode_one_hot_car_ident_full (dataset)
+
+        # Concatenate 
         d_ident = X1.shape[1]
 
         print ("X.shape1", X1.shape)

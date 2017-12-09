@@ -100,7 +100,6 @@ class Tensor_NN(Dataset):
         self.saved_period = args.saved_period
 
         self.dim_data = args.dim_data
-        self.dim_label = args.dim_label
         self.no_hidden_layer = args.no_hidden_layer
         self.no_neuron = args.no_neuron
         self.no_neuron_embed = args.no_neuron_embed
@@ -150,7 +149,6 @@ class Tensor_NN(Dataset):
         if output == "price":
             y_total_set = self.get_data_array (self.total_dataset, output)
         elif output == "sale_duration":
-            X_total_set = self.get_data_matrix_with_constraint (self.total_dataset, features, "sale_state", "Sold-out") 
             y_total_set = self.get_sale_duration_array (self.total_dataset)
         #print ("test:", self.total_dataset.shape, X_total_set.shape, y_total_set.shape)
         #print (y_total_set[:10])
@@ -210,6 +208,8 @@ class Tensor_NN(Dataset):
 
         if output == "price":
             y_total_set = self.get_data_array (self.total_dataset, output)
+        elif output == "sale_duration":
+            y_total_set = self.get_sale_duration_array (self.total_dataset)
         #print ("test:", self.total_dataset.shape, X_total_set.shape, y_total_set.shape)
         #print (y_total_set[:10])
         #sys.exit (-1)
@@ -298,41 +298,19 @@ class Tensor_NN(Dataset):
 
 
 
-    def build_model (self, dim_data, dim_label, no_unit_in_a_hidden_layer, no_hidden_layer):#dim_label = 1x
-        weights = []
-
+    def build_model (self, dim_data, no_unit, no_hidden_layer):
         X = tf.placeholder(tf.float32, [None, dim_data])
-        Y = tf.placeholder(tf.float32, [None, dim_label])
+        Y = tf.placeholder(tf.float32, [None, 1])
 
-        dropout = tf.placeholder(tf.float32, name='dropout')
+        net = slim.fully_connected(X, no_unit, scope='hidden_layer1', activation_fn=tf.nn.relu)
+        net = slim.dropout(net, nn.dropout, scope='dropout1')
+        for i in range (1, no_hidden_layer):
+            net = slim.fully_connected(net, no_unit, scope='hidden_layer'+str(i+1), activation_fn=tf.nn.relu)
+            net = slim.dropout(net, nn.dropout, scope='dropout'+str(i+1))
 
-        # Input layer
-        W1 = tf.Variable(tf.random_normal([dim_data, no_unit_in_a_hidden_layer], stddev=0.01))
-        B1 = tf.Variable(tf.random_normal([no_unit_in_a_hidden_layer], stddev=0.01))
-        L1 = tf.nn.relu(tf.nn.bias_add(tf.matmul(X, W1), B1))
+        prediction = slim.fully_connected(net, 1, scope='output_layer')
 
-        weights.append (W1)
-        weights.append (B1)
-
-        # Hidden layers
-        L2_hat = L1
-        for i in range (no_hidden_layer):
-            W2 = tf.Variable(tf.random_normal([no_unit_in_a_hidden_layer, no_unit_in_a_hidden_layer], stddev=0.01))
-            B2 = tf.Variable(tf.random_normal([no_unit_in_a_hidden_layer], stddev=0.01))
-            L2 = tf.nn.relu(tf.nn.bias_add(tf.matmul(L2_hat, W2), B2))
-            L2_hat = tf.nn.dropout(L2, dropout, name='relu_dropout')
-            weights.append (W2)
-            weights.append (B2)
-
-        # Output layer
-        W3 = tf.Variable(tf.random_normal([no_unit_in_a_hidden_layer, dim_label], stddev=0.01))
-        B3 = tf.Variable(tf.random_normal([dim_label], stddev=0.01))
-        prediction = tf.nn.bias_add(tf.matmul(L2_hat, W3), B3)
-
-        weights.append(W3)
-        weights.append(B3)
-
-        return X, Y, prediction, weights, dropout
+        return X, Y, prediction
 
     def build_car2vect_model (self, no_neuron, no_neuron_embed, d_ident, d_embed, d_remain):
         """
@@ -353,15 +331,16 @@ class Tensor_NN(Dataset):
         print ("build_car2vect_model: d_ident:", d_ident, "d_remain:", d_remain, "d_embed:", d_embed, "no_neuron_embed:", no_neuron_embed, "no_neuron_main:", no_neuron)
 
         output1 = slim.fully_connected(x_ident, no_neuron_embed, scope='hidden_embed1', activation_fn=tf.nn.relu)
-        #output1 = slim.dropout(output1, nn.dropout, scope='dropout2')
-        output2 = slim.fully_connected(output1, no_neuron_embed, scope='hidden_embed2', activation_fn=tf.nn.relu)
+        #output1 = slim.dropout(output1, nn.dropout, scope='dropout1')
+        #output2 = slim.fully_connected(output1, no_neuron_embed, scope='hidden_embed2', activation_fn=tf.nn.relu)
         #output2 = slim.dropout(output2, nn.dropout, scope='dropout2')
         #output3 = slim.fully_connected(output2, no_neuron_embed, scope='hidden_embed3', activation_fn=tf.nn.relu)
         #output3 = slim.dropout(output3, nn.dropout, scope='dropout3')
-        x_embed = slim.fully_connected(output2, d_embed, scope='output_embed', activation_fn=tf.nn.relu) # 3-dimension of embeding NN
+        x_embed = slim.fully_connected(output1, d_embed, scope='output_embed', activation_fn=tf.nn.relu) # 3-dimension of embeding NN
 
-        mean, var = tf.nn.moments (x_embed, [0], keep_dims=True)
-        x_embed = tf.div(tf.subtract(x_embed, mean), tf.sqrt(var))
+        #mean, var = tf.nn.moments (x_embed, [0], keep_dims=True)
+        #x_embed = tf.div(tf.subtract(x_embed, mean), tf.sqrt(var))
+        #x_embed = tf.div (x_embed - tf.reduce_min (x_embed), tf.reduce_max (x_embed) - tf.reduce_min (x_embed))
 
         input3 = tf.concat ([x_remain, x_embed], 1)
 
@@ -374,7 +353,7 @@ class Tensor_NN(Dataset):
         return x_ident, x_remain, Y, x_embed, prediction
 
     def car2vect(self, train_data, train_label, test_data, test_label, test_car_ident, no_neuron, model_path, d_ident, d_embed, d_remain, no_neuron_embed): # Used for 1train-1test
-    #def car2vect(self, train_data, train_label, test_data, test_label, test_car_ident, dropout_val, model_path, d_ident, d_embed, d_remain, x_ident, x_remain, Y, x_embed, prediction, fold): # used for Cross-validation 
+    #def car2vect(self, train_data, train_label, test_data, test_label, test_car_ident, model_path, d_ident, d_embed, d_remain, x_ident, x_remain, Y, x_embed, prediction, fold): # used for Cross-validation 
 
         #building car embedding model
         if using_CV_flag == 0:
@@ -397,7 +376,9 @@ class Tensor_NN(Dataset):
         learning_rate = tf.train.exponential_decay(self.learning_rate, global_step, decay_steps, self.decay_rate, staircase = True)
 
         # Used for minimizing relative error
-        loss = tf.reduce_mean (tf.divide (tf.abs (prediction - Y), Y)) 
+        #lamb = 1e-6
+        #loss = tf.reduce_mean (tf.divide (tf.abs (prediction - Y), Y)) #+ lamb * tf.reduce_mean (tf.norm (x_embed, axis=0, keep_dims=True))
+        loss = tf.reduce_mean (tf.abs (prediction - Y)) #+ lamb * tf.reduce_mean (tf.norm (x_embed, axis=0, keep_dims=True))
         #loss = tf.reduce_mean (tf.divide (tf.abs (prediction - Y), tf.abs (Y) + tf.abs (prediction) ))
 
         optimizer = tf.train.AdamOptimizer(learning_rate).minimize(loss, global_step=global_step)
@@ -405,8 +386,12 @@ class Tensor_NN(Dataset):
         # Declare error functions
         sum_se = tf.reduce_sum (tf.squared_difference(prediction, Y))
         sum_ae = tf.reduce_sum (tf.abs (prediction - Y))
-        sum_relative_err = tf.reduce_sum (tf.divide (tf.abs (prediction - Y), Y)) * 100 # there are problem when Y = 0 -> inf or nan answer
+        sum_relative_err = tf.reduce_sum (tf.divide (tf.abs (prediction - Y), Y)) * 100 
         sum_smape = tf.reduce_sum (tf.divide (tf.abs (prediction - Y), tf.abs (Y) + tf.abs (prediction) )) * 100
+        rmse = tf.sqrt (tf.reduce_mean (tf.squared_difference(prediction, Y)))
+        mae = tf.reduce_mean (tf.abs (prediction - Y))
+        relative_err = tf.reduce_mean (tf.divide (tf.abs (prediction - Y), Y)) * 100 
+        smape = tf.reduce_mean (tf.divide (tf.abs (prediction - Y), tf.abs (Y) + tf.abs (prediction) )) * 100
         
         init = tf.global_variables_initializer()
 
@@ -421,9 +406,7 @@ class Tensor_NN(Dataset):
             start_time = time.time()
 
             train_set = np.concatenate ((train_data, train_label), axis = 1)
-
             train_set_shuffled = np.random.permutation(train_set)
-
             train_data_remain_shuffled = train_set_shuffled [:, 0:d_remain]
             train_data_ident_shuffled = train_set_shuffled [:, d_remain:train_data.shape[1]]
             train_label_shuffled = train_set_shuffled [:, train_data.shape[1]:]
@@ -465,7 +448,6 @@ class Tensor_NN(Dataset):
                     else:
                         end_index = (i+1) * self.batch_size
 
-                    #print (i, train_total_batch, start_index, end_index, len_train)
                     batch_x_ident = train_data_ident_shuffled [start_index : end_index]
                     batch_x_remain = train_data_remain_shuffled [start_index : end_index]
                     batch_y = train_label_shuffled [start_index : end_index]
@@ -578,12 +560,12 @@ class Tensor_NN(Dataset):
 
             return epoch_test_relative_err_val
 
-    def train_nn(self, train_data, train_label, test_data, test_label, no_neuron, no_hidden_layer, dropout_val, model_path): # Used for 1train-1test
-    #def train_nn(self, train_data, train_label, test_data, test_label, dropout_val, model_path, X, Y, prediction, weights, dropout, fold): # used for Cross-validation 
+    def train_nn(self, train_data, train_label, test_data, test_label, no_neuron, no_hidden_layer, model_path): # Used for 1train-1test
+    #def train_nn(self, train_data, train_label, test_data, test_label, model_path, X, Y, prediction, weights, fold): # used for Cross-validation 
        
         #building car embedding model
         if using_CV_flag == 0:
-            X, Y, prediction, weights, dropout = self.build_model(train_data.shape[1], self.dim_label, no_neuron, no_hidden_layer) 
+            X, Y, prediction = self.build_model(train_data.shape[1], no_neuron, no_hidden_layer) 
             mean_error_file_name_ = mean_error_file_name
             y_predict_file_name_ = y_predict_file_name
         else:
@@ -595,29 +577,24 @@ class Tensor_NN(Dataset):
         num_batches_per_epoch = int(len(train_data) / self.batch_size)
         decay_steps = int(num_batches_per_epoch * self.decay_step)
         global_step = tf.Variable(0, trainable = False)
-        #learning_rate = self.learning_rate
         learning_rate = tf.train.exponential_decay(self.learning_rate, global_step, decay_steps, self.decay_rate, staircase = True)
-
-        # Used for minimizing RMSE
-        #loss = tf.reduce_mean(tf.squared_difference(prediction, Y))
 
         # Used for minimizing relative error
         loss = tf.reduce_mean (tf.divide (tf.abs (prediction - Y), Y)) #protect when Y = 0
-
-        # Used for minimizing SMAPE
         #loss = tf.reduce_mean (tf.divide (tf.abs (prediction - Y), tf.abs (Y) + tf.abs (prediction) ))
 
         optimizer = tf.train.AdamOptimizer(learning_rate).minimize(loss, global_step=global_step)
     
-        # RMSE
+        # Declare error functions
+        sum_se = tf.reduce_sum (tf.squared_difference(prediction, Y))
+        sum_ae = tf.reduce_sum (tf.abs (prediction - Y))
+        sum_relative_err = tf.reduce_sum (tf.divide (tf.abs (prediction - Y), Y)) * 100 
+        sum_smape = tf.reduce_sum (tf.divide (tf.abs (prediction - Y), tf.abs (Y) + tf.abs (prediction) )) * 100
         rmse = tf.sqrt (tf.reduce_mean(tf.squared_difference(prediction, Y)))
         mae = tf.reduce_mean (tf.abs (prediction - Y))
-        relative_err = tf.reduce_mean (tf.divide (tf.abs (prediction - Y), (Y))) * 100 # there are problem when Y = 0 -> inf or nan answer
+        relative_err = tf.reduce_mean (tf.divide (tf.abs (prediction - Y), (Y))) * 100 
         smape = tf.reduce_mean (tf.divide (tf.abs (prediction - Y), tf.abs (Y) + tf.abs (prediction) )) * 100
         
-        # Calculate root mean squared error as additional eval metric
-
-        """ Initialize the variables with default values"""
         init = tf.global_variables_initializer()
 
         with tf.Session() as sess:
@@ -635,10 +612,10 @@ class Tensor_NN(Dataset):
             train_data_shuffled = train_set_shuffled [:, 0:train_data.shape[1]]
             train_label_shuffled = train_set_shuffled [:, train_data.shape[1]:]
 
-            #print ("len train:", train_data.shape)
-            total_batch = int((len(train_data)/self.batch_size) + 0.5)
-
-            pre_epoch_test_relative_err_val = 0
+            len_train = len(train_data)
+            len_test  = len(test_data)
+            train_total_batch = int (np.ceil (float (len_train)/self.batch_size))
+            test_total_batch = int (np.ceil (float (len_test)/self.batch_size))
 
             epoch_list = [] 
             train_err_list = [] 
@@ -649,44 +626,40 @@ class Tensor_NN(Dataset):
 
             for epoch in range (self.epoch):
 
-                total_rmse = 0
-                total_mae = 0
+                # Train the model.
+                total_se = 0
+                total_ae = 0
                 total_relative_err = 0
                 total_smape = 0
-                index_counter = 0
-                left_num = len(train_data)
-                for i in range (total_batch):
-                    start_index = index_counter * self.batch_size
-                    #end_index = 0
-                    if(left_num < self.batch_size):
-                        end_index = index_counter * self.batch_size + left_num
+                start_index = 0
+                end_index = 0
+                for i in range (train_total_batch):
+                    if len_train - end_index < self.batch_size:
+                        end_index = len_train
                     else:
-                        end_index = (index_counter + 1) * self.batch_size
+                        end_index = (i+1) * self.batch_size
 
                     batch_x = train_data_shuffled [start_index : end_index]
                     batch_y = train_label_shuffled [start_index : end_index]
-                    #print ("batch_x", batch_x)
-                    #print ("batch_y", batch_y)
-                    index_counter = index_counter + 1
-                    left_num = left_num - self.batch_size
 
-                    if (left_num <= 0):
-                        index_counter = 0
+                    start_index = end_index
 
-                    #_, cost_val, lr = sess.run([optimizer, cost, learning_rate], feed_dict={X: batch_x, Y: batch_y})
-                    _, training_rmse_val, training_mae_val, training_relative_err_val, training_smape_val = sess.run([optimizer, rmse, mae, relative_err, smape], feed_dict={X: batch_x, Y: batch_y, dropout:dropout_val})
-                    total_rmse += training_rmse_val
-                    total_mae += training_mae_val
-                    total_relative_err += training_relative_err_val
-                    total_smape += training_smape_val
+                    _, train_sum_se_val, train_sum_ae_val, train_sum_relative_err_val, train_sum_smape_val = sess.run([optimizer, sum_se, sum_ae, sum_relative_err, sum_smape], feed_dict={X: batch_x, Y: batch_y})
+                    total_se += train_sum_se_val
+                    total_ae += train_sum_ae_val
+                    total_relative_err += train_sum_relative_err_val
+                    total_smape += train_sum_smape_val
                     
-                    a, b = sess.run([Y, prediction], feed_dict={X: batch_x, Y: batch_y, dropout:dropout_val})
-                    #print ("truth:", a[0][0], "prediction:", b[0][0], "Err:", training_relative_err_val)
+                assert end_index == len_train   
 
-                #print('Epoch: %04d' % (epoch + 1), 'Avg. rmse = {:.3f}'.format(total_rmse / total_batch), 'learning_rate = {:.5f}'.format(lr))
-                print('\n\nEpoch: %04d' % (epoch + 1), "Avg. training rmse:", total_rmse/total_batch, "mae:", total_mae/total_batch, 'relative_err:', total_relative_err/total_batch, "smape:", total_smape/total_batch)
+                epoch_train_rmse_val = np.sqrt (total_se/len_train)
+                epoch_train_mae_val = total_ae/len_train
+                epoch_train_relative_err_val = total_relative_err/len_train
+                epoch_train_smape_val = total_smape/len_train
+                print('\n\nEpoch: %04d' % (epoch + 1), "Avg. training rmse:", epoch_train_rmse_val, "mae:", epoch_train_mae_val, 'relative_err:', epoch_train_relative_err_val, "smape:", epoch_train_smape_val)
                 
-                predicted_y, epoch_test_rmse_val, epoch_test_mae_val, epoch_test_relative_err_val, epoch_test_smape_val = sess.run([prediction, rmse, mae, relative_err, smape], feed_dict={X: test_data, Y: test_label, dropout:self.dropout})
+                # Test the model.
+                predicted_y, epoch_test_rmse_val, epoch_test_mae_val, epoch_test_relative_err_val, epoch_test_smape_val = sess.run([prediction, rmse, mae, relative_err, smape], feed_dict={X: test_data, Y: test_label})
                 
                 print ("test: rmse", epoch_test_rmse_val)
                 print ("test: mae", epoch_test_mae_val)
@@ -695,7 +668,7 @@ class Tensor_NN(Dataset):
                 print ("truth:", test_label[:10], "prediction:", predicted_y[:10])
 
                 epoch_list.append (epoch)
-                train_err_list.append (total_relative_err/total_batch)
+                train_err_list.append (epoch_train_relative_err_val)
                 rmse_list.append (epoch_test_rmse_val)
                 mae_list.append (epoch_test_mae_val)
                 rel_err_list.append (epoch_test_relative_err_val)
@@ -803,7 +776,7 @@ if __name__ == '__main__':
     #network parameter
     parser.add_argument('--dim_data', type=int, default=24)
     parser.add_argument('--dim_label', type=int, default=1)
-    parser.add_argument('--no_hidden_layer', type=int, default = 1) #not implement variabel network layer
+    parser.add_argument('--no_hidden_layer', type=int, default = 1) 
     parser.add_argument('--no_neuron', type=int, default = 1000)
     parser.add_argument('--no_neuron_embed', type=int, default = 6000)
     parser.add_argument('--k_fold', type=int, default = -1) # set it to -1 when don't want to use k-fold CV
@@ -841,5 +814,5 @@ if __name__ == '__main__':
     if using_car_ident_flag == 1:
         nn.car2vect(train_data=train_data, train_label=train_label, test_data=test_data, test_label=test_label, test_car_ident=test_car_ident, no_neuron=nn.no_neuron, model_path=model_path, d_ident=nn.d_ident,d_embed=3, d_remain=nn.d_remain, no_neuron_embed=nn.no_neuron_embed) # 1000, 3, 6000
     else:
-        nn.train_nn (train_data=train_data, train_label=train_label, test_data=test_data, test_label=test_label, no_neuron=nn.no_neuron, model_path=model_path, no_hidden_layer = 2, dropout_val=nn.dropout)
+        nn.train_nn (train_data=train_data, train_label=train_label, test_data=test_data, test_label=test_label, no_neuron=nn.no_neuron, no_hidden_layer = nn.no_hidden_layer, model_path=model_path)
      
