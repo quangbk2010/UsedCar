@@ -59,7 +59,7 @@ using_CV_flag = 0
 using_one_hot_flag = 1 # 1-yes, 0-no
 
 """ Encode onehot for car indent"""
-using_car_ident_flag = 1 # 1-yes, 0-no
+using_car_ident_flag = 0 # 1-yes, 0-no
 
 """ Add noise to label of dataset or not to verify results"""
 add_noise_flag = 0
