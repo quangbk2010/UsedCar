@@ -296,7 +296,19 @@ class Tensor_NN(Dataset):
             
         return (X_total_set, y_total_set, X_train_set, y_train_set, X_test_set, y_test_set) 
 
-
+    def batch_norm (self, x, phase_train, scope='bn'):
+        """
+        Batch normalization.
+        Args:
+            x:           Tensor
+            phase_train: boolean tf.Varialbe, true indicates training phase
+            scope:       string, variable scope
+        Return:
+            normed:      batch-normalized maps
+        """
+        with tf.variable_scope (scope):
+            normed = tf.layers.batch_normalization (x, training=phase_train)
+        return normed
 
     def build_model (self, dim_data, no_unit, no_hidden_layer):
         X = tf.placeholder(tf.float32, [None, dim_data])
@@ -327,16 +339,20 @@ class Tensor_NN(Dataset):
         x_ident = tf.placeholder(tf.float32, [None, d_ident])
         x_remain = tf.placeholder(tf.float32, [None, d_remain])
         Y = tf.placeholder(tf.float32, [None, 1])
+        phase_train = tf.placeholder(tf.bool, name='phase_train')
 
         print ("build_car2vect_model: d_ident:", d_ident, "d_remain:", d_remain, "d_embed:", d_embed, "no_neuron_embed:", no_neuron_embed, "no_neuron_main:", no_neuron)
 
-        output1 = slim.fully_connected(x_ident, no_neuron_embed, scope='hidden_embed1', activation_fn=tf.nn.relu)
-        #output1 = slim.dropout(output1, nn.dropout, scope='dropout1')
-        #output2 = slim.fully_connected(output1, no_neuron_embed, scope='hidden_embed2', activation_fn=tf.nn.relu)
-        #output2 = slim.dropout(output2, nn.dropout, scope='dropout2')
+        output1 = slim.fully_connected (x_ident, no_neuron_embed, scope='hidden_embed1', activation_fn=tf.nn.relu)
+        #output1 = slim.dropout (output1, nn.dropout, scope='dropout1')
+        #output2 = slim.fully_connected (output1, no_neuron_embed, scope='hidden_embed2', activation_fn=tf.nn.relu)
+        #output2 = slim.dropout (output2, nn.dropout, scope='dropout2')
         #output3 = slim.fully_connected(output2, no_neuron_embed, scope='hidden_embed3', activation_fn=tf.nn.relu)
-        #output3 = slim.dropout(output3, nn.dropout, scope='dropout3')
-        x_embed = slim.fully_connected(output1, d_embed, scope='output_embed', activation_fn=tf.nn.relu) # 3-dimension of embeding NN
+        #output3 = slim.dropout (output3, nn.dropout, scope='dropout3')
+        x_embed = slim.fully_connected (output1, d_embed, scope='output_embed', activation_fn=tf.nn.relu) # 3-dimension of embeding NN
+        #x_embed = slim.fully_connected (output1, d_embed, scope='output_embed') # seperate the activation function to another step to use batch normalization.
+        #x_embed = self.batch_norm (x_embed, phase_train) # batch normalization
+        #x_embed = tf.nn.elu (x_embed, name="elu_output_embed")
 
         #mean, var = tf.nn.moments (x_embed, [0], keep_dims=True)
         #x_embed = tf.div(tf.subtract(x_embed, mean), tf.sqrt(var))
@@ -350,14 +366,14 @@ class Tensor_NN(Dataset):
         prediction = slim.fully_connected(output3, 1, scope='output_main') # 1-dimension of output
 
 
-        return x_ident, x_remain, Y, x_embed, prediction
+        return x_ident, x_remain, Y, x_embed, prediction, phase_train
 
     def car2vect(self, train_data, train_label, test_data, test_label, test_car_ident, no_neuron, model_path, d_ident, d_embed, d_remain, no_neuron_embed): # Used for 1train-1test
     #def car2vect(self, train_data, train_label, test_data, test_label, test_car_ident, model_path, d_ident, d_embed, d_remain, x_ident, x_remain, Y, x_embed, prediction, fold): # used for Cross-validation 
 
         #building car embedding model
         if using_CV_flag == 0:
-            x_ident, x_remain, Y, x_embed, prediction = self.build_car2vect_model(no_neuron, no_neuron_embed, d_ident, d_embed, d_remain)
+            x_ident, x_remain, Y, x_embed, prediction, phase_train = self.build_car2vect_model(no_neuron, no_neuron_embed, d_ident, d_embed, d_remain)
             x_ident_file_name_ = x_ident_file_name
             x_embed_file_name_ = x_embed_file_name
             mean_error_file_name_ = mean_error_file_name
@@ -377,8 +393,8 @@ class Tensor_NN(Dataset):
 
         # Used for minimizing relative error
         #lamb = 1e-6
-        #loss = tf.reduce_mean (tf.divide (tf.abs (prediction - Y), Y)) #+ lamb * tf.reduce_mean (tf.norm (x_embed, axis=0, keep_dims=True))
-        loss = tf.reduce_mean (tf.abs (prediction - Y)) #+ lamb * tf.reduce_mean (tf.norm (x_embed, axis=0, keep_dims=True))
+        loss = tf.reduce_mean (tf.divide (tf.abs (prediction - Y), Y)) #+ lamb * tf.reduce_mean (tf.norm (x_embed, axis=0, keep_dims=True))
+        #loss = tf.reduce_mean (tf.abs (prediction - Y)) #+ lamb * tf.reduce_mean (tf.norm (x_embed, axis=0, keep_dims=True))
         #loss = tf.reduce_mean (tf.divide (tf.abs (prediction - Y), tf.abs (Y) + tf.abs (prediction) ))
 
         optimizer = tf.train.AdamOptimizer(learning_rate).minimize(loss, global_step=global_step)
@@ -454,7 +470,7 @@ class Tensor_NN(Dataset):
 
                     start_index = end_index
 
-                    _, train_sum_se_val, train_sum_ae_val, train_sum_relative_err_val, train_sum_smape_val = sess.run([optimizer, sum_se, sum_ae, sum_relative_err, sum_smape], feed_dict={x_ident: batch_x_ident, x_remain: batch_x_remain, Y: batch_y})
+                    _, train_sum_se_val, train_sum_ae_val, train_sum_relative_err_val, train_sum_smape_val = sess.run([optimizer, sum_se, sum_ae, sum_relative_err, sum_smape], feed_dict={x_ident: batch_x_ident, x_remain: batch_x_remain, Y: batch_y, phase_train: True})
                     total_se += train_sum_se_val
                     total_ae += train_sum_ae_val
                     total_relative_err += train_sum_relative_err_val
@@ -470,7 +486,7 @@ class Tensor_NN(Dataset):
 
                 # Test the model.
                 # If we use 2 hidden layers, each has >= 10000 units -> resource exhausted, then we should divide it into batches and test on seperate one, and then calculate the average.
-                total_se = 0
+                """total_se = 0
                 total_ae = 0
                 total_relative_err = 0
                 total_smape = 0
@@ -507,8 +523,8 @@ class Tensor_NN(Dataset):
                 epoch_test_rmse_val = np.sqrt (total_se/len_test)
                 epoch_test_mae_val = total_ae/len_test
                 epoch_test_relative_err_val = total_relative_err/len_test
-                epoch_test_smape_val = total_smape/len_test
-                #predicted_y, x_embed_val, epoch_test_rmse_val, epoch_test_mae_val, epoch_test_relative_err_val, epoch_test_smape_val = sess.run([prediction, x_embed, rmse, mae, relative_err, smape], feed_dict={x_ident: test_data_ident, x_remain: test_data_remain, Y: test_label})
+                epoch_test_smape_val = total_smape/len_test"""
+                predicted_y, x_embed_val, epoch_test_rmse_val, epoch_test_mae_val, epoch_test_relative_err_val, epoch_test_smape_val = sess.run([prediction, x_embed, rmse, mae, relative_err, smape], feed_dict={x_ident: test_data_ident, x_remain: test_data_remain, Y: test_label, phase_train: False})
 
                 
                 print ("test: rmse", epoch_test_rmse_val)
@@ -538,10 +554,10 @@ class Tensor_NN(Dataset):
                 train_label_shuffled = train_set_shuffled [:, train_data.shape[1]:]
 
 
-                """if (epoch + 1) % self.saved_period == 0 and epoch != 0:
+                """if (epoch + 1) == 1: # % self.saved_period == 0 and epoch != 0:
                     #model_path = self.model_dir + '/' + self.model_name + '_' + str (k_fold) + '_' + str(epoch + 1) + '.ckpt'
                     save_path = saver.save(sess, model_path, global_step=global_step)
-                    print('Model saved in file: %s' % save_path)"""
+                    print('Model saved in file: %s' % save_path) #"""
 
             print ("Training finished!")
             stop_time = time.time()
@@ -766,7 +782,7 @@ if __name__ == '__main__':
     parser.add_argument('--output_dir', type=str, default = '../Results')
 
     #hyper parameter
-    parser.add_argument('--epoch', type=int, default = 70) #2000 # 100
+    parser.add_argument('--epoch', type=int, default = 10) #2000 # 100
     parser.add_argument('--dropout', type=float, default = 1)
     parser.add_argument('--batch_size', type=int, default = 128)
     parser.add_argument('--learning_rate', type=float, default=0.00125)

@@ -157,16 +157,18 @@ class Dataset (Data_preprocessing, DataFrameImputer):
 
             # Remove the data points with price == 0
             #total_dataset = total_dataset[total_dataset["price"] != 0]
-            #print ("3.", total_dataset.shape)
+            total_dataset = total_dataset[total_dataset["price"] > 50]
+            print ("3.", total_dataset.shape)
 
             # Remove outliers
             #total_dataset = total_dataset[np.abs(total_dataset["price"] - total_dataset["price"].mean()) / total_dataset["price"].std() < 1]
             #print ("4.", total_dataset.shape)
 
             # Remove the data points with sale duration = 0
-            diff_date = total_dataset["sale_date"]-total_dataset["actual_advertising_date"]
-            total_dataset = total_dataset[diff_date != 0] 
-            print ("5.", total_dataset.shape)
+            if output == "sale_duration":
+                diff_date = total_dataset["sale_date"]-total_dataset["actual_advertising_date"]
+                total_dataset = total_dataset[diff_date != 0] 
+                print ("5.", total_dataset.shape)
 
             # Impute missing values from here
             total_dataset = DataFrameImputer().fit_transform (total_dataset)
