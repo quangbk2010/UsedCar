@@ -157,7 +157,7 @@ class Dataset (Data_preprocessing, DataFrameImputer):
 
             # Remove the data points with price == 0
             #total_dataset = total_dataset[total_dataset["price"] != 0]
-            total_dataset = total_dataset[total_dataset["price"] >= 270]
+            total_dataset = total_dataset[total_dataset["price"] >= 400]
             print ("3.1", total_dataset.shape)
             total_dataset = total_dataset[total_dataset["price"] < 10000]
             #print ("3.2", total_dataset.shape)
