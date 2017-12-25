@@ -156,14 +156,11 @@ class Dataset (Data_preprocessing, DataFrameImputer):
             print ("2.", total_dataset.shape)
 
             # Remove the data points with price == 0
-            #total_dataset = total_dataset[total_dataset["price"] != 0]
-            total_dataset = total_dataset[total_dataset["price"] >= 400]
-            print ("3.1", total_dataset.shape)
-            total_dataset = total_dataset[total_dataset["price"] < 9000]# 10000]
+            total_dataset = total_dataset[total_dataset["price"] != 0]
+            #total_dataset = total_dataset[total_dataset["price"] >= 400]
+            #print ("3.1", total_dataset.shape)
+            #total_dataset = total_dataset[total_dataset["price"] < 9000]# 10000]
             #print ("3.2", total_dataset.shape)
-
-            # Subtract 
-            #total_dataset = total_dataset[total_dataset["price"] != 0]
 
             # Remove outliers
             #total_dataset = total_dataset[np.abs(total_dataset["price"] - total_dataset["price"].mean()) / total_dataset["price"].std() < 1]
@@ -171,7 +168,7 @@ class Dataset (Data_preprocessing, DataFrameImputer):
 
             # Just keep hyundai and kia
             #total_dataset = total_dataset[(total_dataset["manufacture_code"] == 101) | (total_dataset["manufacture_code"] == 102)]
-            print ("5.", total_dataset.shape)
+            #print ("5.", total_dataset.shape)
 
             # Remove the data points with sale duration = 0
             if output == "sale_duration":
