@@ -189,6 +189,7 @@ class Dataset (Data_preprocessing, DataFrameImputer):
             #scaler = StandardScaler()  
             scaler = RobustScaler()
             total_dataset[features_not_need_encoding] = scaler.fit_transform (total_dataset[features_not_need_encoding])
+            total_dataset["price"] = scaler.fit_transform (total_dataset["price"])
 
             print ("Store the dataframe into a hdf file")
             total_dataset.to_hdf (filename, key)       
