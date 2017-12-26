@@ -180,10 +180,9 @@ class Tensor_NN(Dataset):
 
             X_test_set = X_total_set[train_length:, :]
             y_test_set = y_total_set[train_length:, :]
-            price_test_set = self.price_[train_length:, :]
 
             
-        return (X_total_set, y_total_set, X_train_set, y_train_set, X_test_set, y_test_set, price_test_set) 
+        return (X_total_set, y_total_set, X_train_set, y_train_set, X_test_set, y_test_set) 
     
     
     def get_data_label_car_ident (self, features, output):
@@ -579,7 +578,7 @@ class Tensor_NN(Dataset):
 
             return epoch_test_relative_err_val
 
-    def train_nn(self, train_data, train_label, test_data, test_label, no_neuron, no_hidden_layer, model_path, price_): # Used for 1train-1test
+    def train_nn(self, train_data, train_label, test_data, test_label, no_neuron, no_hidden_layer, model_path): # Used for 1train-1test
     #def train_nn(self, train_data, train_label, test_data, test_label, model_path, X, Y, prediction, weights, fold): # used for Cross-validation 
        
         #building car embedding model
@@ -631,6 +630,14 @@ class Tensor_NN(Dataset):
             train_data_shuffled = train_set_shuffled [:, 0:train_data.shape[1]]
             train_label_shuffled = train_set_shuffled [:, train_data.shape[1]:]
 
+            scaler = MinMaxScaler(feature_range=(self.min_price, self.max_price))
+            scaler.fit (train_label_shuffled)
+            train_label_shuffled_scaled = scaler.transform (train_label_shuffled)
+            train_label_min = train_label_shuffled.min ()
+            train_label_max = train_label_shuffled.max ()
+            print ("train_label_min:", train_label_min, "train_label_max", train_label_max)
+            sys.exit (-1)
+
             len_train = len(train_data)
             len_test  = len(test_data)
             train_total_batch = int (np.ceil (float (len_train)/self.batch_size))
@@ -659,7 +666,7 @@ class Tensor_NN(Dataset):
                         end_index = (i+1) * self.batch_size
 
                     batch_x = train_data_shuffled [start_index : end_index]
-                    batch_y = train_label_shuffled [start_index : end_index]
+                    batch_y = train_label_shuffled_scaled [start_index : end_index]
 
                     start_index = end_index
 
@@ -678,13 +685,17 @@ class Tensor_NN(Dataset):
                 print('\n\nEpoch: %04d' % (epoch + 1), "Avg. training rmse:", epoch_train_rmse_val, "mae:", epoch_train_mae_val, 'relative_err:', epoch_train_relative_err_val, "smape:", epoch_train_smape_val)
                 
                 # Test the model.
-                predicted_y, epoch_test_rmse_val, epoch_test_mae_val, epoch_test_relative_err_val, epoch_test_smape_val = sess.run([prediction, rmse, mae, relative_err, smape], feed_dict={X: test_data, Y: test_label})
+                test_label_scaled = scaler.transform (test_label)
+
+                predicted_y, epoch_test_rmse_val, epoch_test_mae_val, epoch_test_relative_err_val, epoch_test_smape_val = sess.run([prediction, rmse, mae, relative_err, smape], feed_dict={X: test_data, Y: test_label_scaled})
                 
                 print ("test: rmse", epoch_test_rmse_val)
                 print ("test: mae", epoch_test_mae_val)
                 print ("test: relative_err", epoch_test_relative_err_val)
                 print ("test: smape", epoch_test_smape_val)
-                print ("truth:", price_[10], "rescale:", test_label[:10] * (self.max_price - self.min_price) + self.min_price, "prediction:", predicted_y[:10] * (self.max_price - self.min_price) + self.min_price)
+                #print ("rescale:", 1 + (test_label[:10] - 1) * (201648 - 1) / 99, "prediction:",  1 + (predicted_y[:10] - 1) * (201648 - 1) / 99)
+                predicted_y_rescaled = train_label_min + (predicted_y - 1) * (train_label_max - train_label_min) / 99
+                print ("truth:", test_label[:10], "rescale:", train_label_min + (test_label_scaled[:10] - 1) * (train_label_max - train_label_min) / 99, "prediction:", predicted_y_rescaled[:10])
                 #print ("truth:", test_label[:10], "prediction:", predicted_y[:10])
 
                 epoch_list.append (epoch)
@@ -696,7 +707,7 @@ class Tensor_NN(Dataset):
 
                 line = np.zeros(len (test_label), dtype=[('truth', float), ('pred', float)])
                 line['truth'] = test_label.reshape (test_label.shape[0])
-                line['pred'] = predicted_y.reshape (predicted_y.shape[0])
+                line['pred'] = predicted_y_rescaled.reshape (predicted_y_rescaled.shape[0])
 
                 if (epoch + 1) % 1 == 0: # 10 == 0:
                     np.savetxt(y_predict_file_name_ + "_" + str (epoch), line, fmt="%.2f\t%.2f")
@@ -706,6 +717,7 @@ class Tensor_NN(Dataset):
                 train_set_shuffled = np.random.permutation(train_set)
                 train_data_shuffled = train_set_shuffled [:, 0:train_data.shape[1]]
                 train_label_shuffled = train_set_shuffled [:, train_data.shape[1]:]
+                train_label_shuffled_scaled = scaler.transform (train_label_shuffled)
 
                 """if (epoch + 1) % self.saved_period == 0 and epoch != 0:
                     #model_path = self.model_dir + '/' + self.model_name + '_' + str (k_fold) + '_' + str(epoch + 1) + '.ckpt'
@@ -825,7 +837,6 @@ if __name__ == '__main__':
     train_label = nn.y_train_set
     test_data = nn.X_test_set
     test_label = nn.y_test_set
-    price_ = nn.price_test_set
     if using_car_ident_flag == 1:
         test_car_ident = nn.car_ident_code_total_set[train_data.shape[0]:]
 
@@ -837,5 +848,5 @@ if __name__ == '__main__':
     if using_car_ident_flag == 1:
         nn.car2vect(train_data=train_data, train_label=train_label, test_data=test_data, test_label=test_label, test_car_ident=test_car_ident, no_neuron=nn.no_neuron, model_path=model_path, d_ident=nn.d_ident,d_embed=3, d_remain=nn.d_remain, no_neuron_embed=nn.no_neuron_embed) # 1000, 3, 6000
     else:
-        nn.train_nn (train_data=train_data, train_label=train_label, test_data=test_data, test_label=test_label, no_neuron=nn.no_neuron, no_hidden_layer = nn.no_hidden_layer, model_path=model_path, price_=price_)
+        nn.train_nn (train_data=train_data, train_label=train_label, test_data=test_data, test_label=test_label, no_neuron=nn.no_neuron, no_hidden_layer = nn.no_hidden_layer, model_path=model_path)
      
