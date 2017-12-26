@@ -441,9 +441,9 @@ class Tensor_NN(Dataset):
             train_data_ident_shuffled = train_set_shuffled [:, d_remain:train_data.shape[1]]
             train_label_shuffled = train_set_shuffled [:, train_data.shape[1]:]
 
-            scaler = MinMaxScaler(feature_range=(self.min_price, self.max_price))
-            scaler.fit (train_label_shuffled)
             if self.scale_label == 1:
+                scaler = MinMaxScaler(feature_range=(self.min_price, self.max_price))
+                scaler.fit (train_label_shuffled)
                 train_label_shuffled_scaled = scaler.transform (train_label_shuffled)
             else:
                 train_label_shuffled_scaled = train_label_shuffled
@@ -579,7 +579,10 @@ class Tensor_NN(Dataset):
                 train_data_remain_shuffled = train_set_shuffled [:, 0:d_remain]
                 train_data_ident_shuffled = train_set_shuffled [:, d_remain:train_data.shape[1]]
                 train_label_shuffled = train_set_shuffled [:, train_data.shape[1]:]
-                train_label_shuffled_scaled = scaler.transform (train_label_shuffled)
+                if self.scale_label == 1:
+                    train_label_shuffled_scaled = scaler.transform (train_label_shuffled)
+                else:
+                    train_label_shuffled_scaled = train_label_shuffled
 
                 """if (epoch + 1) == 1: # % self.saved_period == 0 and epoch != 0:
                     #model_path = self.model_dir + '/' + self.model_name + '_' + str (k_fold) + '_' + str(epoch + 1) + '.ckpt'
