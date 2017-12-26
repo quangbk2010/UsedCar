@@ -141,6 +141,7 @@ class Dataset (Data_preprocessing, DataFrameImputer):
 
         filename = "./Dataframe/[" + dataset + "]total_dataframe_Initial.h5"
         key = "df"
+
         if os.path.isfile (filename) == False:
             print ("Load dataset from excel file")
             total_dataset = pd.read_excel (dataset_excel_file, names = self.headers, converters = dtype_dict, header = 0)
@@ -156,14 +157,11 @@ class Dataset (Data_preprocessing, DataFrameImputer):
             print ("2.", total_dataset.shape)
 
             # Remove the data points with price == 0
-            #total_dataset = total_dataset[total_dataset["price"] != 0]
-            total_dataset = total_dataset[total_dataset["price"] > 600]
-            print ("3.1", total_dataset.shape)
-            total_dataset = total_dataset[total_dataset["price"] < 10000]
+            total_dataset = total_dataset[total_dataset["price"] != 0]
+            #total_dataset = total_dataset[total_dataset["price"] >= 400]
+            #print ("3.1", total_dataset.shape)
+            #total_dataset = total_dataset[total_dataset["price"] < 9000]# 10000]
             #print ("3.2", total_dataset.shape)
-
-            # Subtract 
-            #total_dataset = total_dataset[total_dataset["price"] != 0]
 
             # Remove outliers
             #total_dataset = total_dataset[np.abs(total_dataset["price"] - total_dataset["price"].mean()) / total_dataset["price"].std() < 1]
@@ -171,7 +169,7 @@ class Dataset (Data_preprocessing, DataFrameImputer):
 
             # Just keep hyundai and kia
             #total_dataset = total_dataset[(total_dataset["manufacture_code"] == 101) | (total_dataset["manufacture_code"] == 102)]
-            print ("5.", total_dataset.shape)
+            #print ("5.", total_dataset.shape)
 
             # Remove the data points with sale duration = 0
             if output == "sale_duration":
@@ -190,6 +188,14 @@ class Dataset (Data_preprocessing, DataFrameImputer):
             scaler = RobustScaler()
             total_dataset[features_not_need_encoding] = scaler.fit_transform (total_dataset[features_not_need_encoding])
 
+            # MinMax scale the price
+            # TODO: here we scale on the total dataset, but we need to scale separately on the train set and the test set
+            self.price_ = total_dataset["price"]
+            self.min_price = 1.0
+            self.max_price = 100.0
+            scaler = MinMaxScaler(feature_range=(self.min_price, self.max_price))
+            total_dataset["price"] = scaler.fit_transform (total_dataset["price"])
+
             print ("Store the dataframe into a hdf file")
             total_dataset.to_hdf (filename, key)       
             print ("Time for Loading dataset: %.3f" % (time.time() - stime))        
@@ -197,6 +203,7 @@ class Dataset (Data_preprocessing, DataFrameImputer):
             print ("Reload dataset using HDF5 (Pytables)")
             total_dataset = pd.read_hdf (filename, key)
    
+        print ("Before scale: min price:", self.min_price, "max price:", self.max_price)
         print ("Time for Loading and preprocessing dataset: %.3f" % (time.time() - stime))
         self.total_dataset = total_dataset
     

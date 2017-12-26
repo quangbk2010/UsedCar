@@ -180,9 +180,10 @@ class Tensor_NN(Dataset):
 
             X_test_set = X_total_set[train_length:, :]
             y_test_set = y_total_set[train_length:, :]
+            price_test_set = self.price_[train_length:, :]
 
             
-        return (X_total_set, y_total_set, X_train_set, y_train_set, X_test_set, y_test_set) 
+        return (X_total_set, y_total_set, X_train_set, y_train_set, X_test_set, y_test_set, price_test_set) 
     
     
     def get_data_label_car_ident (self, features, output):
@@ -531,7 +532,8 @@ class Tensor_NN(Dataset):
                 print ("test: mae", epoch_test_mae_val)
                 print ("test: relative_err", epoch_test_relative_err_val)
                 print ("test: smape", epoch_test_smape_val)
-                print ("truth:", test_label[:10], "prediction:", predicted_y[:10])
+                print ("truth:", test_label[:10] * (self.max_price - self.min_price) + self.min_price, "prediction:", predicted_y[:10] * (self.max_price - self.min_price) + self.min_price)
+                #print ("truth:", test_label[:10], "prediction:", predicted_y[:10])
 
                 epoch_list.append (epoch)
                 train_err_list.append (epoch_train_relative_err_val)
@@ -540,12 +542,13 @@ class Tensor_NN(Dataset):
                 rel_err_list.append (epoch_test_relative_err_val)
                 smape_list.append (epoch_test_smape_val)
 
-                np.savetxt (x_embed_file_name_ + "_" + str (epoch), x_embed_val, fmt="%.2f\t%.2f\t%.2f")
-
                 line = np.zeros(len (test_label), dtype=[('truth', float), ('pred', float)])
                 line['truth'] = test_label.reshape (test_label.shape[0])
                 line['pred'] = predicted_y.reshape (predicted_y.shape[0])
-                np.savetxt(y_predict_file_name_ + "_" + str (epoch), line, fmt="%.2f\t%.2f")
+
+                if (epoch + 1) % 10 == 0:
+                    np.savetxt (x_embed_file_name_ + "_" + str (epoch), x_embed_val, fmt="%.2f\t%.2f\t%.2f")
+                    np.savetxt(y_predict_file_name_ + "_" + str (epoch), line, fmt="%.2f\t%.2f")
 
                 #TODO: training data permutation
                 train_set_shuffled = np.random.permutation(train_set)
@@ -576,7 +579,7 @@ class Tensor_NN(Dataset):
 
             return epoch_test_relative_err_val
 
-    def train_nn(self, train_data, train_label, test_data, test_label, no_neuron, no_hidden_layer, model_path): # Used for 1train-1test
+    def train_nn(self, train_data, train_label, test_data, test_label, no_neuron, no_hidden_layer, model_path, price_): # Used for 1train-1test
     #def train_nn(self, train_data, train_label, test_data, test_label, model_path, X, Y, prediction, weights, fold): # used for Cross-validation 
        
         #building car embedding model
@@ -681,7 +684,8 @@ class Tensor_NN(Dataset):
                 print ("test: mae", epoch_test_mae_val)
                 print ("test: relative_err", epoch_test_relative_err_val)
                 print ("test: smape", epoch_test_smape_val)
-                print ("truth:", test_label[:10], "prediction:", predicted_y[:10])
+                print ("truth:", price_[10], "rescale:", test_label[:10] * (self.max_price - self.min_price) + self.min_price, "prediction:", predicted_y[:10] * (self.max_price - self.min_price) + self.min_price)
+                #print ("truth:", test_label[:10], "prediction:", predicted_y[:10])
 
                 epoch_list.append (epoch)
                 train_err_list.append (epoch_train_relative_err_val)
@@ -693,7 +697,9 @@ class Tensor_NN(Dataset):
                 line = np.zeros(len (test_label), dtype=[('truth', float), ('pred', float)])
                 line['truth'] = test_label.reshape (test_label.shape[0])
                 line['pred'] = predicted_y.reshape (predicted_y.shape[0])
-                np.savetxt(y_predict_file_name_ + "_" + str (epoch), line, fmt="%.2f\t%.2f")
+
+                if (epoch + 1) % 1 == 0: # 10 == 0:
+                    np.savetxt(y_predict_file_name_ + "_" + str (epoch), line, fmt="%.2f\t%.2f")
 
 
                 #TODO: training data permutation
@@ -819,6 +825,7 @@ if __name__ == '__main__':
     train_label = nn.y_train_set
     test_data = nn.X_test_set
     test_label = nn.y_test_set
+    price_ = nn.price_test_set
     if using_car_ident_flag == 1:
         test_car_ident = nn.car_ident_code_total_set[train_data.shape[0]:]
 
@@ -830,5 +837,5 @@ if __name__ == '__main__':
     if using_car_ident_flag == 1:
         nn.car2vect(train_data=train_data, train_label=train_label, test_data=test_data, test_label=test_label, test_car_ident=test_car_ident, no_neuron=nn.no_neuron, model_path=model_path, d_ident=nn.d_ident,d_embed=3, d_remain=nn.d_remain, no_neuron_embed=nn.no_neuron_embed) # 1000, 3, 6000
     else:
-        nn.train_nn (train_data=train_data, train_label=train_label, test_data=test_data, test_label=test_label, no_neuron=nn.no_neuron, no_hidden_layer = nn.no_hidden_layer, model_path=model_path)
+        nn.train_nn (train_data=train_data, train_label=train_label, test_data=test_data, test_label=test_label, no_neuron=nn.no_neuron, no_hidden_layer = nn.no_hidden_layer, model_path=model_path, price_=price_)
      
