@@ -141,6 +141,11 @@ class Dataset (Data_preprocessing, DataFrameImputer):
 
         filename = "./Dataframe/[" + dataset + "]total_dataframe_Initial.h5"
         key = "df"
+
+        # These below vars are used in minmax scaler for price
+        self.min_price = 1.0
+        self.max_price = 100.0
+
         if os.path.isfile (filename) == False:
             print ("Load dataset from excel file")
             total_dataset = pd.read_excel (dataset_excel_file, names = self.headers, converters = dtype_dict, header = 0)
@@ -157,13 +162,10 @@ class Dataset (Data_preprocessing, DataFrameImputer):
 
             # Remove the data points with price == 0
             #total_dataset = total_dataset[total_dataset["price"] != 0]
-            total_dataset = total_dataset[total_dataset["price"] >= 400]
+            total_dataset = total_dataset[total_dataset["price"] >= 50] # 400]
             print ("3.1", total_dataset.shape)
-            total_dataset = total_dataset[total_dataset["price"] < 9000]# 10000]
-            #print ("3.2", total_dataset.shape)
-
-            # Subtract 
-            #total_dataset = total_dataset[total_dataset["price"] != 0]
+            total_dataset = total_dataset[total_dataset["price"] < 9000]
+            print ("3.2", total_dataset.shape)
 
             # Remove outliers
             #total_dataset = total_dataset[np.abs(total_dataset["price"] - total_dataset["price"].mean()) / total_dataset["price"].std() < 1]
@@ -171,13 +173,17 @@ class Dataset (Data_preprocessing, DataFrameImputer):
 
             # Just keep hyundai and kia
             #total_dataset = total_dataset[(total_dataset["manufacture_code"] == 101) | (total_dataset["manufacture_code"] == 102)]
-            print ("5.", total_dataset.shape)
+            #print ("5.", total_dataset.shape)
+
+            # Just keep passenger cars
+            #total_dataset = total_dataset[(total_dataset["car_type"] == "Passenger car")]
+            #print ("6.", total_dataset.shape)
 
             # Remove the data points with sale duration = 0
             if output == "sale_duration":
                 diff_date = total_dataset["sale_date"]-total_dataset["actual_advertising_date"]
                 total_dataset = total_dataset[diff_date != 0] 
-                print ("5.", total_dataset.shape)
+                print ("7.", total_dataset.shape)
 
             # Impute missing values from here
             total_dataset = DataFrameImputer().fit_transform (total_dataset)
@@ -190,6 +196,11 @@ class Dataset (Data_preprocessing, DataFrameImputer):
             scaler = RobustScaler()
             total_dataset[features_not_need_encoding] = scaler.fit_transform (total_dataset[features_not_need_encoding])
 
+            # MinMax scale the price
+            # TODO: here we scale on the total dataset, but we need to scale separately on the train set and the test set
+            #scaler = MinMaxScaler(feature_range=(self.min_price, self.max_price))
+            #total_dataset["price"] = scaler.fit_transform (total_dataset["price"])
+
             print ("Store the dataframe into a hdf file")
             total_dataset.to_hdf (filename, key)       
             print ("Time for Loading dataset: %.3f" % (time.time() - stime))        
@@ -197,6 +208,7 @@ class Dataset (Data_preprocessing, DataFrameImputer):
             print ("Reload dataset using HDF5 (Pytables)")
             total_dataset = pd.read_hdf (filename, key)
    
+        print ("Before scale: min price:", self.min_price, "max price:", self.max_price)
         print ("Time for Loading and preprocessing dataset: %.3f" % (time.time() - stime))
         self.total_dataset = total_dataset
     
@@ -204,46 +216,17 @@ class Dataset (Data_preprocessing, DataFrameImputer):
         
         return self.total_dataset
     
-    """def get_training_dataset (self):
-        
-        self.traning_dataset = self.total_dataset.head (n = data_training_length)
-        return self.traning_dataset
-        # or return self.total_dataset[0:data_training_length]
-    
-    def get_validation_dataset (self):
-        
-        self.validation_dataset = self.total_dataset[data_training_length:data_training_length + data_validation_length]
-        #print ('test:', self.validation_dataset)
-        return self.validation_dataset
-    
-    def get_test_dataset (self):
-        
-        self.test_dataset = self.total_dataset.tail (data_test_length)
-        return self.test_dataset""" 
-    
     def encode_one_hot_feature (self, total_data_array, feature, feature_array):
         """
-        There are some features need to be encoded (here using one-hot), because they are categorical features (represented as nominal, is not 
-        meaningful because they are index, it doesn't make sense to add or subtract them ).
-        NOTE: We need to know how many code of a features (based on training data set) -> fit correctly for test, validation dataset.
+        There are some features need to be encoded (here using one-hot), because they are categorical features (represented as nominal, is not meaningful because they are index, it doesn't make sense to add or subtract them).
         
         feature_array: numpy array of feature 
         return the one-hot code for feature array
         """
-        #print ("Encode one-hot.")
-        #data_array = np.array ([self.get_total_dataset()[feature]]) # it is ok to use training dataset if the length of training dataset is large enough
-        #data_array = self.impute_missing_values (feature, data_array, strategy_h)
         enc = OneHotEncoder(sparse = False)
-        #print ("***", total_data_array.shape, feature_array.shape)
         enc.fit (total_data_array.T) 
-        #print ('encoded:', enc.transform (feature_array.T))
         return enc.transform (feature_array.T)
         
-        """X = np.array ([[128], [101], [105], [102], [109], [160], [101], [101], [102]])
-        print ('X = ', X)
-        print ('feature arr: ', feature_array)
-        print (enc.fit_transform (feature_array.T))"""
-    
     def count_car (self, dataset):    
         """
             Count how many cars (each car can be diffirentiated by (model_code, rating_code)) in the dataset. 
@@ -499,7 +482,18 @@ class Dataset (Data_preprocessing, DataFrameImputer):
         X1 = enc.fit_transform (X1)
         print ("X1.shape", X1.shape)
 
+        # use the information about advertising date: use year and month separately
+        adv_date = dataset ["actual_advertising_date"]
+        manufacture_year = dataset ["year"]
+        adv_year = adv_date // 10000
+        adv_month = adv_date % 10000 // 100
+        adv_month = enc.fit_transform(adv_month)
+        adv_month = adv_month.reshape (adv_month.shape[1], 1)
+        year_diff = (adv_year - manufacture_year)
+        year_diff = year_diff.reshape (adv_month.shape[0], 1)
+
         X2 = np.array (dataset[features_not_need_encoding]) 
+        #X = np.concatenate ((X2, X1, adv_month, year_diff), axis = 1) 
         X = np.concatenate ((X2, X1), axis = 1) 
         print ("X2.shape", X2.shape)
         return X 

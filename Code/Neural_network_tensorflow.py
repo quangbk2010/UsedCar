@@ -103,6 +103,8 @@ class Tensor_NN(Dataset):
         self.no_hidden_layer = args.no_hidden_layer
         self.no_neuron = args.no_neuron
         self.no_neuron_embed = args.no_neuron_embed
+
+        self.scale_label = args.scale_label
         
         self.model_dir = args.model_dir
         self.model_name = args.model_name
@@ -399,15 +401,27 @@ class Tensor_NN(Dataset):
 
         optimizer = tf.train.AdamOptimizer(learning_rate).minimize(loss, global_step=global_step)
     
+        # Use in case of scale label
+        if self.scale_label == 1:
+            train_label_min = train_label.min ()
+            train_label_max = train_label.max ()
+            print ("train_label_min:", train_label_min, "train_label_max", train_label_max)
+            prediction = train_label_min + (prediction - self.min_price) * (train_label_max - train_label_min) / (self.max_price - self.min_price)
+            Y_ = train_label_min + (Y - self.min_price) * (train_label_max - train_label_min) / (self.max_price - self.min_price)
+ 
+        else:
+           Y_ = Y 
+
         # Declare error functions
-        sum_se = tf.reduce_sum (tf.squared_difference(prediction, Y))
-        sum_ae = tf.reduce_sum (tf.abs (prediction - Y))
-        sum_relative_err = tf.reduce_sum (tf.divide (tf.abs (prediction - Y), Y)) * 100 
-        sum_smape = tf.reduce_sum (tf.divide (tf.abs (prediction - Y), tf.abs (Y) + tf.abs (prediction) )) * 100
-        rmse = tf.sqrt (tf.reduce_mean (tf.squared_difference(prediction, Y)))
-        mae = tf.reduce_mean (tf.abs (prediction - Y))
-        relative_err = tf.reduce_mean (tf.divide (tf.abs (prediction - Y), Y)) * 100 
-        smape = tf.reduce_mean (tf.divide (tf.abs (prediction - Y), tf.abs (Y) + tf.abs (prediction) )) * 100
+        sum_se = tf.reduce_sum (tf.squared_difference(prediction, Y_))
+        sum_ae = tf.reduce_sum (tf.abs (prediction - Y_))
+        sum_relative_err = tf.reduce_sum (tf.divide (tf.abs (prediction - Y_), Y_)) * 100 
+        sum_smape = tf.reduce_sum (tf.divide (tf.abs (prediction - Y_), tf.abs (Y_) + tf.abs (prediction) )) * 100
+        rmse = tf.sqrt (tf.reduce_mean(tf.squared_difference(prediction, Y_)))
+        mae = tf.reduce_mean (tf.abs (prediction - Y_))
+        relative_err = tf.reduce_mean (tf.divide (tf.abs (prediction - Y_), (Y_))) * 100 
+        smape = tf.reduce_mean (tf.divide (tf.abs (prediction - Y_), tf.abs (Y_) + tf.abs (prediction) )) * 100
+
         
         init = tf.global_variables_initializer()
 
@@ -426,6 +440,13 @@ class Tensor_NN(Dataset):
             train_data_remain_shuffled = train_set_shuffled [:, 0:d_remain]
             train_data_ident_shuffled = train_set_shuffled [:, d_remain:train_data.shape[1]]
             train_label_shuffled = train_set_shuffled [:, train_data.shape[1]:]
+
+            scaler = MinMaxScaler(feature_range=(self.min_price, self.max_price))
+            scaler.fit (train_label_shuffled)
+            if self.scale_label == 1:
+                train_label_shuffled_scaled = scaler.transform (train_label_shuffled)
+            else:
+                train_label_shuffled_scaled = train_label_shuffled
 
             test_data_remain = test_data [:, 0:d_remain]
             test_data_ident = test_data [:, d_remain:]
@@ -466,7 +487,7 @@ class Tensor_NN(Dataset):
 
                     batch_x_ident = train_data_ident_shuffled [start_index : end_index]
                     batch_x_remain = train_data_remain_shuffled [start_index : end_index]
-                    batch_y = train_label_shuffled [start_index : end_index]
+                    batch_y = train_label_shuffled_scaled [start_index : end_index]
 
                     start_index = end_index
 
@@ -485,6 +506,11 @@ class Tensor_NN(Dataset):
                 print('\n\nEpoch: %04d' % (epoch + 1), "Avg. training rmse:", epoch_train_rmse_val, "mae:", epoch_train_mae_val, 'relative_err:', epoch_train_relative_err_val, "smape:", epoch_train_smape_val)
 
                 # Test the model.
+                if self.scale_label == 1:
+                    test_label_scaled = scaler.transform (test_label)
+                else:
+                    test_label_scaled = test_label
+
                 # If we use 2 hidden layers, each has >= 10000 units -> resource exhausted, then we should divide it into batches and test on seperate one, and then calculate the average.
                 """total_se = 0
                 total_ae = 0
@@ -524,7 +550,7 @@ class Tensor_NN(Dataset):
                 epoch_test_mae_val = total_ae/len_test
                 epoch_test_relative_err_val = total_relative_err/len_test
                 epoch_test_smape_val = total_smape/len_test"""
-                predicted_y, x_embed_val, epoch_test_rmse_val, epoch_test_mae_val, epoch_test_relative_err_val, epoch_test_smape_val = sess.run([prediction, x_embed, rmse, mae, relative_err, smape], feed_dict={x_ident: test_data_ident, x_remain: test_data_remain, Y: test_label, phase_train: False})
+                predicted_y, x_embed_val, epoch_test_rmse_val, epoch_test_mae_val, epoch_test_relative_err_val, epoch_test_smape_val = sess.run([prediction, x_embed, rmse, mae, relative_err, smape], feed_dict={x_ident: test_data_ident, x_remain: test_data_remain, Y: test_label_scaled, phase_train: False})
 
                 
                 print ("test: rmse", epoch_test_rmse_val)
@@ -553,7 +579,7 @@ class Tensor_NN(Dataset):
                 train_data_remain_shuffled = train_set_shuffled [:, 0:d_remain]
                 train_data_ident_shuffled = train_set_shuffled [:, d_remain:train_data.shape[1]]
                 train_label_shuffled = train_set_shuffled [:, train_data.shape[1]:]
-
+                train_label_shuffled_scaled = scaler.transform (train_label_shuffled)
 
                 """if (epoch + 1) == 1: # % self.saved_period == 0 and epoch != 0:
                     #model_path = self.model_dir + '/' + self.model_name + '_' + str (k_fold) + '_' + str(epoch + 1) + '.ckpt'
@@ -602,15 +628,26 @@ class Tensor_NN(Dataset):
 
         optimizer = tf.train.AdamOptimizer(learning_rate).minimize(loss, global_step=global_step)
     
+        # Use in case of scale label
+        if self.scale_label == 1:
+            train_label_min = train_label.min ()
+            train_label_max = train_label.max ()
+            print ("train_label_min:", train_label_min, "train_label_max", train_label_max)
+            prediction = train_label_min + (prediction - self.min_price) * (train_label_max - train_label_min) / (self.max_price - self.min_price)
+            Y_ = train_label_min + (Y - self.min_price) * (train_label_max - train_label_min) / (self.max_price - self.min_price)
+ 
+        else:
+           Y_ = Y 
+
         # Declare error functions
-        sum_se = tf.reduce_sum (tf.squared_difference(prediction, Y))
-        sum_ae = tf.reduce_sum (tf.abs (prediction - Y))
-        sum_relative_err = tf.reduce_sum (tf.divide (tf.abs (prediction - Y), Y)) * 100 
-        sum_smape = tf.reduce_sum (tf.divide (tf.abs (prediction - Y), tf.abs (Y) + tf.abs (prediction) )) * 100
-        rmse = tf.sqrt (tf.reduce_mean(tf.squared_difference(prediction, Y)))
-        mae = tf.reduce_mean (tf.abs (prediction - Y))
-        relative_err = tf.reduce_mean (tf.divide (tf.abs (prediction - Y), (Y))) * 100 
-        smape = tf.reduce_mean (tf.divide (tf.abs (prediction - Y), tf.abs (Y) + tf.abs (prediction) )) * 100
+        sum_se = tf.reduce_sum (tf.squared_difference(prediction, Y_))
+        sum_ae = tf.reduce_sum (tf.abs (prediction - Y_))
+        sum_relative_err = tf.reduce_sum (tf.divide (tf.abs (prediction - Y_), Y_)) * 100 
+        sum_smape = tf.reduce_sum (tf.divide (tf.abs (prediction - Y_), tf.abs (Y_) + tf.abs (prediction) )) * 100
+        rmse = tf.sqrt (tf.reduce_mean(tf.squared_difference(prediction, Y_)))
+        mae = tf.reduce_mean (tf.abs (prediction - Y_))
+        relative_err = tf.reduce_mean (tf.divide (tf.abs (prediction - Y_), (Y_))) * 100 
+        smape = tf.reduce_mean (tf.divide (tf.abs (prediction - Y_), tf.abs (Y_) + tf.abs (prediction) )) * 100
         
         init = tf.global_variables_initializer()
 
@@ -628,6 +665,13 @@ class Tensor_NN(Dataset):
             train_set_shuffled = np.random.permutation(train_set)
             train_data_shuffled = train_set_shuffled [:, 0:train_data.shape[1]]
             train_label_shuffled = train_set_shuffled [:, train_data.shape[1]:]
+
+            scaler = MinMaxScaler(feature_range=(self.min_price, self.max_price))
+            scaler.fit (train_label_shuffled)
+            if self.scale_label == 1:
+                train_label_shuffled_scaled = scaler.transform (train_label_shuffled)
+            else:
+                train_label_shuffled_scaled = train_label_shuffled
 
             len_train = len(train_data)
             len_test  = len(test_data)
@@ -657,7 +701,7 @@ class Tensor_NN(Dataset):
                         end_index = (i+1) * self.batch_size
 
                     batch_x = train_data_shuffled [start_index : end_index]
-                    batch_y = train_label_shuffled [start_index : end_index]
+                    batch_y = train_label_shuffled_scaled [start_index : end_index]
 
                     start_index = end_index
 
@@ -676,12 +720,19 @@ class Tensor_NN(Dataset):
                 print('\n\nEpoch: %04d' % (epoch + 1), "Avg. training rmse:", epoch_train_rmse_val, "mae:", epoch_train_mae_val, 'relative_err:', epoch_train_relative_err_val, "smape:", epoch_train_smape_val)
                 
                 # Test the model.
-                predicted_y, epoch_test_rmse_val, epoch_test_mae_val, epoch_test_relative_err_val, epoch_test_smape_val = sess.run([prediction, rmse, mae, relative_err, smape], feed_dict={X: test_data, Y: test_label})
+                if self.scale_label == 1:
+                    test_label_scaled = scaler.transform (test_label)
+                else:
+                    test_label_scaled = test_label
+
+                predicted_y, epoch_test_rmse_val, epoch_test_mae_val, epoch_test_relative_err_val, epoch_test_smape_val = sess.run([prediction, rmse, mae, relative_err, smape], feed_dict={X: test_data, Y: test_label_scaled})
                 
                 print ("test: rmse", epoch_test_rmse_val)
                 print ("test: mae", epoch_test_mae_val)
                 print ("test: relative_err", epoch_test_relative_err_val)
                 print ("test: smape", epoch_test_smape_val)
+                #predicted_y_rescaled = train_label_min + (predicted_y - self.min_price) * (train_label_max - train_label_min) / (self.max_price - self.min_price)
+                #print ("truth:", test_label[:10], "prediction:", predicted_y_rescaled[:10])
                 print ("truth:", test_label[:10], "prediction:", predicted_y[:10])
 
                 epoch_list.append (epoch)
@@ -691,11 +742,14 @@ class Tensor_NN(Dataset):
                 rel_err_list.append (epoch_test_relative_err_val)
                 smape_list.append (epoch_test_smape_val)
 
+                #line = np.zeros(len (test_label), dtype=[('truth_scaled', float), ('pred_scaled', float), ('truth', float), ('pred', float)])
                 line = np.zeros(len (test_label), dtype=[('truth', float), ('pred', float)])
+                #line['truth_scaled'] = test_label_scaled.reshape (test_label.shape[0])
+                #line['pred_scaled'] = predicted_y.reshape (predicted_y.shape[0])
                 line['truth'] = test_label.reshape (test_label.shape[0])
                 line['pred'] = predicted_y.reshape (predicted_y.shape[0])
 
-                if (epoch + 1) % 10 == 0:
+                if (epoch + 1) % 1 == 0: # 10 == 0:
                     np.savetxt(y_predict_file_name_ + "_" + str (epoch), line, fmt="%.2f\t%.2f")
 
 
@@ -703,6 +757,7 @@ class Tensor_NN(Dataset):
                 train_set_shuffled = np.random.permutation(train_set)
                 train_data_shuffled = train_set_shuffled [:, 0:train_data.shape[1]]
                 train_label_shuffled = train_set_shuffled [:, train_data.shape[1]:]
+                train_label_shuffled_scaled = scaler.transform (train_label_shuffled)
 
                 """if (epoch + 1) % self.saved_period == 0 and epoch != 0:
                     #model_path = self.model_dir + '/' + self.model_name + '_' + str (k_fold) + '_' + str(epoch + 1) + '.ckpt'
@@ -739,7 +794,7 @@ class Tensor_NN(Dataset):
                 x_ident, x_remain, Y, x_embed, prediction, dropout = self.build_car2vect_model(no_neuron=100, no_neuron_embed=6000, d_ident=nn.d_ident,d_embed=d_embed_val, d_remain=nn.d_remain)
             else:
                 print ("--Build model using only onehot code")
-                X, Y, prediction, weights, dropout = self.build_model(dim_data=self.X_train_set[0].shape[1], dim_label=self.dim_label, no_unit_in_a_hidden_layer=6000, no_hidden_layer=2)
+                X, Y, prediction, weights, dropout = self.build_model(dim_data=self.X_train_set[0].shape[1], dim_label=1, no_unit_in_a_hidden_layer=6000, no_hidden_layer=2)
 
             
             test_err = []
@@ -783,6 +838,7 @@ if __name__ == '__main__':
     parser.add_argument('--mode', type=str, default='train')
     parser.add_argument('--saved_period', type=int, default=100, help='save checkpoint per X epoch') # 200
     parser.add_argument('--output_dir', type=str, default = '../Results')
+    parser.add_argument('--scale_label', type=int, default=0)
 
     #hyper parameter
     parser.add_argument('--epoch', type=int, default = 10) #2000 # 100
@@ -794,7 +850,6 @@ if __name__ == '__main__':
 
     #network parameter
     parser.add_argument('--dim_data', type=int, default=24)
-    parser.add_argument('--dim_label', type=int, default=1)
     parser.add_argument('--no_hidden_layer', type=int, default = 1) 
     parser.add_argument('--no_neuron', type=int, default = 1000)
     parser.add_argument('--no_neuron_embed', type=int, default = 6000)
