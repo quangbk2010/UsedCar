@@ -531,7 +531,7 @@ class Tensor_NN(Dataset):
                 print ("test: mae", epoch_test_mae_val)
                 print ("test: relative_err", epoch_test_relative_err_val)
                 print ("test: smape", epoch_test_smape_val)
-                print ("truth:", test_label[:10], "prediction:", predicted_y[:10])
+                print ("truth:", test_label[:10] * (self.max_price - self.min_price) + self.min_price, "prediction:", predicted_y[:10] * (self.max_price - self.min_price) + self.min_price)
 
                 epoch_list.append (epoch)
                 train_err_list.append (epoch_train_relative_err_val)
