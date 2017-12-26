@@ -164,7 +164,7 @@ class Dataset (Data_preprocessing, DataFrameImputer):
             #total_dataset = total_dataset[total_dataset["price"] != 0]
             total_dataset = total_dataset[total_dataset["price"] >= 50] # 400]
             print ("3.1", total_dataset.shape)
-            total_dataset = total_dataset[total_dataset["price"] < 10000]
+            total_dataset = total_dataset[total_dataset["price"] < 9000]
             print ("3.2", total_dataset.shape)
 
             # Remove outliers
@@ -175,11 +175,15 @@ class Dataset (Data_preprocessing, DataFrameImputer):
             #total_dataset = total_dataset[(total_dataset["manufacture_code"] == 101) | (total_dataset["manufacture_code"] == 102)]
             #print ("5.", total_dataset.shape)
 
+            # Just keep passenger cars
+            #total_dataset = total_dataset[(total_dataset["car_type"] == "Passenger car")]
+            #print ("6.", total_dataset.shape)
+
             # Remove the data points with sale duration = 0
             if output == "sale_duration":
                 diff_date = total_dataset["sale_date"]-total_dataset["actual_advertising_date"]
                 total_dataset = total_dataset[diff_date != 0] 
-                print ("5.", total_dataset.shape)
+                print ("7.", total_dataset.shape)
 
             # Impute missing values from here
             total_dataset = DataFrameImputer().fit_transform (total_dataset)
@@ -478,7 +482,18 @@ class Dataset (Data_preprocessing, DataFrameImputer):
         X1 = enc.fit_transform (X1)
         print ("X1.shape", X1.shape)
 
+        # use the information about advertising date: use year and month separately
+        adv_date = dataset ["actual_advertising_date"]
+        manufacture_year = dataset ["year"]
+        adv_year = adv_date // 10000
+        adv_month = adv_date % 10000 // 100
+        adv_month = enc.fit_transform(adv_month)
+        adv_month = adv_month.reshape (adv_month.shape[1], 1)
+        year_diff = (adv_year - manufacture_year)
+        year_diff = year_diff.reshape (adv_month.shape[0], 1)
+
         X2 = np.array (dataset[features_not_need_encoding]) 
+        #X = np.concatenate ((X2, X1, adv_month, year_diff), axis = 1) 
         X = np.concatenate ((X2, X1), axis = 1) 
         print ("X2.shape", X2.shape)
         return X 
