@@ -142,6 +142,10 @@ class Dataset (Data_preprocessing, DataFrameImputer):
         filename = "./Dataframe/[" + dataset + "]total_dataframe_Initial.h5"
         key = "df"
 
+        # These below vars are used in minmax scaler for price
+        self.min_price = 1.0
+        self.max_price = 100.0
+
         if os.path.isfile (filename) == False:
             print ("Load dataset from excel file")
             total_dataset = pd.read_excel (dataset_excel_file, names = self.headers, converters = dtype_dict, header = 0)
@@ -157,11 +161,11 @@ class Dataset (Data_preprocessing, DataFrameImputer):
             print ("2.", total_dataset.shape)
 
             # Remove the data points with price == 0
-            total_dataset = total_dataset[total_dataset["price"] != 0]
-            #total_dataset = total_dataset[total_dataset["price"] >= 400]
-            #print ("3.1", total_dataset.shape)
-            #total_dataset = total_dataset[total_dataset["price"] < 9000]# 10000]
-            #print ("3.2", total_dataset.shape)
+            #total_dataset = total_dataset[total_dataset["price"] != 0]
+            total_dataset = total_dataset[total_dataset["price"] >= 50] # 400]
+            print ("3.1", total_dataset.shape)
+            total_dataset = total_dataset[total_dataset["price"] < 10000]
+            print ("3.2", total_dataset.shape)
 
             # Remove outliers
             #total_dataset = total_dataset[np.abs(total_dataset["price"] - total_dataset["price"].mean()) / total_dataset["price"].std() < 1]
@@ -190,11 +194,8 @@ class Dataset (Data_preprocessing, DataFrameImputer):
 
             # MinMax scale the price
             # TODO: here we scale on the total dataset, but we need to scale separately on the train set and the test set
-            self.price_ = total_dataset["price"]
-            self.min_price = 1.0
-            self.max_price = 100.0
-            scaler = MinMaxScaler(feature_range=(self.min_price, self.max_price))
-            total_dataset["price"] = scaler.fit_transform (total_dataset["price"])
+            #scaler = MinMaxScaler(feature_range=(self.min_price, self.max_price))
+            #total_dataset["price"] = scaler.fit_transform (total_dataset["price"])
 
             print ("Store the dataframe into a hdf file")
             total_dataset.to_hdf (filename, key)       
@@ -211,46 +212,17 @@ class Dataset (Data_preprocessing, DataFrameImputer):
         
         return self.total_dataset
     
-    """def get_training_dataset (self):
-        
-        self.traning_dataset = self.total_dataset.head (n = data_training_length)
-        return self.traning_dataset
-        # or return self.total_dataset[0:data_training_length]
-    
-    def get_validation_dataset (self):
-        
-        self.validation_dataset = self.total_dataset[data_training_length:data_training_length + data_validation_length]
-        #print ('test:', self.validation_dataset)
-        return self.validation_dataset
-    
-    def get_test_dataset (self):
-        
-        self.test_dataset = self.total_dataset.tail (data_test_length)
-        return self.test_dataset""" 
-    
     def encode_one_hot_feature (self, total_data_array, feature, feature_array):
         """
-        There are some features need to be encoded (here using one-hot), because they are categorical features (represented as nominal, is not 
-        meaningful because they are index, it doesn't make sense to add or subtract them ).
-        NOTE: We need to know how many code of a features (based on training data set) -> fit correctly for test, validation dataset.
+        There are some features need to be encoded (here using one-hot), because they are categorical features (represented as nominal, is not meaningful because they are index, it doesn't make sense to add or subtract them).
         
         feature_array: numpy array of feature 
         return the one-hot code for feature array
         """
-        #print ("Encode one-hot.")
-        #data_array = np.array ([self.get_total_dataset()[feature]]) # it is ok to use training dataset if the length of training dataset is large enough
-        #data_array = self.impute_missing_values (feature, data_array, strategy_h)
         enc = OneHotEncoder(sparse = False)
-        #print ("***", total_data_array.shape, feature_array.shape)
         enc.fit (total_data_array.T) 
-        #print ('encoded:', enc.transform (feature_array.T))
         return enc.transform (feature_array.T)
         
-        """X = np.array ([[128], [101], [105], [102], [109], [160], [101], [101], [102]])
-        print ('X = ', X)
-        print ('feature arr: ', feature_array)
-        print (enc.fit_transform (feature_array.T))"""
-    
     def count_car (self, dataset):    
         """
             Count how many cars (each car can be diffirentiated by (model_code, rating_code)) in the dataset. 
