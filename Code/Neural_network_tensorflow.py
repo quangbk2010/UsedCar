@@ -636,7 +636,6 @@ class Tensor_NN(Dataset):
             train_label_min = train_label_shuffled.min ()
             train_label_max = train_label_shuffled.max ()
             print ("train_label_min:", train_label_min, "train_label_max", train_label_max)
-            sys.exit (-1)
 
             len_train = len(train_data)
             len_test  = len(test_data)
