@@ -186,6 +186,9 @@ class Dataset (Data_preprocessing, DataFrameImputer):
             #scaler = StandardScaler()  
             scaler = RobustScaler()
             total_dataset[features_not_need_encoding] = scaler.fit_transform (total_dataset[features_not_need_encoding])
+
+            # MinMax scale the price
+            # TODO: here we scale on the total dataset, but we need to scale separately on the train set and the test set
             scaler = MinMaxScaler(feature_range=(1, 100))
             total_dataset["price"] = scaler.fit_transform (total_dataset["price"])
 
@@ -196,6 +199,9 @@ class Dataset (Data_preprocessing, DataFrameImputer):
             print ("Reload dataset using HDF5 (Pytables)")
             total_dataset = pd.read_hdf (filename, key)
    
+        self.min_price = total_dataset["price"].min ()
+        self.max_price = total_dataset["price"].max ()
+        print ("min price:", self.min_price, "max price:", self.max_price)
         print ("Time for Loading and preprocessing dataset: %.3f" % (time.time() - stime))
         self.total_dataset = total_dataset
     
