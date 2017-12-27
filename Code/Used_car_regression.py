@@ -492,7 +492,7 @@ class Dataset (Data_preprocessing, DataFrameImputer):
         year_diff = (adv_year - manufacture_year)
         year_diff = year_diff.reshape (adv_month.shape[0], 1)
 
-        X2 = np.array (dataset[features_not_need_encoding]) 
+        X2 = np.array (dataset[features_not_need_encoding])
         #X = np.concatenate ((X2, X1, adv_month, year_diff), axis = 1) 
         X = np.concatenate ((X2, X1), axis = 1) 
         print ("X2.shape", X2.shape)
@@ -513,7 +513,7 @@ class Dataset (Data_preprocessing, DataFrameImputer):
         d_ident = X1.shape[1]
 
         print ("X.shape1", X1.shape)
-        X2 = np.array (dataset[feature_need_encoding]) 
+        X2 = np.array (dataset[["manufacture_code","rep_model_code"] + feature_need_encoding]) 
         enc = OneHotEncoder(sparse = False)
         X2 = enc.fit_transform (X2)
 
