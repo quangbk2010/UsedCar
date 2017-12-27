@@ -349,8 +349,6 @@ class Tensor_NN(Dataset):
         #output1 = slim.dropout (output1, nn.dropout, scope='dropout1')
         #output2 = slim.fully_connected (output1, no_neuron_embed, scope='hidden_embed2', activation_fn=tf.nn.relu)
         #output2 = slim.dropout (output2, nn.dropout, scope='dropout2')
-        #output3 = slim.fully_connected(output2, no_neuron_embed, scope='hidden_embed3', activation_fn=tf.nn.relu)
-        #output3 = slim.dropout (output3, nn.dropout, scope='dropout3')
         x_embed = slim.fully_connected (output1, d_embed, scope='output_embed', activation_fn=tf.nn.relu) # 3-dimension of embeding NN
         #x_embed = slim.fully_connected (output1, d_embed, scope='output_embed') # seperate the activation function to another step to use batch normalization.
         #x_embed = self.batch_norm (x_embed, phase_train) # batch normalization
@@ -570,7 +568,8 @@ class Tensor_NN(Dataset):
                 line['truth'] = test_label.reshape (test_label.shape[0])
                 line['pred'] = predicted_y.reshape (predicted_y.shape[0])
 
-                if (epoch + 1) % 10 == 0:
+                #if (epoch + 1) % 10 == 0:
+                if epoch_test_relative_err_val < 8.5:
                     np.savetxt (x_embed_file_name_ + "_" + str (epoch), x_embed_val, fmt="%.2f\t%.2f\t%.2f")
                     np.savetxt(y_predict_file_name_ + "_" + str (epoch), line, fmt="%.2f\t%.2f")
 
@@ -736,7 +735,7 @@ class Tensor_NN(Dataset):
                 print ("test: smape", epoch_test_smape_val)
                 #predicted_y_rescaled = train_label_min + (predicted_y - self.min_price) * (train_label_max - train_label_min) / (self.max_price - self.min_price)
                 #print ("truth:", test_label[:10], "prediction:", predicted_y_rescaled[:10])
-                print ("truth:", test_label[:10], "prediction:", predicted_y[:10])
+                print ("truth:", test_label_scaled[:10], "prediction:", predicted_y[:10])
 
                 epoch_list.append (epoch)
                 train_err_list.append (epoch_train_relative_err_val)
@@ -752,7 +751,8 @@ class Tensor_NN(Dataset):
                 line['truth'] = test_label.reshape (test_label.shape[0])
                 line['pred'] = predicted_y.reshape (predicted_y.shape[0])
 
-                if (epoch + 1) % 1 == 0: # 10 == 0:
+                #if (epoch + 1) % 10 == 0:
+                if epoch_test_relative_err_val < 8.5:
                     np.savetxt(y_predict_file_name_ + "_" + str (epoch), line, fmt="%.2f\t%.2f")
 
 
@@ -760,7 +760,10 @@ class Tensor_NN(Dataset):
                 train_set_shuffled = np.random.permutation(train_set)
                 train_data_shuffled = train_set_shuffled [:, 0:train_data.shape[1]]
                 train_label_shuffled = train_set_shuffled [:, train_data.shape[1]:]
-                train_label_shuffled_scaled = scaler.transform (train_label_shuffled)
+                if self.scale_label == 1:
+                    train_label_shuffled_scaled = scaler.transform (train_label_shuffled)
+                else:
+                    train_label_shuffled_scaled = train_label_shuffled
 
                 """if (epoch + 1) % self.saved_period == 0 and epoch != 0:
                     #model_path = self.model_dir + '/' + self.model_name + '_' + str (k_fold) + '_' + str(epoch + 1) + '.ckpt'
