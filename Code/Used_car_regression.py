@@ -162,7 +162,7 @@ class Dataset (Data_preprocessing, DataFrameImputer):
 
             # Remove the data points with price == 0
             #total_dataset = total_dataset[total_dataset["price"] != 0]
-            total_dataset = total_dataset[total_dataset["price"] >= 400] # 400]
+            total_dataset = total_dataset[total_dataset["price"] >= 200] # 400]
             print ("3.1", total_dataset.shape)
             total_dataset = total_dataset[total_dataset["price"] < 9000]
             print ("3.2", total_dataset.shape)
@@ -172,12 +172,12 @@ class Dataset (Data_preprocessing, DataFrameImputer):
             #print ("4.", total_dataset.shape)
 
             # Just keep hyundai and kia
-            #total_dataset = total_dataset[(total_dataset["manufacture_code"] == 101) | (total_dataset["manufacture_code"] == 102)]
-            #print ("5.", total_dataset.shape)
+            total_dataset = total_dataset[(total_dataset["manufacture_code"] == 101) | (total_dataset["manufacture_code"] == 102)]
+            print ("5.", total_dataset.shape)
 
             # Just keep passenger cars
-            #total_dataset = total_dataset[(total_dataset["car_type"] == "Passenger car")]
-            #print ("6.", total_dataset.shape)
+            total_dataset = total_dataset[(total_dataset["car_type"] == "Passenger car")]
+            print ("6.", total_dataset.shape)
 
             # Remove the data points with sale duration = 0
             if output == "sale_duration":
@@ -492,7 +492,7 @@ class Dataset (Data_preprocessing, DataFrameImputer):
         year_diff = (adv_year - manufacture_year)
         year_diff = year_diff.reshape (adv_month.shape[0], 1)
 
-        X2 = np.array (dataset[features_not_need_encoding]) 
+        X2 = np.array (dataset[features_not_need_encoding])
         #X = np.concatenate ((X2, X1, adv_month, year_diff), axis = 1) 
         X = np.concatenate ((X2, X1), axis = 1) 
         print ("X2.shape", X2.shape)
@@ -513,7 +513,7 @@ class Dataset (Data_preprocessing, DataFrameImputer):
         d_ident = X1.shape[1]
 
         print ("X.shape1", X1.shape)
-        X2 = np.array (dataset[feature_need_encoding]) 
+        X2 = np.array (dataset[["manufacture_code","rep_model_code"] + feature_need_encoding]) 
         enc = OneHotEncoder(sparse = False)
         X2 = enc.fit_transform (X2)
 
