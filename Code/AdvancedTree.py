@@ -122,7 +122,7 @@ def tree_regression (reg_type):
 
     if reg_type == "DecisionTreeRegressor":
         reg_tree = tree.DecisionTreeRegressor() 
-        param_grid = [ {"criterion":"mae", "min_samples_split":[5, 10, 20], "max_depth":[10, 20, 30]}]
+        param_grid = [ {"criterion":["mae"], "min_samples_split":[5, 10, 20], "max_depth":[10, 20, 30]}]
     elif reg_type == "GradientBoostingRegressor":
         reg_tree = ensemble.GradientBoostingRegressor()
         param_grid = [ {"n_estimators": [10, 100, 500, 1000],"learning_rate": [0.001, 0.01, 0.1, 0.2], "max_depth":[10,20,30]}]
@@ -138,7 +138,7 @@ def tree_regression (reg_type):
     err = make_scorer (get_err, greater_is_better=False)
 
     if os.path.isfile (grid_file) == False:
-        grid_search = GridSearchCV (reg_tree, param_grid, cv = 2, scoring = err)
+        grid_search = GridSearchCV (reg_tree, param_grid, cv = 5, scoring = err)
         grid_search.fit (train_data, train_label)
         pickle.dump (grid_search, open (grid_file, 'wb'))
     else:
