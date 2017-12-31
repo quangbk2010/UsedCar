@@ -6,15 +6,18 @@ Created on Sat Nov  4 17:57:02 2017
 """
 from sklearn import tree
 from sklearn import ensemble
+from sklearn.model_selection import GridSearchCV
+from sklearn.metrics import make_scorer
 import numpy as np
 import matplotlib.pyplot as plt
 from Header_lib import *
 import pickle
 import os
+import sys
 from Used_car_regression import *
 
-#np.set_printoptions(threshold=np.nan)
 print ("Advanced tree.")
+grid_file = "./Model/[" + dataset  +  "]grid_search_DT.sav_" #'./Model/GradientBoostingTree/[GradientBoostingRegressor] finalized_model.sav'
 
 #############################################################################################
 total_dataset = Dataset()
@@ -37,28 +40,21 @@ training_length = int (0.5 + len_total_set * data_training_percentage)
 total_set = np.concatenate ((X_total_set, y_total_set), axis = 1)
   
 #################
-# dont shuffle dataset
-total_set_shuffled = total_set
-#################
+total_data = total_set [:, 0:total_set.shape[1]-1]
+total_label = total_set [:, total_set.shape[1]-1:]
 
-#total_set_shuffled = np.random.permutation(total_set)
-total_data_shuffled = total_set_shuffled [:, 0:total_set.shape[1]-1]
-total_label_shuffled = total_set_shuffled [:, total_set.shape[1]-1:]
-
-train_data  = total_data_shuffled[:training_length, :]
-train_label = total_label_shuffled[:training_length, :]
+train_data  = total_data[:training_length, :]
+train_label = total_label[:training_length, :]
 
 
-test_data  = total_data_shuffled[training_length:, :]
-test_label = total_label_shuffled[training_length:, :]
+test_data  = total_data[training_length:, :]
+test_label = total_label[training_length:, :]
 
-print (test_data[0])
+print (test_label[0])
 print (train_data.shape, train_label.shape)
 print (test_data.shape, test_label.shape)
 
-reg_type = "RandomForestRegressor" # in [DecisionTreeRegressor, GradientBoostingRegressor, AdaBoostRegressor, RandomForestRegressor]
-filename = './Model/GradientBoostingTree/[GradientBoostingRegressor] finalized_model.sav'
-err_type = "smape" #"relative_err"
+err_type = "relative_err" #"relative_err","smape" 
 
 #############################################################################################
 
@@ -85,7 +81,7 @@ def get_smape (predicted_label, actual_label):
         return -1
     return np.mean (np.abs (predicted_label - actual_label) / (np.abs (actual_label) + np.abs (predicted_label)) ) * 100
 
-def get_err (err_type, predicted_label, actual_label):
+def get_err (predicted_label, actual_label): #err_type
     if err_type == "relative_err":
         return get_relative_err (predicted_label, actual_label)
     elif err_type == "smape":
@@ -119,23 +115,94 @@ def plot_feature_importance():
 # Basic tree
 # Training
 def tree_regression (reg_type):
+    global grid_file
+    grid_file += reg_type
+    stime = time.time()
+    print ("training...")
+
     if reg_type == "DecisionTreeRegressor":
-        reg_tree = tree.DecisionTreeRegressor(criterion="mae",min_samples_split=5,max_depth=20) #max_leaf_nodes=10000)
+        reg_tree = tree.DecisionTreeRegressor() 
+        param_grid = [ {"criterion":"mae", "min_samples_split":[5, 10, 20], "max_depth":[10, 20, 30]}]
+    elif reg_type == "GradientBoostingRegressor":
+        reg_tree = ensemble.GradientBoostingRegressor()
+        param_grid = [ {"n_estimators": [10, 100, 500, 1000],"learning_rate": [0.001, 0.01, 0.1, 0.2], "max_depth":[10,20,30]}]
+    elif reg_type == "AdaBoostRegressor":
+        reg_tree = ensemble.AdaBoostRegressor()
+        param_grid = [ {"n_estimators": [10, 100, 500, 1000], "min_samples_split": [5, 10, 20], "max_depth": [10, 20, 30]}]
+    elif reg_type == "RandomForestRegressor":
+        reg_tree = ensemble.RandomForestRegressor()
+        param_grid = [ {"n_estimators": [10, 100, 500, 1000], "min_samples_split": [5, 10, 20], "max_depth": [10, 20, 30]},
+                       {"bootstrap": [False], "n_estimators": [10, 100, 500, 1000], "min_samples_split": [5, 10, 20], "max_depth": [10, 20, 30]} 
+        ]
+
+    err = make_scorer (get_err, greater_is_better=False)
+
+    if os.path.isfile (grid_file) == False:
+        grid_search = GridSearchCV (reg_tree, param_grid, cv = 2, scoring = err)
+        grid_search.fit (train_data, train_label)
+        pickle.dump (grid_search, open (grid_file, 'wb'))
+    else:
+        # load the model from disk
+        print ("load the gridsearch from disk")
+        grid_search = pickle.load(open(grid_file, 'rb'))
+
+    print (grid_search.best_params_)
+    print (grid_search.best_estimator_)
+    cvres = grid_search.cv_results_
+    for mean_score, params in zip (cvres["mean_test_score"], cvres["params"]):
+        print (mean_score, params)
+    # Testing
+    print ("testing...")
+    predicted_train_label = get_predicted_label (grid_search, train_data) 
+    train_err = get_err (predicted_train_label, train_label)
+    
+    predicted_test_label = get_predicted_label (grid_search, test_data) 
+    test_err = get_err (predicted_test_label, test_label) 
+    print ("[" + reg_type  + "] Relative err: train_err: %.3f %%, test_err: %.3f %%" % (train_err, test_err))
+
+
+for reg_type in ["DecisionTreeRegressor", "GradientBoostingRegressor", "RandomForestRegressor", "AdaBoostRegressor"]:
+    print ("test:", reg_type)
+    tree_regression(reg_type)
+
+'''
+
+    if reg_type == "DecisionTreeRegressor":
         stime = time.time()
         print ("training...")
-        print (train_data.shape, train_label.shape)
-        reg_tree.fit (train_data, train_label)
-        print("Time for DecisionTreeRegressor learning_rate 0.1 tree fitting: %.3f" % (time.time() - stime))
-        
+
+        """print ("here")
+        for i in range (10):
+            sys.stdout.write ("\r" + "test: %d" % (i))
+        print ("there")"""
+
+        reg_tree = tree.DecisionTreeRegressor() #criterion="mae",min_samples_split=5,max_depth=20) #max_leaf_nodes=10000)
+        param_grid = [ {"min_samples_split":[5, 10, 20], "max_depth":[10, 20, 30]}]
+        err = make_scorer (get_err, greater_is_better=False)
+
+        if os.path.isfile (grid_file) == False:
+            grid_search = GridSearchCV (reg_tree, param_grid, cv = 5, scoring = err)
+            grid_search.fit (train_data, train_label)
+            pickle.dump (grid_search, open (grid_file, 'wb'))
+        else:
+            # load the model from disk
+            print ("load the gridsearch from disk")
+            grid_search = pickle.load(open(grid_file, 'rb'))
+
+        print (grid_search.best_params_)
+        print (grid_search.best_estimator_)
+        cvres = grid_search.cv_results_
+        for mean_score, params in zip (cvres["mean_test_score"], cvres["params"]):
+            print (mean_score, params)
         # Testing
         print ("testing...")
-        predicted_train_label = get_predicted_label (reg_tree, train_data) # np.array (reg_tree.predict(test_data)).reshape (test_data.shape[0], 1)
-        train_err = get_err (err_type, predicted_train_label, train_label)
+        predicted_train_label = get_predicted_label (grid_search, train_data) 
+        train_err = get_err (predicted_train_label, train_label)
         
-        predicted_test_label = get_predicted_label (reg_tree, test_data) # np.array (reg_tree.predict(test_data)).reshape (test_data.shape[0], 1)
-        test_err = get_err (err_type, predicted_test_label, test_label) #np.mean (np.abs (predicted_label - test_label)/test_label) * 100
+        predicted_test_label = get_predicted_label (grid_search, test_data) 
+        test_err = get_err (predicted_test_label, test_label) 
         print ("[DecisionTreeRegressor] Relative err: train_err: %.3f %%, test_err: %.3f %%" % (train_err, test_err))
-    
+                
     
     #######
     # GradientBoostingRegressor
@@ -210,9 +277,4 @@ def tree_regression (reg_type):
         predicted_test_label = get_predicted_label (reg_tree, test_data) # np.array (reg_tree.predict(test_data)).reshape (test_data.shape[0], 1)
         test_err = get_err (err_type, predicted_test_label, test_label) #np.mean (np.abs (predicted_label - test_label)/test_label) * 100
         print ("[RandomForestRegressor] Relative err: train_err: %.3f %%, test_err: %.3f %%" % (train_err, test_err))
-#"""
-
-for reg_type in ["DecisionTreeRegressor", "GradientBoostingRegressor", "RandomForestRegressor", "AdaBoostRegressor"]:
-    print ("test:", reg_type)
-    tree_regression(reg_type)
-
+'''

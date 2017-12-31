@@ -185,6 +185,13 @@ class Dataset (Data_preprocessing, DataFrameImputer):
                 total_dataset = total_dataset[diff_date != 0] 
                 print ("7.", total_dataset.shape)
 
+            # use the information about advertising date: use year and month separately
+            """adv_date = total_dataset ["actual_advertising_date"]
+            manufacture_year = total_dataset ["year"]
+            adv_year = adv_date // 10000
+            total_dataset["adv_month"] = adv_date % 10000 // 100
+            total_dataset["year_diff"] = adv_year - manufacture_year"""
+
             # Impute missing values from here
             total_dataset = DataFrameImputer().fit_transform (total_dataset)
 
@@ -477,23 +484,12 @@ class Dataset (Data_preprocessing, DataFrameImputer):
         => return: a matrix with rows are data points, columns are features values (nD numpy.array object)
         
         """ 
-        X1 = np.array (dataset[car_ident + feature_need_encoding]) 
+        X1 = np.array (dataset[car_ident + feature_need_encoding])#["adv_month"] +  
         enc = OneHotEncoder(sparse = False)
         X1 = enc.fit_transform (X1)
         print ("X1.shape", X1.shape)
 
-        # use the information about advertising date: use year and month separately
-        adv_date = dataset ["actual_advertising_date"]
-        manufacture_year = dataset ["year"]
-        adv_year = adv_date // 10000
-        adv_month = adv_date % 10000 // 100
-        adv_month = enc.fit_transform(adv_month)
-        adv_month = adv_month.reshape (adv_month.shape[1], 1)
-        year_diff = (adv_year - manufacture_year)
-        year_diff = year_diff.reshape (adv_month.shape[0], 1)
-
-        X2 = np.array (dataset[features_not_need_encoding])
-        #X = np.concatenate ((X2, X1, adv_month, year_diff), axis = 1) 
+        X2 = np.array (dataset[features_not_need_encoding])#["year_diff"] + 
         X = np.concatenate ((X2, X1), axis = 1) 
         print ("X2.shape", X2.shape)
         return X 
