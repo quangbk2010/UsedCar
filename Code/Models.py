@@ -388,10 +388,11 @@ class Tensor_NN (Dataset, Sklearn_model):
                     threshold_err = 150
                     epoch_test_err_val = epoch_test_mae_val
                 elif loss_func == "mse":
+                    threshold_err = 140
                     epoch_test_err_val = epoch_test_rmse_val
 
-                if (epoch + 1) % 1 == 0:
-                #if epoch_test_err_val < threshold_err:
+                #if (epoch + 1) % 1 == 0:
+                if epoch_test_err_val < threshold_err:
                     np.savetxt (y_predict_file_name_ + "_" + str (epoch), line, fmt="%.2f\t%.2f")
                     save_path = saver.save (sess, model_path + "_" + str (epoch)) #, global_step=global_step)
                     print('Model saved in file: %s' % save_path)
@@ -684,10 +685,11 @@ class Tensor_NN (Dataset, Sklearn_model):
                     threshold_err = 150
                     epoch_test_err_val = epoch_test_mae_val
                 elif loss_func == "mse":
+                    threshold_err = 140
                     epoch_test_err_val = epoch_test_rmse_val
 
-                if (epoch + 1) % 1 == 0:
-                #if epoch_test_err_val < threshold_err:
+                #if (epoch + 1) % 1 == 0:
+                if epoch_test_err_val < threshold_err:
                     np.savetxt (x_embed_file_name_ + "_" + str (epoch), x_embed_val, fmt="%.2f\t%.2f\t%.2f")
                     np.savetxt (y_predict_file_name_ + "_" + str (epoch), line, fmt="%.2f\t%.2f")
                     save_path = saver.save (sess, model_path + "_" + str (epoch)) #, global_step=global_step)
