@@ -744,10 +744,10 @@ class Tensor_NN (Dataset, Sklearn_model):
             mean_error_file_name_ = mean_error_file_name + "_" + str (i+1)
 
             if i > 0:
-                train_label_copy -= predicted_train_label  
-                test_label_copy -= predicted_test_label 
-                #train_label_copy = predicted_train_label - train_label_copy
-                #test_label_copy = predicted_test_label - test_label_copy
+                #train_label_copy -= predicted_train_label  
+                #test_label_copy -= predicted_test_label 
+                train_label_copy = predicted_train_label - train_label_copy
+                test_label_copy = predicted_test_label - test_label_copy
 
             tf.reset_default_graph ()
             #best_epoch = self.baseline (train_data=train_data, train_label=train_label_copy, test_data=test_data, test_label=test_label_copy, no_neuron=no_neuron, no_hidden_layer = no_hidden_layer, loss_func=loss_func, model_path=model_path, y_predict_file_name=y_predict_file_name_, mean_error_file_name=mean_error_file_name_)
@@ -865,6 +865,7 @@ class Tensor_NN (Dataset, Sklearn_model):
         print ("=================================")
 
         #reg_tree = tree.DecisionTreeRegressor(criterion="mse", min_samples_split=5, max_depth=20) 
+        print ("\n\n=====Gradient boosting tree:")
         reg_tree = ensemble.GradientBoostingRegressor(loss="ls", learning_rate=0.01, n_estimators=10, max_depth=10)
         train_label_copy -= predicted_train_label  
         test_label_copy -= predicted_test_label 
