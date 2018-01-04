@@ -923,6 +923,7 @@ class Tensor_NN (Dataset, Sklearn_model):
         np.random.seed (1)
 
         for i in range (self.num_regressor):
+            print ("\n\n==============regressor%d" %(i+1))
             (X_train, y_train) = self.subsample (train_data, train_label, ratio)
             model_path = self.model_dir + "/bagging_NN/baseline/regressor" + str (i+1) + "/" + dataset_size + "_" + self.model_name  + "_" + self.label  + "_baseline_" + str (self.no_neuron) + "_" + str (self.no_hidden_layer)
             y_predict_file_name_ = y_predict_file_name + "_" + str (i+1)
@@ -933,8 +934,15 @@ class Tensor_NN (Dataset, Sklearn_model):
             # Training
             if i == 0:
                 best_epoch = 8
+            elif i == 1:
+                best_epoch = 5
+            elif i == 2:
+                best_epoch = 26
             else:
                 best_epoch = self.baseline (train_data=X_train, train_label=y_train, test_data=test_data, test_label=test_label, no_neuron=self.no_neuron, no_hidden_layer=self.no_hidden_layer, loss_func="rel_err", model_path=model_path, y_predict_file_name=y_predict_file_name_, mean_error_file_name=mean_error_file_name_)
+                bash_cmd = "cd ../checkpoint/bagging_NN/baseline/regressor" + str (i+1) + "; mkdir temp_save; rm temp_save/*; cp checkpoint *" + str (best_epoch) + "*" + " temp_save; cd ../../../../Code"
+                print ("bash_cmd:", bash_cmd)
+                os.system (bash_cmd)
             print ("Best epoch: ", best_epoch)
             meta_file = model_path + "_" + str (best_epoch) + ".meta"
             ckpt_file = model_path + "_" + str (best_epoch) 
@@ -943,6 +951,7 @@ class Tensor_NN (Dataset, Sklearn_model):
             (predicted_test_label, test_rmse_val, test_mae_val, test_relative_err_val, test_smape_val) = self.restore_model_NN_baseline (test_data, test_label, meta_file, ckpt_file)
             list_predicted_test_label.append (predicted_test_label)
             print ("predicted_test_label (" + str(i) + ")", predicted_test_label[:10])
+            print ("=================================")
 
         print ("label", test_label[:10])
         for i in range (self.num_regressor):
