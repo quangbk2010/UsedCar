@@ -388,7 +388,7 @@ class Tensor_NN (Dataset, Sklearn_model):
                     threshold_err = 150
                     epoch_test_err_val = epoch_test_mae_val
                 elif loss_func == "mse":
-                    threshold_err = 140
+                    threshold_err = 144
                     epoch_test_err_val = epoch_test_rmse_val
 
                 #if (epoch + 1) % 1 == 0:
