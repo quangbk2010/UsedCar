@@ -166,10 +166,10 @@ class Tensor_NN (Dataset, Sklearn_model):
         X = tf.placeholder (tf.float32, [None, dim_data], name="X")
         Y = tf.placeholder (tf.float32, [None, 1], name="Y")
 
-        net = slim.fully_connected (X, no_unit, scope='hidden_layer1', activation_fn=None) #tf.nn.relu) #None) # 
+        net = slim.fully_connected (X, no_unit, scope='hidden_layer1', activation_fn=tf.nn.relu) #None) # None) #
         net = slim.dropout (net, self.dropout, scope='dropout1')
         for i in range (1, no_hidden_layer):
-            net = slim.fully_connected (net, no_unit, scope='hidden_layer'+str(i+1), activation_fn=None) #tf.nn.relu) #None) # 
+            net = slim.fully_connected (net, no_unit, scope='hidden_layer'+str(i+1), activation_fn=tf.nn.relu) #None) # None) #
             net = slim.dropout (net, self.dropout, scope='dropout'+str(i+1))
 
         prediction = slim.fully_connected (net, 1, scope='output_layer', activation_fn=None) #, reuse=tf.AUTO_REUSE)
@@ -382,7 +382,7 @@ class Tensor_NN (Dataset, Sklearn_model):
 
                 # Save predicted label and determine the best epoch
                 if loss_func == "rel_err":
-                    threshold_err = 15# 8.5
+                    threshold_err = 9.5# 8.5
                     epoch_test_err_val = epoch_test_relative_err_val
                 elif loss_func == "mae":
                     threshold_err = 96
@@ -928,18 +928,21 @@ class Tensor_NN (Dataset, Sklearn_model):
             y_predict_file_name_ = y_predict_file_name + "_" + str (i+1)
             mean_error_file_name_ = mean_error_file_name + "_" + str (i+1)
 
-            best_epoch = self.baseline (train_data=X_train, train_label=y_train, test_data=test_data, test_label=test_label, no_neuron=self.no_neuron, no_hidden_layer=self.no_hidden_layer, loss_func="rel_err", model_path=model_path, y_predict_file_name=y_predict_file_name_, mean_error_file_name=mean_error_file_name_)
+            # Reset to the default graph, avoid to the error of redefining variables
+            tf.reset_default_graph ()
+            # Training
+            if i == 0:
+                best_epoch = 8
+            else:
+                best_epoch = self.baseline (train_data=X_train, train_label=y_train, test_data=test_data, test_label=test_label, no_neuron=self.no_neuron, no_hidden_layer=self.no_hidden_layer, loss_func="rel_err", model_path=model_path, y_predict_file_name=y_predict_file_name_, mean_error_file_name=mean_error_file_name_)
             print ("Best epoch: ", best_epoch)
             meta_file = model_path + "_" + str (best_epoch) + ".meta"
             ckpt_file = model_path + "_" + str (best_epoch) 
+            #print (model_path)
+            #sys.exit (-1)
             (predicted_test_label, test_rmse_val, test_mae_val, test_relative_err_val, test_smape_val) = self.restore_model_NN_baseline (test_data, test_label, meta_file, ckpt_file)
             list_predicted_test_label.append (predicted_test_label)
-
-        predicted_test_label = sum (pred_y for pred_y in list_predicted_test_label) / len (list_predicted_test_label)
-        (test_rmse_val, test_mae_val, test_relative_err_val, test_smape_val) = get_err (predicted_test_label, test_label)
-        print ("test_label:", test_label[:10])
-        print ("final predicted_test_label:", predicted_test_label[:10])
-        print (test_rmse_val, test_mae_val, test_relative_err_val, test_smape_val)
+            print ("predicted_test_label (" + str(i) + ")", predicted_test_label[:10])
 
         print ("label", test_label[:10])
         for i in range (self.num_regressor):
