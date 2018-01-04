@@ -166,10 +166,10 @@ class Tensor_NN (Dataset, Sklearn_model):
         X = tf.placeholder (tf.float32, [None, dim_data], name="X")
         Y = tf.placeholder (tf.float32, [None, 1], name="Y")
 
-        net = slim.fully_connected (X, no_unit, scope='hidden_layer1', activation_fn=tf.nn.elu)  
+        net = slim.fully_connected (X, no_unit, scope='hidden_layer1', activation_fn=tf.nn.relu)  
         net = slim.dropout (net, self.dropout, scope='dropout1')
         for i in range (1, no_hidden_layer):
-            net = slim.fully_connected (net, no_unit, scope='hidden_layer'+str(i+1), activation_fn=tf.nn.elu) 
+            net = slim.fully_connected (net, no_unit, scope='hidden_layer'+str(i+1), activation_fn=tf.nn.relu) 
             net = slim.dropout (net, self.dropout, scope='dropout'+str(i+1))
 
         prediction = slim.fully_connected (net, 1, scope='output_layer', activation_fn=None) #, reuse=tf.AUTO_REUSE)
