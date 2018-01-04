@@ -932,17 +932,17 @@ class Tensor_NN (Dataset, Sklearn_model):
             # Reset to the default graph, avoid to the error of redefining variables
             tf.reset_default_graph ()
             # Training
-            if i == 0:
+            """if i == 0:
                 best_epoch = 8
             elif i == 1:
                 best_epoch = 5
             elif i == 2:
                 best_epoch = 26
-            else:
-                best_epoch = self.baseline (train_data=X_train, train_label=y_train, test_data=test_data, test_label=test_label, no_neuron=self.no_neuron, no_hidden_layer=self.no_hidden_layer, loss_func="rel_err", model_path=model_path, y_predict_file_name=y_predict_file_name_, mean_error_file_name=mean_error_file_name_)
-                bash_cmd = "cd ../checkpoint/bagging_NN/baseline/regressor" + str (i+1) + "; mkdir temp_save; rm temp_save/*; cp checkpoint *" + str (best_epoch) + "*" + " temp_save; cd ../../../../Code"
-                print ("bash_cmd:", bash_cmd)
-                os.system (bash_cmd)
+            else:"""
+            best_epoch = self.baseline (train_data=X_train, train_label=y_train, test_data=test_data, test_label=test_label, no_neuron=self.no_neuron, no_hidden_layer=self.no_hidden_layer, loss_func="rel_err", model_path=model_path, y_predict_file_name=y_predict_file_name_, mean_error_file_name=mean_error_file_name_)
+            bash_cmd = "cd ../checkpoint/bagging_NN/baseline/regressor" + str (i+1) + "; mkdir temp_save; rm temp_save/*; cp checkpoint *" + str (best_epoch) + "*" + " temp_save; cd ../../../../Code"
+            print ("bash_cmd:", bash_cmd)
+            os.system (bash_cmd)
             print ("Best epoch: ", best_epoch)
             meta_file = model_path + "_" + str (best_epoch) + ".meta"
             ckpt_file = model_path + "_" + str (best_epoch) 
