@@ -973,16 +973,16 @@ class Tensor_NN (Dataset, Sklearn_model):
         """
             - Purpose: Apply bagging (a kind of ensemble method) using car2vect.
         """
-        train_data_remain = train_data [:, 0:d_remain]
-        train_data_ident = train_data [:, d_remain:]
+        #train_data_remain = train_data [:, 0:d_remain]
+        #train_data_ident = train_data [:, d_remain:]
         test_data_remain = test_data [:, 0:d_remain]
         test_data_ident = test_data [:, d_remain:]
         list_predicted_test_label = []
-        np.random.seed (1)
+        #np.random.seed (1)
 
         for i in range (self.num_regressor):
             print ("\n\n==============regressor%d" %(i+1))
-            (X_train, y_train) = self.subsample (train_data, train_label, ratio)
+            #(X_train, y_train) = self.subsample (train_data, train_label, ratio)
             model_path = self.model_dir + "/bagging_NN/car2vect/regressor" + str (i+1) + "/" + dataset_size + "_" + self.model_name  + "_" + self.label  + "_baseline_" + str (self.no_neuron) + "_" + str (self.no_hidden_layer)
             y_predict_file_name_ = y_predict_file_name + "_" + str (i+1)
             mean_error_file_name_ = mean_error_file_name + "_" + str (i+1)
@@ -990,10 +990,10 @@ class Tensor_NN (Dataset, Sklearn_model):
             x_embed_file_name_ = x_embed_file_name + "_" + str (i+1)
 
             # Reset to the default graph, avoid to the error of redefining variables
-            tf.reset_default_graph ()
+            #tf.reset_default_graph ()
 
             # Training
-            os.system ("mkdir -p ../checkpoint/bagging_NN/car2vect/regressor" + str (i+1)) # TODO: move this line to Main.py
+            #os.system ("mkdir -p ../checkpoint/bagging_NN/car2vect/regressor" + str (i+1)) # TODO: move this line to Main.py
             if i == 0:
                 best_epoch = 40
             elif i == 1:
@@ -1027,7 +1027,7 @@ class Tensor_NN (Dataset, Sklearn_model):
             print ("=================================")
 
         print ("label", test_label[:10])
-        for i in range (10, self.num_regressor):
+        for i in range (9, self.num_regressor):
             predicted_test_label = sum (pred_y for pred_y in list_predicted_test_label[:i+1]) / (i+1)
             print ("predicted_test_label (" + str(i) + ")", predicted_test_label[:10])
             (test_rmse_val, test_mae_val, test_relative_err_val, test_smape_val) = get_err (predicted_test_label, test_label)
