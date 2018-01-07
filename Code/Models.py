@@ -994,13 +994,30 @@ class Tensor_NN (Dataset, Sklearn_model):
 
             # Training
             os.system ("mkdir -p ../checkpoint/bagging_NN/car2vect/regressor" + str (i+1)) # TODO: move this line to Main.py
-            """if i == 0:
+            if i == 0:
                 best_epoch = 40
-            else:"""
-            best_epoch = self.car2vect (train_data=train_data, train_label=train_label, test_data=test_data, test_label=test_label, test_car_ident=test_car_ident, d_ident=d_ident, d_embed=self.d_embed, d_remain=d_remain, no_neuron=self.no_neuron, no_neuron_embed=self.no_neuron_embed, loss_func="rel_err", model_path=model_path, y_predict_file_name=y_predict_file_name_, mean_error_file_name=mean_error_file_name_, x_ident_file_name=x_ident_file_name_, x_embed_file_name=x_embed_file_name_)
-            bash_cmd = "cd ../checkpoint/bagging_NN/car2vect/regressor" + str (i+1) + "; mkdir temp_save; rm temp_save/*; cp checkpoint *_" + str (best_epoch) + ".*" + " temp_save; cd ../../../../Code"
-            print ("bash_cmd:", bash_cmd)
-            os.system (bash_cmd)
+            elif i == 1:
+                best_epoch = 39
+            elif i == 2:
+                best_epoch = 45
+            elif i == 3:
+                best_epoch = 26
+            elif i == 4:
+                best_epoch = 25
+            elif i == 5:
+                best_epoch = 45
+            elif i == 6:
+                best_epoch = 35
+            elif i == 7:
+                best_epoch = 47
+            elif i == 8:
+                best_epoch = 41
+            else:
+                best_epoch = 39
+            #best_epoch = self.car2vect (train_data=train_data, train_label=train_label, test_data=test_data, test_label=test_label, test_car_ident=test_car_ident, d_ident=d_ident, d_embed=self.d_embed, d_remain=d_remain, no_neuron=self.no_neuron, no_neuron_embed=self.no_neuron_embed, loss_func="rel_err", model_path=model_path, y_predict_file_name=y_predict_file_name_, mean_error_file_name=mean_error_file_name_, x_ident_file_name=x_ident_file_name_, x_embed_file_name=x_embed_file_name_)
+            #bash_cmd = "cd ../checkpoint/bagging_NN/car2vect/regressor" + str (i+1) + "; mkdir temp_save; rm temp_save/*; cp checkpoint *_" + str (best_epoch) + ".*" + " temp_save; cd ../../../../Code"
+            #print ("bash_cmd:", bash_cmd)
+            #os.system (bash_cmd)
             print ("Best epoch: ", best_epoch)
             meta_file = model_path + "_" + str (best_epoch) + ".meta"
             ckpt_file = model_path + "_" + str (best_epoch) 
