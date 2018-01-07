@@ -166,10 +166,10 @@ class Tensor_NN (Dataset, Sklearn_model):
         X = tf.placeholder (tf.float32, [None, dim_data], name="X")
         Y = tf.placeholder (tf.float32, [None, 1], name="Y")
 
-        net = slim.fully_connected (X, no_unit, scope='hidden_layer1', activation_fn=None) #tf.nn.relu)  
+        net = slim.fully_connected (X, no_unit, scope='hidden_layer1', activation_fn=tf.nn.relu) #None) # None) #
         net = slim.dropout (net, self.dropout, scope='dropout1')
         for i in range (1, no_hidden_layer):
-            net = slim.fully_connected (net, no_unit, scope='hidden_layer'+str(i+1), activation_fn=None) #tf.nn.relu) 
+            net = slim.fully_connected (net, no_unit, scope='hidden_layer'+str(i+1), activation_fn=tf.nn.relu) #None) # None) #
             net = slim.dropout (net, self.dropout, scope='dropout'+str(i+1))
 
         prediction = slim.fully_connected (net, 1, scope='output_layer', activation_fn=None) #, reuse=tf.AUTO_REUSE)
@@ -382,10 +382,10 @@ class Tensor_NN (Dataset, Sklearn_model):
 
                 # Save predicted label and determine the best epoch
                 if loss_func == "rel_err":
-                    threshold_err = 8.5
+                    threshold_err = 8.5 #9.5# 
                     epoch_test_err_val = epoch_test_relative_err_val
                 elif loss_func == "mae":
-                    threshold_err = 150
+                    threshold_err = 96
                     epoch_test_err_val = epoch_test_mae_val
                 elif loss_func == "mse":
                     threshold_err = 146
@@ -444,10 +444,10 @@ class Tensor_NN (Dataset, Sklearn_model):
         print ("build_car2vect_model: d_ident:", d_ident, "d_remain:", d_remain, "d_embed:", d_embed, "no_neuron_embed:", no_neuron_embed, "no_neuron_main:", no_neuron)
 
         output1 = slim.fully_connected (x_ident, no_neuron_embed, scope='hidden_embed1', activation_fn=tf.nn.relu) #None) #
-        output1 = slim.dropout (output1, self.dropout, scope='dropout1')
+        #output1 = slim.dropout (output1, self.dropout, scope='dropout1')
         #output2 = slim.fully_connected (output1, no_neuron_embed, scope='hidden_embed2', activation_fn=tf.nn.relu)
         #output2 = slim.dropout (output2, self.dropout, scope='dropout2')
-        x_embed = slim.fully_connected (x_ident, d_embed, scope='output_embed', activation_fn=None) # 3-dimension of embeding NN
+        x_embed = slim.fully_connected (x_ident, d_embed, scope='output_embed') #, activation_fn=None) #, activation_fn=tf.nn.relu)#, activation_fn=None) # 3-dimension of embeding NN
         #x_embed = slim.fully_connected (output1, d_embed, scope='output_embed', activation_fn=tf.nn.relu) # 3-dimension of embeding NN
         #x_embed = slim.fully_connected (output1, d_embed, scope='output_embed') # seperate the activation function to another step to use batch normalization.
         #x_embed = self.batch_norm (x_embed, phase_train) # batch normalization
@@ -462,7 +462,7 @@ class Tensor_NN (Dataset, Sklearn_model):
         output3 = slim.fully_connected(input3, no_neuron, scope='hidden_main1', activation_fn=tf.nn.relu)
         #output4 = slim.fully_connected(output3, no_neuron, scope='hidden_main_2', activation_fn=tf.nn.relu)
         #output5 = slim.fully_connected(output4, no_neuron, scope='hidden_main_3', activation_fn=tf.nn.relu)
-        prediction = slim.fully_connected(output3, 1, scope='output_main', activation_fn=None) # 1-dimension of output
+        prediction = slim.fully_connected(output3, 1, scope='output_main')#, activation_fn=None) # 1-dimension of output
         tf.identity (prediction, name="prediction")
 
         return x_ident, x_remain, Y, x_embed, prediction, phase_train
@@ -756,10 +756,21 @@ class Tensor_NN (Dataset, Sklearn_model):
             if i == 0:
                 best_epoch = 9
                 model_path = self.model_dir + "/gb_NN/baseline/regressor" + str (i+1) + "/" + dataset_size + "_" + self.model_name  + "_" + self.label  + "_baseline_2000_2_" + loss_func
-            elif i > 0: # i == 1:
-                #best_epoch = 17
+            elif i == 1: #i > 0: # 
+                best_epoch = 17
+                loss_func = "mse"
+                model_path = self.model_dir + "/gb_NN/baseline/regressor" + str (i+1) + "/" + dataset_size + "_" + self.model_name  + "_" + self.label  + "_baseline_1000_1_" + loss_func #"_baseline_" + str (self.no_neuron) + "_" + str (self.no_hidden_layer) + "_" + loss_func
+            elif i == 2:
+                best_epoch = 16
+                loss_func = "mse"
+                model_path = self.model_dir + "/gb_NN/baseline/regressor" + str (i+1) + "/" + dataset_size + "_" + self.model_name  + "_" + self.label  + "_baseline_1000_1_" + loss_func #"_baseline_" + str (self.no_neuron) + "_" + str (self.no_hidden_layer) + "_" + loss_func
+            else:
             #elif i == 2:
+                loss_func = "mae"
                 best_epoch = self.baseline (train_data=train_data, train_label=train_label_copy, test_data=test_data, test_label=test_label_copy, no_neuron=self.no_neuron, no_hidden_layer=self.no_hidden_layer, loss_func=loss_func, model_path=model_path, y_predict_file_name=y_predict_file_name_, mean_error_file_name=mean_error_file_name_)
+                bash_cmd = "cd ../checkpoint/gb_NN/baseline/regressor" + str (i+1) + "; mkdir temp_save; rm temp_save/*; cp checkpoint *" + str (best_epoch) + "*" + " temp_save; cd ../../../../Code"
+                print ("bash_cmd:", bash_cmd)
+                os.system (bash_cmd)
                 #best_epoch = 0
             print ("Best epoch: ", best_epoch)
 
@@ -840,7 +851,7 @@ class Tensor_NN (Dataset, Sklearn_model):
     
     def gradient_boosting_NN_baseline_Tree (self, train_data, train_label, test_data, test_label, y_predict_file_name, mean_error_file_name, dataset_size):
         """
-            - Purpose: Apply Gradient Boosting (a kind of ensemble method) using baseline NN.
+            - Purpose: Apply Gradient Boosting (a kind of ensemble method) using baseline NN, after that using Decision Tree to estimate 
         """
         train_label_copy = train_label.astype (np.float64)
         test_label_copy = test_label.astype (np.float64)
@@ -883,23 +894,119 @@ class Tensor_NN (Dataset, Sklearn_model):
         predicted_test_label = sum (pred_y for pred_y in list_predicted_test_label)
         (test_rmse_val, test_mae_val, test_relative_err_val, test_smape_val) = get_err (predicted_test_label, test_label)
         print ("Final err:", test_rmse_val, test_mae_val, test_relative_err_val, test_smape_val)
-        """for i in range (self.num_regressor):
-            print ("\n\n==============Tree:", i+1)
-            train_label_copy -= predicted_train_label  
-            test_label_copy -= predicted_test_label 
-            reg_tree.fit (train_data, train_label_copy)
-            predicted_train_label = self.get_predicted_label (reg_tree, train_data) 
-            predicted_test_label = self.get_predicted_label (reg_tree, test_data) 
+        
+    # Create a random subsample from the dataset with replacement
+    def subsample (self, data, label, ratio):
+        """sample = list()
+        n_sample = round(len(dataset) * ratio)
+        while len(sample) < n_sample:
+            index = randrange(len(dataset))
+            sample.append(dataset[index])
+        return sample"""
+        
+        #TODO: training data permutation
+        dataset = np.concatenate ((data, label), axis = 1)
+        n_sample = int (round(len(dataset) * ratio))
+
+        dataset_shuffled = np.random.permutation(dataset)
+        data_shuffled  = dataset_shuffled [:, 0:data.shape[1]]
+        label_shuffled = dataset_shuffled [:, data.shape[1]:]
+        return (data_shuffled[:n_sample], label_shuffled[:n_sample])
+
+    def bagging_NN_baseline (self, train_data, train_label, test_data, test_label, y_predict_file_name, mean_error_file_name, dataset_size, ratio):
+        """
+            - Purpose: Apply bagging (a kind of ensemble method) using baseline NN.
+        """
+        train_label_copy = train_label.astype (np.float64)
+        test_label_copy = test_label.astype (np.float64)
+        list_predicted_test_label = []
+        np.random.seed (1)
+
+        for i in range (self.num_regressor):
+            print ("\n\n==============regressor%d" %(i+1))
+            (X_train, y_train) = self.subsample (train_data, train_label, ratio)
+            model_path = self.model_dir + "/bagging_NN/baseline/regressor" + str (i+1) + "/" + dataset_size + "_" + self.model_name  + "_" + self.label  + "_baseline_" + str (self.no_neuron) + "_" + str (self.no_hidden_layer)
+            y_predict_file_name_ = y_predict_file_name + "_" + str (i+1)
+            mean_error_file_name_ = mean_error_file_name + "_" + str (i+1)
+
+            # Reset to the default graph, avoid to the error of redefining variables
+            tf.reset_default_graph ()
+            # Training
+            """if i == 0:
+                best_epoch = 8
+            elif i == 1:
+                best_epoch = 5
+            elif i == 2:
+                best_epoch = 26
+            elif i == 3:
+                best_epoch = 7
+            elif i == 4:
+                best_epoch = 9
+            elif i == 5:
+                best_epoch = 5
+            else:"""
+            best_epoch = self.baseline (train_data=X_train, train_label=y_train, test_data=test_data, test_label=test_label, no_neuron=self.no_neuron, no_hidden_layer=self.no_hidden_layer, loss_func="rel_err", model_path=model_path, y_predict_file_name=y_predict_file_name_, mean_error_file_name=mean_error_file_name_)
+            bash_cmd = "cd ../checkpoint/bagging_NN/baseline/regressor" + str (i+1) + "; mkdir temp_save; rm temp_save/*; cp checkpoint *_" + str (best_epoch) + ".*" + " temp_save; cd ../../../../Code"
+            print ("bash_cmd:", bash_cmd)
+            os.system (bash_cmd)
+            print ("Best epoch: ", best_epoch)
+            meta_file = model_path + "_" + str (best_epoch) + ".meta"
+            ckpt_file = model_path + "_" + str (best_epoch) 
+            #print (model_path)
+            #sys.exit (-1)
+            (predicted_test_label, test_rmse_val, test_mae_val, test_relative_err_val, test_smape_val) = self.restore_model_NN_baseline (test_data, test_label, meta_file, ckpt_file)
             list_predicted_test_label.append (predicted_test_label)
-            print (predicted_test_label[:10])
-            print (test_label_copy[:10])
+            print ("predicted_test_label (" + str(i) + ")", predicted_test_label[:10])
             print ("=================================")
 
-
         print ("label", test_label[:10])
-        for i in range (self.num_regressor+1):
-            predicted_test_label = sum (pred_y for pred_y in list_predicted_test_label[:i+1])
+        for i in range (self.num_regressor):
+            predicted_test_label = sum (pred_y for pred_y in list_predicted_test_label[:i+1]) / (i+1)
             print ("predicted_test_label (" + str(i) + ")", predicted_test_label[:10])
             (test_rmse_val, test_mae_val, test_relative_err_val, test_smape_val) = get_err (predicted_test_label, test_label)
-            print ("Err after " + str (i+1)  + " regressors:", test_rmse_val, test_mae_val, test_relative_err_val, test_smape_val)"""
+            print ("Err after " + str (i+1)  + " regressors:", test_rmse_val, test_mae_val, test_relative_err_val, test_smape_val)
 
+    def bagging_NN_car2vect (self, train_data, train_label, test_data, test_label, test_car_ident, d_ident, d_remain, y_predict_file_name, mean_error_file_name, x_ident_file_name, x_embed_file_name, dataset_size, ratio):
+        """
+            - Purpose: Apply bagging (a kind of ensemble method) using car2vect.
+        """
+        train_label_copy = train_label.astype (np.float64)
+        test_label_copy = test_label.astype (np.float64)
+        list_predicted_test_label = []
+        np.random.seed (1)
+
+        for i in range (self.num_regressor):
+            print ("\n\n==============regressor%d" %(i+1))
+            (X_train, y_train) = self.subsample (train_data, train_label, ratio)
+            model_path = self.model_dir + "/bagging_NN/car2vect/regressor" + str (i+1) + "/" + dataset_size + "_" + self.model_name  + "_" + self.label  + "_baseline_" + str (self.no_neuron) + "_" + str (self.no_hidden_layer)
+            y_predict_file_name_ = y_predict_file_name + "_" + str (i+1)
+            mean_error_file_name_ = mean_error_file_name + "_" + str (i+1)
+            x_ident_file_name_ = x_ident_file_name + "_" + str (i+1)
+            x_embed_file_name_ = x_embed_file_name + "_" + str (i+1)
+
+            # Reset to the default graph, avoid to the error of redefining variables
+            tf.reset_default_graph ()
+
+            # Training
+            best_epoch = self.car2vect (train_data=train_data, train_label=train_label_copy, test_data=test_data, test_label=test_label_copy, test_car_ident=test_car_ident, d_ident=d_ident, d_embed=self.d_embed, d_remain=d_remain, no_neuron=self.no_neuron, no_neuron_embed=self.no_neuron_embed, loss_func="rel_err", model_path=model_path, y_predict_file_name=y_predict_file_name_, mean_error_file_name=mean_error_file_name_, x_ident_file_name=x_ident_file_name_, x_embed_file_name=x_embed_file_name_)
+            bash_cmd = "cd ../checkpoint/bagging_NN/car2vect/regressor" + str (i+1) + "; mkdir temp_save; rm temp_save/*; cp checkpoint *_" + str (best_epoch) + ".*" + " temp_save; cd ../../../../Code"
+            print ("bash_cmd:", bash_cmd)
+            os.system (bash_cmd)
+            print ("Best epoch: ", best_epoch)
+            meta_file = model_path + "_" + str (best_epoch) + ".meta"
+            ckpt_file = model_path + "_" + str (best_epoch) 
+            (predicted_test_label, test_rmse_val, test_mae_val, test_relative_err_val, test_smape_val) = self.restore_model_NN_baseline (test_data, test_label, meta_file, ckpt_file)
+            list_predicted_test_label.append (predicted_test_label)
+            print ("predicted_test_label (" + str(i) + ")", predicted_test_label[:10])
+            print ("=================================")
+
+        print ("label", test_label[:10])
+        for i in range (self.num_regressor):
+            predicted_test_label = sum (pred_y for pred_y in list_predicted_test_label[:i+1]) / (i+1)
+            print ("predicted_test_label (" + str(i) + ")", predicted_test_label[:10])
+            (test_rmse_val, test_mae_val, test_relative_err_val, test_smape_val) = get_err (predicted_test_label, test_label)
+            print ("Err after " + str (i+1)  + " regressors:", test_rmse_val, test_mae_val, test_relative_err_val, test_smape_val)
+
+
+
+        

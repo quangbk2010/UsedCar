@@ -161,12 +161,12 @@ class Dataset ():
             #print ("4.", total_dataset.shape)
 
             # Just keep hyundai and kia
-            total_dataset = total_dataset[(total_dataset["manufacture_code"] == 101) | (total_dataset["manufacture_code"] == 102)]
-            print ("5.", total_dataset.shape)
+            #total_dataset = total_dataset[(total_dataset["manufacture_code"] == 101) | (total_dataset["manufacture_code"] == 102)]
+            #print ("5.", total_dataset.shape)
 
             # Just keep passenger cars
-            total_dataset = total_dataset[(total_dataset["car_type"] == "Passenger car")]
-            print ("6.", total_dataset.shape)
+            #total_dataset = total_dataset[(total_dataset["car_type"] == "Passenger car")]
+            #print ("6.", total_dataset.shape)
 
             # Remove the data points with sale duration = 0
             if label == "sale_duration":
@@ -376,24 +376,25 @@ class Dataset ():
         => return: a matrix with rows are data points, columns are features values (nD numpy.array object)
         
         """
+        # Encode onehot for car identification
         car_ident_codes = np.array (dataset[self.car_ident]) 
         print ("car_ident_codes", car_ident_codes.shape)
-
         X1 = self.encode_one_hot_car_ident_full (dataset)
-
-        # Concatenate 
         d_ident = X1.shape[1]
 
-        print ("X.shape1", X1.shape)
+        # Encode onehot for the remaining categorical features + maker, rep_model codes
         X2 = np.array (dataset[["manufacture_code","rep_model_code"] + self.features_need_encoding]) 
         enc = OneHotEncoder(sparse = False)
         X2 = enc.fit_transform (X2)
 
+        # Get the remaining features: numerical features
         X3 = np.array (dataset[self.features_not_need_encoding]) 
+
+        # Concatenate 
         X = np.concatenate ((X3, X2, X1), axis = 1) 
         
         d_remain = X.shape[1] - d_ident
-        print ("X.shape2", X.shape, d_remain, d_ident)
+        print ("[get_data_matrix_car_ident] shape of prepared data:", X.shape, "d_remain", d_remain, "d_ident", d_ident)
         return (car_ident_codes, X, d_ident, d_remain)
 
    
