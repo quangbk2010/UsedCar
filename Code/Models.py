@@ -1010,11 +1010,15 @@ class Tensor_NN (Dataset, Sklearn_model):
             print ("=================================")
 
         print ("label", test_label[:10])
-        for i in range (self.num_regressor):
+        for i in range (10, self.num_regressor):
             predicted_test_label = sum (pred_y for pred_y in list_predicted_test_label[:i+1]) / (i+1)
             print ("predicted_test_label (" + str(i) + ")", predicted_test_label[:10])
             (test_rmse_val, test_mae_val, test_relative_err_val, test_smape_val) = get_err (predicted_test_label, test_label)
             print ("Err after " + str (i+1)  + " regressors:", test_rmse_val, test_mae_val, test_relative_err_val, test_smape_val)
+            line = np.zeros(len (test_label), dtype=[('truth', float), ('pred', float)])
+            line['truth'] = test_label.reshape (test_label.shape[0])
+            line['pred'] = predicted_test_label.reshape (predicted_test_label.shape[0])
+            np.savetxt (y_predict_file_name_ + "_final", line, fmt="%.2f\t%.2f")
 
 
 
