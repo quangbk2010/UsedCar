@@ -922,8 +922,6 @@ class Tensor_NN (Dataset, Sklearn_model):
         """
             - Purpose: Apply bagging (a kind of ensemble method) using baseline NN.
         """
-        train_label_copy = train_label.astype (np.float64)
-        test_label_copy = test_label.astype (np.float64)
         list_predicted_test_label = []
         np.random.seed (1)
 
@@ -975,8 +973,6 @@ class Tensor_NN (Dataset, Sklearn_model):
         """
             - Purpose: Apply bagging (a kind of ensemble method) using car2vect.
         """
-        train_label_copy = train_label.astype (np.float64)
-        test_label_copy = test_label.astype (np.float64)
         list_predicted_test_label = []
         np.random.seed (1)
 
@@ -994,14 +990,17 @@ class Tensor_NN (Dataset, Sklearn_model):
 
             # Training
             os.system ("mkdir -p ../checkpoint/bagging_NN/car2vect/regressor" + str (i+1)) # TODO: move this line to Main.py
-            best_epoch = self.car2vect (train_data=train_data, train_label=train_label_copy, test_data=test_data, test_label=test_label_copy, test_car_ident=test_car_ident, d_ident=d_ident, d_embed=self.d_embed, d_remain=d_remain, no_neuron=self.no_neuron, no_neuron_embed=self.no_neuron_embed, loss_func="rel_err", model_path=model_path, y_predict_file_name=y_predict_file_name_, mean_error_file_name=mean_error_file_name_, x_ident_file_name=x_ident_file_name_, x_embed_file_name=x_embed_file_name_)
+            if i == 0:
+                best_epoch = 40
+            else:
+                best_epoch = self.car2vect (train_data=train_data, train_label=train_label_copy, test_data=test_data, test_label=test_label, test_car_ident=test_car_ident, d_ident=d_ident, d_embed=self.d_embed, d_remain=d_remain, no_neuron=self.no_neuron, no_neuron_embed=self.no_neuron_embed, loss_func="rel_err", model_path=model_path, y_predict_file_name=y_predict_file_name_, mean_error_file_name=mean_error_file_name_, x_ident_file_name=x_ident_file_name_, x_embed_file_name=x_embed_file_name_)
             bash_cmd = "cd ../checkpoint/bagging_NN/car2vect/regressor" + str (i+1) + "; mkdir temp_save; rm temp_save/*; cp checkpoint *_" + str (best_epoch) + ".*" + " temp_save; cd ../../../../Code"
             print ("bash_cmd:", bash_cmd)
             os.system (bash_cmd)
             print ("Best epoch: ", best_epoch)
             meta_file = model_path + "_" + str (best_epoch) + ".meta"
             ckpt_file = model_path + "_" + str (best_epoch) 
-            (predicted_test_label, test_rmse_val, test_mae_val, test_relative_err_val, test_smape_val) = self.restore_model_NN_baseline (test_data, test_label, meta_file, ckpt_file)
+            (predicted_test_label, test_rmse_val, test_mae_val, test_relative_err_val, test_smape_val) = self.restore_model_car2vect (test_data_ident, test_data_remain, test_label, meta_file, ckpt_file)
             list_predicted_test_label.append (predicted_test_label)
             print ("predicted_test_label (" + str(i) + ")", predicted_test_label[:10])
             print ("=================================")
