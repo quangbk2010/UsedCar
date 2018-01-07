@@ -997,7 +997,7 @@ class Tensor_NN (Dataset, Sklearn_model):
             if i == 0:
                 best_epoch = 40
             else:
-                best_epoch = self.car2vect (train_data=train_data, train_label=train_label_copy, test_data=test_data, test_label=test_label, test_car_ident=test_car_ident, d_ident=d_ident, d_embed=self.d_embed, d_remain=d_remain, no_neuron=self.no_neuron, no_neuron_embed=self.no_neuron_embed, loss_func="rel_err", model_path=model_path, y_predict_file_name=y_predict_file_name_, mean_error_file_name=mean_error_file_name_, x_ident_file_name=x_ident_file_name_, x_embed_file_name=x_embed_file_name_)
+                best_epoch = self.car2vect (train_data=train_data, train_label=train_label, test_data=test_data, test_label=test_label, test_car_ident=test_car_ident, d_ident=d_ident, d_embed=self.d_embed, d_remain=d_remain, no_neuron=self.no_neuron, no_neuron_embed=self.no_neuron_embed, loss_func="rel_err", model_path=model_path, y_predict_file_name=y_predict_file_name_, mean_error_file_name=mean_error_file_name_, x_ident_file_name=x_ident_file_name_, x_embed_file_name=x_embed_file_name_)
             bash_cmd = "cd ../checkpoint/bagging_NN/car2vect/regressor" + str (i+1) + "; mkdir temp_save; rm temp_save/*; cp checkpoint *_" + str (best_epoch) + ".*" + " temp_save; cd ../../../../Code"
             print ("bash_cmd:", bash_cmd)
             os.system (bash_cmd)
