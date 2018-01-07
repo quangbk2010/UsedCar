@@ -447,7 +447,7 @@ class Tensor_NN (Dataset, Sklearn_model):
         #output1 = slim.dropout (output1, self.dropout, scope='dropout1')
         #output2 = slim.fully_connected (output1, no_neuron_embed, scope='hidden_embed2', activation_fn=tf.nn.relu)
         #output2 = slim.dropout (output2, self.dropout, scope='dropout2')
-        x_embed = slim.fully_connected (x_ident, d_embed, scope='output_embed') #, activation_fn=None) #, activation_fn=tf.nn.relu)#, activation_fn=None) # 3-dimension of embeding NN
+        x_embed = slim.fully_connected (x_ident, d_embed, scope='output_embed', activation_fn=None) #, activation_fn=tf.nn.relu)#, activation_fn=None) # 3-dimension of embeding NN
         #x_embed = slim.fully_connected (output1, d_embed, scope='output_embed', activation_fn=tf.nn.relu) # 3-dimension of embeding NN
         #x_embed = slim.fully_connected (output1, d_embed, scope='output_embed') # seperate the activation function to another step to use batch normalization.
         #x_embed = self.batch_norm (x_embed, phase_train) # batch normalization
@@ -462,7 +462,7 @@ class Tensor_NN (Dataset, Sklearn_model):
         output3 = slim.fully_connected(input3, no_neuron, scope='hidden_main1', activation_fn=tf.nn.relu)
         #output4 = slim.fully_connected(output3, no_neuron, scope='hidden_main_2', activation_fn=tf.nn.relu)
         #output5 = slim.fully_connected(output4, no_neuron, scope='hidden_main_3', activation_fn=tf.nn.relu)
-        prediction = slim.fully_connected(output3, 1, scope='output_main')#, activation_fn=None) # 1-dimension of output
+        prediction = slim.fully_connected(output3, 1, scope='output_main', activation_fn=None) # 1-dimension of output
         tf.identity (prediction, name="prediction")
 
         return x_ident, x_remain, Y, x_embed, prediction, phase_train
@@ -679,13 +679,13 @@ class Tensor_NN (Dataset, Sklearn_model):
 
                 # Save predicted label and determine the best epoch
                 if loss_func == "rel_err":
-                    threshold_err = 8.5
+                    threshold_err = 9.3 #8.5
                     epoch_test_err_val = epoch_test_relative_err_val
                 elif loss_func == "mae":
                     threshold_err = 150
                     epoch_test_err_val = epoch_test_mae_val
                 elif loss_func == "mse":
-                    threshold_err = 140
+                    threshold_err = 200 #140
                     epoch_test_err_val = epoch_test_rmse_val
 
                 #if (epoch + 1) % 1 == 0:
@@ -752,6 +752,7 @@ class Tensor_NN (Dataset, Sklearn_model):
                 test_label_copy = predicted_test_label - test_label_copy
 
             tf.reset_default_graph ()
+            os.system ("mkdir ../checkpoint/gb_NN/car2vect/regressor" + str (i+1))
             #best_epoch = self.baseline (train_data=train_data, train_label=train_label_copy, test_data=test_data, test_label=test_label_copy, no_neuron=no_neuron, no_hidden_layer = no_hidden_layer, loss_func=loss_func, model_path=model_path, y_predict_file_name=y_predict_file_name_, mean_error_file_name=mean_error_file_name_)
             if i == 0:
                 best_epoch = 9
@@ -816,12 +817,13 @@ class Tensor_NN (Dataset, Sklearn_model):
             x_embed_file_name_ = x_embed_file_name + "_" + str (i+1)
 
             if i > 0:
-                #train_label_copy -= predicted_train_label  
-                #test_label_copy -= predicted_test_label 
-                train_label_copy = predicted_train_label - train_label_copy
-                test_label_copy = predicted_test_label - test_label_copy
+                train_label_copy -= predicted_train_label  
+                test_label_copy -= predicted_test_label 
+                #train_label_copy = predicted_train_label - train_label_copy
+                #test_label_copy = predicted_test_label - test_label_copy
 
             tf.reset_default_graph ()
+            os.system ("mkdir ../checkpoint/gb_NN/car2vect/regressor" + str (i+1))
             best_epoch = self.car2vect (train_data=train_data, train_label=train_label_copy, test_data=test_data, test_label=test_label_copy, test_car_ident=test_car_ident, d_ident=d_ident, d_embed=self.d_embed, d_remain=d_remain, no_neuron=self.no_neuron, no_neuron_embed=self.no_neuron_embed, loss_func=loss_func, model_path=model_path, y_predict_file_name=y_predict_file_name_, mean_error_file_name=mean_error_file_name_, x_ident_file_name=x_ident_file_name_, x_embed_file_name=x_embed_file_name_)
             """if i == 0:
                 best_epoch = 22
@@ -831,6 +833,9 @@ class Tensor_NN (Dataset, Sklearn_model):
             #elif i == 2:
                 #best_epoch = 0"""
             print ("Best epoch: ", best_epoch)
+            bash_cmd = "cd ../checkpoint/gb_NN/car2vect/regressor" + str (i+1) + "; mkdir temp_save; rm temp_save/*; cp checkpoint *" + str (best_epoch) + "*" + " temp_save; cd ../../../../Code"
+            print ("bash_cmd:", bash_cmd)
+            os.system (bash_cmd)
 
             meta_file = model_path + "_" + str (best_epoch) + ".meta"
             ckpt_file = model_path + "_" + str (best_epoch) 
@@ -988,6 +993,7 @@ class Tensor_NN (Dataset, Sklearn_model):
             tf.reset_default_graph ()
 
             # Training
+            os.system ("mkdir ../checkpoint/bagging_NN/car2vect/regressor" + str (i+1)) # TODO: move this line to Main.py
             best_epoch = self.car2vect (train_data=train_data, train_label=train_label_copy, test_data=test_data, test_label=test_label_copy, test_car_ident=test_car_ident, d_ident=d_ident, d_embed=self.d_embed, d_remain=d_remain, no_neuron=self.no_neuron, no_neuron_embed=self.no_neuron_embed, loss_func="rel_err", model_path=model_path, y_predict_file_name=y_predict_file_name_, mean_error_file_name=mean_error_file_name_, x_ident_file_name=x_ident_file_name_, x_embed_file_name=x_embed_file_name_)
             bash_cmd = "cd ../checkpoint/bagging_NN/car2vect/regressor" + str (i+1) + "; mkdir temp_save; rm temp_save/*; cp checkpoint *_" + str (best_epoch) + ".*" + " temp_save; cd ../../../../Code"
             print ("bash_cmd:", bash_cmd)
