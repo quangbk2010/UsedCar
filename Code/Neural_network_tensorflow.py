@@ -345,11 +345,12 @@ class Tensor_NN(Dataset):
 
         print ("build_car2vect_model: d_ident:", d_ident, "d_remain:", d_remain, "d_embed:", d_embed, "no_neuron_embed:", no_neuron_embed, "no_neuron_main:", no_neuron)
 
-        output1 = slim.fully_connected (x_ident, no_neuron_embed, scope='hidden_embed1', activation_fn=tf.nn.relu)
+        output1 = slim.fully_connected (x_ident, no_neuron_embed, scope='hidden_embed1', activation_fn=tf.nn.selu) #None) #
         #output1 = slim.dropout (output1, nn.dropout, scope='dropout1')
         #output2 = slim.fully_connected (output1, no_neuron_embed, scope='hidden_embed2', activation_fn=tf.nn.relu)
         #output2 = slim.dropout (output2, nn.dropout, scope='dropout2')
-        x_embed = slim.fully_connected (output1, d_embed, scope='output_embed', activation_fn=tf.nn.relu) # 3-dimension of embeding NN
+        #x_embed = slim.fully_connected (x_ident, d_embed, scope='output_embed', activation_fn=None) # 3-dimension of embeding NN
+        x_embed = slim.fully_connected (output1, d_embed, scope='output_embed', activation_fn=tf.nn.selu) # 3-dimension of embeding NN
         #x_embed = slim.fully_connected (output1, d_embed, scope='output_embed') # seperate the activation function to another step to use batch normalization.
         #x_embed = self.batch_norm (x_embed, phase_train) # batch normalization
         #x_embed = tf.nn.elu (x_embed, name="elu_output_embed")
@@ -568,7 +569,7 @@ class Tensor_NN(Dataset):
                 line['truth'] = test_label.reshape (test_label.shape[0])
                 line['pred'] = predicted_y.reshape (predicted_y.shape[0])
 
-                #if (epoch + 1) % 10 == 0:
+                #if (epoch + 1) % 1 == 0:
                 if epoch_test_relative_err_val < 8.5:
                     np.savetxt (x_embed_file_name_ + "_" + str (epoch), x_embed_val, fmt="%.2f\t%.2f\t%.2f")
                     np.savetxt(y_predict_file_name_ + "_" + str (epoch), line, fmt="%.2f\t%.2f")
@@ -583,10 +584,10 @@ class Tensor_NN(Dataset):
                 else:
                     train_label_shuffled_scaled = train_label_shuffled
 
-                """if (epoch + 1) == 1: # % self.saved_period == 0 and epoch != 0:
-                    #model_path = self.model_dir + '/' + self.model_name + '_' + str (k_fold) + '_' + str(epoch + 1) + '.ckpt'
+                #if (epoch + 1) == 1: # % self.saved_period == 0 and epoch != 0:
+                if epoch_test_relative_err_val < 8.5:
                     save_path = saver.save(sess, model_path, global_step=global_step)
-                    print('Model saved in file: %s' % save_path) #"""
+                    print('Model saved in file: %s' % save_path) 
 
             print ("Training finished!")
             stop_time = time.time()

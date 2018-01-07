@@ -199,11 +199,11 @@ else:
     feature_coding = "With onehot"
 
 if using_car_ident_flag == 0:
-    feature_need_encoding = ["manufacture_code","rep_model_code","car_code","model_code","rating_code","car_type", "trans_mode", "fuel_type"]
+    feature_need_encoding = ["manufacture_code","rep_model_code","car_code","model_code","rating_code","car_type", "trans_mode", "fuel_type", "city", "district", "dealer_name"]
 else:
     feature_need_encoding = ["car_type", "trans_mode", "fuel_type"]
 
-feature_need_label = ["car_type", "trans_mode", "fuel_type"]
+feature_need_label = ["car_type", "trans_mode", "fuel_type", "city", "district", "dealer_name"]
 feature_need_impute = ["rating_code"]#, "car_type"]
 feature_need_remove_outlier = ["vehicle_mile", "no_click", "recovery_fee"]#, "price"]
 
