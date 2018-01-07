@@ -444,10 +444,10 @@ class Tensor_NN (Dataset, Sklearn_model):
         print ("build_car2vect_model: d_ident:", d_ident, "d_remain:", d_remain, "d_embed:", d_embed, "no_neuron_embed:", no_neuron_embed, "no_neuron_main:", no_neuron)
 
         output1 = slim.fully_connected (x_ident, no_neuron_embed, scope='hidden_embed1', activation_fn=tf.nn.relu) #None) #
-        #output1 = slim.dropout (output1, self.dropout, scope='dropout1')
+        output1 = slim.dropout (output1, self.dropout, scope='dropout1')
         #output2 = slim.fully_connected (output1, no_neuron_embed, scope='hidden_embed2', activation_fn=tf.nn.relu)
         #output2 = slim.dropout (output2, self.dropout, scope='dropout2')
-        x_embed = slim.fully_connected (x_ident, d_embed, scope='output_embed', activation_fn=None) #, activation_fn=tf.nn.relu)#, activation_fn=None) # 3-dimension of embeding NN
+        x_embed = slim.fully_connected (output1, d_embed, scope='output_embed', activation_fn=None) #, activation_fn=tf.nn.relu)#, activation_fn=None) # 3-dimension of embeding NN
         #x_embed = slim.fully_connected (output1, d_embed, scope='output_embed', activation_fn=tf.nn.relu) # 3-dimension of embeding NN
         #x_embed = slim.fully_connected (output1, d_embed, scope='output_embed') # seperate the activation function to another step to use batch normalization.
         #x_embed = self.batch_norm (x_embed, phase_train) # batch normalization
@@ -460,6 +460,7 @@ class Tensor_NN (Dataset, Sklearn_model):
         input3 = tf.concat ([x_remain, x_embed], 1)
 
         output3 = slim.fully_connected(input3, no_neuron, scope='hidden_main1', activation_fn=tf.nn.relu)
+        output3 = slim.dropout (output3, self.dropout, scope='dropout3')
         #output4 = slim.fully_connected(output3, no_neuron, scope='hidden_main_2', activation_fn=tf.nn.relu)
         #output5 = slim.fully_connected(output4, no_neuron, scope='hidden_main_3', activation_fn=tf.nn.relu)
         prediction = slim.fully_connected(output3, 1, scope='output_main', activation_fn=None) # 1-dimension of output
