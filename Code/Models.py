@@ -973,6 +973,10 @@ class Tensor_NN (Dataset, Sklearn_model):
         """
             - Purpose: Apply bagging (a kind of ensemble method) using car2vect.
         """
+        train_data_remain = train_data [:, 0:d_remain]
+        train_data_ident = train_data [:, d_remain:]
+        test_data_remain = test_data [:, 0:d_remain]
+        test_data_ident = test_data [:, d_remain:]
         list_predicted_test_label = []
         np.random.seed (1)
 
