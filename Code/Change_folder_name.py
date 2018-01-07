@@ -22,5 +22,6 @@ else:
 
 for i in range (num_regressors):
     bash_cmd = "cd " + path + str (i+1) + ";"
+    bash_cmd += "rm full_*;"
     bash_cmd += "cp -r temp_save " + new_folder
     os.system (bash_cmd)
