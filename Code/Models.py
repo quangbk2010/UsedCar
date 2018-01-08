@@ -791,6 +791,10 @@ class Tensor_NN (Dataset, Sklearn_model):
             print ("predicted_test_label (" + str(i) + ")", predicted_test_label[:10])
             (test_rmse_val, test_mae_val, test_relative_err_val, test_smape_val) = get_err (predicted_test_label, test_label)
             print ("Err after " + str (i+1)  + " regressors:", test_rmse_val, test_mae_val, test_relative_err_val, test_smape_val)
+            line = np.zeros(len (test_label), dtype=[('truth', float), ('pred', float)])
+            line['truth'] = test_label.reshape (test_label.shape[0])
+            line['pred'] = predicted_test_label.reshape (predicted_test_label.shape[0])
+            np.savetxt (y_predict_file_name_ + "_final" + str(i), line, fmt="%.2f\t%.2f")
 
     def gradient_boosting_NN_car2vect (self, train_data, train_label, test_data, test_label, test_car_ident, d_ident, d_remain, y_predict_file_name, mean_error_file_name, x_ident_file_name, x_embed_file_name, dataset_size):
         """
@@ -826,13 +830,7 @@ class Tensor_NN (Dataset, Sklearn_model):
             tf.reset_default_graph ()
             os.system ("mkdir -p ../checkpoint/gb_NN/car2vect/regressor" + str (i+1))
             best_epoch = self.car2vect (train_data=train_data, train_label=train_label_copy, test_data=test_data, test_label=test_label_copy, test_car_ident=test_car_ident, d_ident=d_ident, d_embed=self.d_embed, d_remain=d_remain, no_neuron=self.no_neuron, no_neuron_embed=self.no_neuron_embed, loss_func=loss_func, model_path=model_path, y_predict_file_name=y_predict_file_name_, mean_error_file_name=mean_error_file_name_, x_ident_file_name=x_ident_file_name_, x_embed_file_name=x_embed_file_name_)
-            """if i == 0:
-                best_epoch = 22
-            elif i > 0: # i == 1:
-                #best_epoch = 17
-                best_epoch = self.car2vect (train_data=train_data, train_label=train_label_copy, test_data=test_data, test_label=test_label_copy, test_car_ident=test_car_ident, d_ident=d_ident, d_embed=self.d_embed, d_remain=d_remain, no_neuron=self.no_neuron, no_neuron_embed=self.no_neuron_embed, loss_func=loss_func, model_path=model_path, y_predict_file_name=y_predict_file_name_, mean_error_file_name=mean_error_file_name_, x_ident_file_name=x_ident_file_name_, x_embed_file_name=x_embed_file_name_)
-            #elif i == 2:
-                #best_epoch = 0"""
+            
             print ("Best epoch: ", best_epoch)
             bash_cmd = "cd ../checkpoint/gb_NN/car2vect/regressor" + str (i+1) + "; mkdir temp_save; rm temp_save/*; cp checkpoint *" + str (best_epoch) + "*" + " temp_save; cd ../../../../Code"
             print ("bash_cmd:", bash_cmd)
@@ -853,6 +851,10 @@ class Tensor_NN (Dataset, Sklearn_model):
             print ("predicted_test_label (" + str(i) + ")", predicted_test_label[:10])
             (test_rmse_val, test_mae_val, test_relative_err_val, test_smape_val) = get_err (predicted_test_label, test_label)
             print ("Err after " + str (i+1)  + " regressors:", test_rmse_val, test_mae_val, test_relative_err_val, test_smape_val)
+            line = np.zeros(len (test_label), dtype=[('truth', float), ('pred', float)])
+            line['truth'] = test_label.reshape (test_label.shape[0])
+            line['pred'] = predicted_test_label.reshape (predicted_test_label.shape[0])
+            np.savetxt (y_predict_file_name_ + "_final" + str(i), line, fmt="%.2f\t%.2f")
         
     
     def gradient_boosting_NN_baseline_Tree (self, train_data, train_label, test_data, test_label, y_predict_file_name, mean_error_file_name, dataset_size):
@@ -903,12 +905,6 @@ class Tensor_NN (Dataset, Sklearn_model):
         
     # Create a random subsample from the dataset with replacement
     def subsample (self, data, label, ratio):
-        """sample = list()
-        n_sample = round(len(dataset) * ratio)
-        while len(sample) < n_sample:
-            index = randrange(len(dataset))
-            sample.append(dataset[index])
-        return sample"""
         
         #TODO: training data permutation
         dataset = np.concatenate ((data, label), axis = 1)
@@ -935,20 +931,8 @@ class Tensor_NN (Dataset, Sklearn_model):
 
             # Reset to the default graph, avoid to the error of redefining variables
             tf.reset_default_graph ()
+
             # Training
-            """if i == 0:
-                best_epoch = 8
-            elif i == 1:
-                best_epoch = 5
-            elif i == 2:
-                best_epoch = 26
-            elif i == 3:
-                best_epoch = 7
-            elif i == 4:
-                best_epoch = 9
-            elif i == 5:
-                best_epoch = 5
-            else:"""
             best_epoch = self.baseline (train_data=X_train, train_label=y_train, test_data=test_data, test_label=test_label, no_neuron=self.no_neuron, no_hidden_layer=self.no_hidden_layer, loss_func="rel_err", model_path=model_path, y_predict_file_name=y_predict_file_name_, mean_error_file_name=mean_error_file_name_)
             bash_cmd = "cd ../checkpoint/bagging_NN/baseline/regressor" + str (i+1) + "; mkdir temp_save; rm temp_save/*; cp checkpoint *_" + str (best_epoch) + ".*" + " temp_save; cd ../../../../Code"
             print ("bash_cmd:", bash_cmd)
@@ -956,8 +940,6 @@ class Tensor_NN (Dataset, Sklearn_model):
             print ("Best epoch: ", best_epoch)
             meta_file = model_path + "_" + str (best_epoch) + ".meta"
             ckpt_file = model_path + "_" + str (best_epoch) 
-            #print (model_path)
-            #sys.exit (-1)
             (predicted_test_label, test_rmse_val, test_mae_val, test_relative_err_val, test_smape_val) = self.restore_model_NN_baseline (test_data, test_label, meta_file, ckpt_file)
             list_predicted_test_label.append (predicted_test_label)
             print ("predicted_test_label (" + str(i) + ")", predicted_test_label[:10])
@@ -969,6 +951,10 @@ class Tensor_NN (Dataset, Sklearn_model):
             print ("predicted_test_label (" + str(i) + ")", predicted_test_label[:10])
             (test_rmse_val, test_mae_val, test_relative_err_val, test_smape_val) = get_err (predicted_test_label, test_label)
             print ("Err after " + str (i+1)  + " regressors:", test_rmse_val, test_mae_val, test_relative_err_val, test_smape_val)
+            line = np.zeros(len (test_label), dtype=[('truth', float), ('pred', float)])
+            line['truth'] = test_label.reshape (test_label.shape[0])
+            line['pred'] = predicted_test_label.reshape (predicted_test_label.shape[0])
+            np.savetxt (y_predict_file_name_ + "_final" + str(i), line, fmt="%.2f\t%.2f")
 
     def bagging_NN_car2vect (self, train_data, train_label, test_data, test_label, test_car_ident, d_ident, d_remain, y_predict_file_name, mean_error_file_name, x_ident_file_name, x_embed_file_name, dataset_size, ratio):
         """
@@ -984,8 +970,8 @@ class Tensor_NN (Dataset, Sklearn_model):
         for i in range (self.num_regressor):
             print ("\n\n==============regressor%d" %(i+1))
             (X_train, y_train) = self.subsample (train_data, train_label, ratio)
-            model_path = self.model_dir + "/bagging_NN/car2vect/regressor" + str (i+1) + "/" + dataset_size + "_" + self.model_name  + "_" + self.label  + "_baseline_" + str (self.no_neuron) + "_" + str (self.no_hidden_layer) #TODO: replace this line by the below line
-            #model_path = self.model_dir + "/bagging_NN/car2vect/regressor" + str (i+1) + "/" + dataset_size + "_" + self.model_name  + "_" + self.label  + "_car2vect_" + str (self.no_neuron_embed) + "_" + str (self.no_neuron)
+            #model_path = self.model_dir + "/bagging_NN/car2vect/regressor" + str (i+1) + "/" + dataset_size + "_" + self.model_name  + "_" + self.label  + "_baseline_" + str (self.no_neuron) + "_" + str (self.no_hidden_layer) #TODO: replace this line by the below line
+            model_path = self.model_dir + "/bagging_NN/car2vect/regressor" + str (i+1) + "/" + dataset_size + "_" + self.model_name  + "_" + self.label  + "_car2vect_" + str (self.no_neuron_embed) + "_" + str (self.no_neuron)
             y_predict_file_name_ = y_predict_file_name + "_" + str (i+1)
             mean_error_file_name_ = mean_error_file_name + "_" + str (i+1)
             x_ident_file_name_ = x_ident_file_name + "_" + str (i+1)
@@ -996,26 +982,7 @@ class Tensor_NN (Dataset, Sklearn_model):
 
             # Training
             os.system ("mkdir -p ../checkpoint/bagging_NN/car2vect/regressor" + str (i+1)) # TODO: move this line to Main.py
-            """if i == 0:
-                best_epoch = 40
-            elif i == 1:
-                best_epoch = 39
-            elif i == 2:
-                best_epoch = 45
-            elif i == 3:
-                best_epoch = 26
-            elif i == 4:
-                best_epoch = 25
-            elif i == 5:
-                best_epoch = 45
-            elif i == 6:
-                best_epoch = 35
-            elif i == 7:
-                best_epoch = 47
-            elif i == 8:
-                best_epoch = 41
-            else:
-                best_epoch = 39"""
+            
             best_epoch = self.car2vect (train_data=train_data, train_label=train_label, test_data=test_data, test_label=test_label, test_car_ident=test_car_ident, d_ident=d_ident, d_embed=self.d_embed, d_remain=d_remain, no_neuron=self.no_neuron, no_neuron_embed=self.no_neuron_embed, loss_func="rel_err", model_path=model_path, y_predict_file_name=y_predict_file_name_, mean_error_file_name=mean_error_file_name_, x_ident_file_name=x_ident_file_name_, x_embed_file_name=x_embed_file_name_)
             bash_cmd = "cd ../checkpoint/bagging_NN/car2vect/regressor" + str (i+1) + "; mkdir temp_save; rm temp_save/*; cp checkpoint *_" + str (best_epoch) + ".*" + " temp_save; cd ../../../../Code"
             print ("bash_cmd:", bash_cmd)
