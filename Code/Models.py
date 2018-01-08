@@ -444,10 +444,10 @@ class Tensor_NN (Dataset, Sklearn_model):
         print ("build_car2vect_model: d_ident:", d_ident, "d_remain:", d_remain, "d_embed:", d_embed, "no_neuron_embed:", no_neuron_embed, "no_neuron_main:", no_neuron)
 
         output1 = slim.fully_connected (x_ident, no_neuron_embed, scope='hidden_embed1', activation_fn=tf.nn.relu) #None) #
-        #output1 = slim.dropout (output1, self.dropout, scope='dropout1')
+        output1 = slim.dropout (output1, self.dropout, scope='dropout1')
         #output2 = slim.fully_connected (output1, no_neuron_embed, scope='hidden_embed2', activation_fn=tf.nn.relu)
         #output2 = slim.dropout (output2, self.dropout, scope='dropout2')
-        x_embed = slim.fully_connected (x_ident, d_embed, scope='output_embed', activation_fn=None) #, activation_fn=tf.nn.relu)#, activation_fn=None) # 3-dimension of embeding NN
+        x_embed = slim.fully_connected (output1, d_embed, scope='output_embed', activation_fn=None) #, activation_fn=tf.nn.relu)#, activation_fn=None) # 3-dimension of embeding NN
         #x_embed = slim.fully_connected (output1, d_embed, scope='output_embed', activation_fn=tf.nn.relu) # 3-dimension of embeding NN
         #x_embed = slim.fully_connected (output1, d_embed, scope='output_embed') # seperate the activation function to another step to use batch normalization.
         #x_embed = self.batch_norm (x_embed, phase_train) # batch normalization
@@ -460,6 +460,7 @@ class Tensor_NN (Dataset, Sklearn_model):
         input3 = tf.concat ([x_remain, x_embed], 1)
 
         output3 = slim.fully_connected(input3, no_neuron, scope='hidden_main1', activation_fn=tf.nn.relu)
+        output3 = slim.dropout (output3, self.dropout, scope='dropout3')
         #output4 = slim.fully_connected(output3, no_neuron, scope='hidden_main_2', activation_fn=tf.nn.relu)
         #output5 = slim.fully_connected(output4, no_neuron, scope='hidden_main_3', activation_fn=tf.nn.relu)
         prediction = slim.fully_connected(output3, 1, scope='output_main', activation_fn=None) # 1-dimension of output
@@ -973,16 +974,16 @@ class Tensor_NN (Dataset, Sklearn_model):
         """
             - Purpose: Apply bagging (a kind of ensemble method) using car2vect.
         """
-        #train_data_remain = train_data [:, 0:d_remain]
-        #train_data_ident = train_data [:, d_remain:]
+        train_data_remain = train_data [:, 0:d_remain]
+        train_data_ident = train_data [:, d_remain:]
         test_data_remain = test_data [:, 0:d_remain]
         test_data_ident = test_data [:, d_remain:]
         list_predicted_test_label = []
-        #np.random.seed (1)
+        np.random.seed (1)
 
         for i in range (self.num_regressor):
             print ("\n\n==============regressor%d" %(i+1))
-            #(X_train, y_train) = self.subsample (train_data, train_label, ratio)
+            (X_train, y_train) = self.subsample (train_data, train_label, ratio)
             model_path = self.model_dir + "/bagging_NN/car2vect/regressor" + str (i+1) + "/" + dataset_size + "_" + self.model_name  + "_" + self.label  + "_baseline_" + str (self.no_neuron) + "_" + str (self.no_hidden_layer)
             y_predict_file_name_ = y_predict_file_name + "_" + str (i+1)
             mean_error_file_name_ = mean_error_file_name + "_" + str (i+1)
@@ -990,11 +991,11 @@ class Tensor_NN (Dataset, Sklearn_model):
             x_embed_file_name_ = x_embed_file_name + "_" + str (i+1)
 
             # Reset to the default graph, avoid to the error of redefining variables
-            #tf.reset_default_graph ()
+            tf.reset_default_graph ()
 
             # Training
-            #os.system ("mkdir -p ../checkpoint/bagging_NN/car2vect/regressor" + str (i+1)) # TODO: move this line to Main.py
-            if i == 0:
+            os.system ("mkdir -p ../checkpoint/bagging_NN/car2vect/regressor" + str (i+1)) # TODO: move this line to Main.py
+            """if i == 0:
                 best_epoch = 40
             elif i == 1:
                 best_epoch = 39
@@ -1013,11 +1014,11 @@ class Tensor_NN (Dataset, Sklearn_model):
             elif i == 8:
                 best_epoch = 41
             else:
-                best_epoch = 39
-            #best_epoch = self.car2vect (train_data=train_data, train_label=train_label, test_data=test_data, test_label=test_label, test_car_ident=test_car_ident, d_ident=d_ident, d_embed=self.d_embed, d_remain=d_remain, no_neuron=self.no_neuron, no_neuron_embed=self.no_neuron_embed, loss_func="rel_err", model_path=model_path, y_predict_file_name=y_predict_file_name_, mean_error_file_name=mean_error_file_name_, x_ident_file_name=x_ident_file_name_, x_embed_file_name=x_embed_file_name_)
-            #bash_cmd = "cd ../checkpoint/bagging_NN/car2vect/regressor" + str (i+1) + "; mkdir temp_save; rm temp_save/*; cp checkpoint *_" + str (best_epoch) + ".*" + " temp_save; cd ../../../../Code"
-            #print ("bash_cmd:", bash_cmd)
-            #os.system (bash_cmd)
+                best_epoch = 39"""
+            best_epoch = self.car2vect (train_data=train_data, train_label=train_label, test_data=test_data, test_label=test_label, test_car_ident=test_car_ident, d_ident=d_ident, d_embed=self.d_embed, d_remain=d_remain, no_neuron=self.no_neuron, no_neuron_embed=self.no_neuron_embed, loss_func="rel_err", model_path=model_path, y_predict_file_name=y_predict_file_name_, mean_error_file_name=mean_error_file_name_, x_ident_file_name=x_ident_file_name_, x_embed_file_name=x_embed_file_name_)
+            bash_cmd = "cd ../checkpoint/bagging_NN/car2vect/regressor" + str (i+1) + "; mkdir temp_save; rm temp_save/*; cp checkpoint *_" + str (best_epoch) + ".*" + " temp_save; cd ../../../../Code"
+            print ("bash_cmd:", bash_cmd)
+            os.system (bash_cmd)
             print ("Best epoch: ", best_epoch)
             meta_file = model_path + "_" + str (best_epoch) + ".meta"
             ckpt_file = model_path + "_" + str (best_epoch) 
@@ -1027,7 +1028,7 @@ class Tensor_NN (Dataset, Sklearn_model):
             print ("=================================")
 
         print ("label", test_label[:10])
-        for i in range (9, self.num_regressor):
+        for i in range (self.num_regressor):
             predicted_test_label = sum (pred_y for pred_y in list_predicted_test_label[:i+1]) / (i+1)
             print ("predicted_test_label (" + str(i) + ")", predicted_test_label[:10])
             (test_rmse_val, test_mae_val, test_relative_err_val, test_smape_val) = get_err (predicted_test_label, test_label)
