@@ -747,10 +747,10 @@ class Tensor_NN (Dataset, Sklearn_model):
             mean_error_file_name_ = mean_error_file_name + "_" + str (i+1)
 
             if i > 0:
-                #train_label_copy -= predicted_train_label  
-                #test_label_copy -= predicted_test_label 
-                train_label_copy = predicted_train_label - train_label_copy
-                test_label_copy = predicted_test_label - test_label_copy
+                train_label_copy -= predicted_train_label  
+                test_label_copy -= predicted_test_label 
+                #train_label_copy = predicted_train_label - train_label_copy
+                #test_label_copy = predicted_test_label - test_label_copy
 
             tf.reset_default_graph ()
             os.system ("mkdir -p ../checkpoint/gb_NN/car2vect/regressor" + str (i+1))

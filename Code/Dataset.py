@@ -161,12 +161,12 @@ class Dataset ():
             #print ("4.", total_dataset.shape)
 
             # Just keep hyundai and kia
-            #total_dataset = total_dataset[(total_dataset["manufacture_code"] == 101) | (total_dataset["manufacture_code"] == 102)]
-            #print ("5.", total_dataset.shape)
+            total_dataset = total_dataset[(total_dataset["manufacture_code"] == 101) | (total_dataset["manufacture_code"] == 102)]
+            print ("5.", total_dataset.shape)
 
             # Just keep passenger cars
-            #total_dataset = total_dataset[(total_dataset["car_type"] == "Passenger car")]
-            #print ("6.", total_dataset.shape)
+            total_dataset = total_dataset[(total_dataset["car_type"] == "Passenger car")]
+            print ("6.", total_dataset.shape)
 
             # Remove the data points with sale duration = 0
             if label == "sale_duration":
