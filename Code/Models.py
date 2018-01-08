@@ -620,7 +620,7 @@ class Tensor_NN (Dataset, Sklearn_model):
                     test_label_scaled = test_label
 
                 # If we use 2 hidden layers, each has >= 10000 units -> resource exhausted, then we should divide it into batches and test on seperate one, and then calculate the average.
-                """total_se = 0
+                total_se = 0
                 total_ae = 0
                 total_relative_err = 0
                 total_smape = 0
@@ -657,8 +657,8 @@ class Tensor_NN (Dataset, Sklearn_model):
                 epoch_test_rmse_val = np.sqrt (total_se/len_test)
                 epoch_test_mae_val = total_ae/len_test
                 epoch_test_relative_err_val = total_relative_err/len_test
-                epoch_test_smape_val = total_smape/len_test"""
-                predicted_y, x_embed_val, epoch_test_rmse_val, epoch_test_mae_val, epoch_test_relative_err_val, epoch_test_smape_val = sess.run([prediction, x_embed, rmse, mae, relative_err, smape], feed_dict={x_ident: test_data_ident, x_remain: test_data_remain, Y: test_label_scaled, phase_train: False})
+                epoch_test_smape_val = total_smape/len_test
+                #predicted_y, x_embed_val, epoch_test_rmse_val, epoch_test_mae_val, epoch_test_relative_err_val, epoch_test_smape_val = sess.run([prediction, x_embed, rmse, mae, relative_err, smape], feed_dict={x_ident: test_data_ident, x_remain: test_data_remain, Y: test_label_scaled, phase_train: False})
 
                 
                 print ("test: rmse", epoch_test_rmse_val)
