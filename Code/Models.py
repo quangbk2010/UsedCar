@@ -984,7 +984,8 @@ class Tensor_NN (Dataset, Sklearn_model):
         for i in range (self.num_regressor):
             print ("\n\n==============regressor%d" %(i+1))
             (X_train, y_train) = self.subsample (train_data, train_label, ratio)
-            model_path = self.model_dir + "/bagging_NN/car2vect/regressor" + str (i+1) + "/" + dataset_size + "_" + self.model_name  + "_" + self.label  + "_baseline_" + str (self.no_neuron) + "_" + str (self.no_hidden_layer)
+            model_path = self.model_dir + "/bagging_NN/car2vect/regressor" + str (i+1) + "/" + dataset_size + "_" + self.model_name  + "_" + self.label  + "_baseline_" + str (self.no_neuron) + "_" + str (self.no_hidden_layer) #TODO: replace this line by the below line
+            #model_path = self.model_dir + "/bagging_NN/car2vect/regressor" + str (i+1) + "/" + dataset_size + "_" + self.model_name  + "_" + self.label  + "_car2vect_" + str (self.no_neuron_embed) + "_" + str (self.no_neuron)
             y_predict_file_name_ = y_predict_file_name + "_" + str (i+1)
             mean_error_file_name_ = mean_error_file_name + "_" + str (i+1)
             x_ident_file_name_ = x_ident_file_name + "_" + str (i+1)
@@ -1036,7 +1037,7 @@ class Tensor_NN (Dataset, Sklearn_model):
             line = np.zeros(len (test_label), dtype=[('truth', float), ('pred', float)])
             line['truth'] = test_label.reshape (test_label.shape[0])
             line['pred'] = predicted_test_label.reshape (predicted_test_label.shape[0])
-            np.savetxt (y_predict_file_name_ + "_final", line, fmt="%.2f\t%.2f")
+            np.savetxt (y_predict_file_name_ + "_final" + str(i), line, fmt="%.2f\t%.2f")
 
 
 
