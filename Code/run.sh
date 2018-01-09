@@ -18,6 +18,10 @@
 #Bagging with baseline NN# python Main.py --model_set DL --dataset_size full --ensemble_NN_flag 4 --loss_func rel_err --car_ident_flag 0 --no_neuron 1000 --no_hidden_layer 2 --epoch 30 --num_regressor 10 --sample_ratio 0.5
 #Bagging with car2vect NN# python Main.py --model_set DL --dataset_size full --ensemble_NN_flag 5 --loss_func rel_err --car_ident_flag 1 --no_neuron 1000 --no_neuron_embed 6000 --epoch 50 --num_regressor 10 --sample_ratio 0.5
 
+
+#######################
+#Retrain the model after removing outliers with car2vect# python Main.py --model_set DL --dataset_size full --ensemble_NN_flag 6 --loss_func rel_err --car_ident_flag 1 --no_neuron 1000 --no_neuron_embed 6000 --epoch 50 --outliers_removal_percent 10
+
 #######################
 python Main.py --model_set DL --dataset_size full --ensemble_NN_flag 4 --car_ident_flag 0 --no_neuron 1000  --no_hidden_layer 2 --epoch 30 --num_regressor 3 --sample_ratio 0.5
 
