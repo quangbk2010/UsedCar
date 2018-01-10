@@ -690,7 +690,7 @@ class Tensor_NN (Dataset, Sklearn_model):
 
                 # Save predicted label and determine the best epoch
                 if loss_func == "rel_err":
-                    threshold_err = 8.5 #9.3 #
+                    threshold_err = 9.3 #8.5 #
                     epoch_test_err_val = epoch_test_relative_err_val
                 elif loss_func == "mae":
                     threshold_err = 150
@@ -893,7 +893,13 @@ class Tensor_NN (Dataset, Sklearn_model):
         # First train the model on the original train data (can remove a part of outliers previously)
         os.system ("mkdir -p ../checkpoint/rm_outliers_NN/car2vect/regressor1")
         model_path = self.model_dir + "/rm_outliers_NN/car2vect/regressor" + str (1) + "/" + dataset_size + "_" + self.model_name  + "_" + self.label  + "_car2vect_" + str (self.no_neuron_embed) + "_" + str (self.no_neuron)
-        best_epoch = self.car2vect (train_data=train_data, train_label=train_label, test_data=test_data, test_label=test_label, test_car_ident=test_car_ident, d_ident=d_ident, d_embed=self.d_embed, d_remain=d_remain, no_neuron=self.no_neuron, no_neuron_embed=self.no_neuron_embed, loss_func=self.loss_func, model_path=model_path, y_predict_file_name=y_predict_file_name, mean_error_file_name=mean_error_file_name, x_ident_file_name=x_ident_file_name, x_embed_file_name=x_embed_file_name)
+        y_predict_file_name_ = y_predict_file_name + "_" + str (1)
+        mean_error_file_name_ = mean_error_file_name + "_" + str (1)
+        x_ident_file_name_ = x_ident_file_name + "_" + str (1)
+        x_embed_file_name_ = x_embed_file_name + "_" + str (1)
+        print ("\n\n===========Predictor1")
+        best_epoch = 40# best_epoch = self.car2vect (train_data=train_data, train_label=train_label, test_data=test_data, test_label=test_label, test_car_ident=test_car_ident, d_ident=d_ident, d_embed=self.d_embed, d_remain=d_remain, no_neuron=self.no_neuron, no_neuron_embed=self.no_neuron_embed, loss_func=self.loss_func, model_path=model_path, y_predict_file_name=y_predict_file_name_, mean_error_file_name=mean_error_file_name_, x_ident_file_name=x_ident_file_name_, x_embed_file_name=x_embed_file_name_)
+        print ("Best epoch: ", best_epoch)
 
         # Restore the trained model
         # When restore model with the whole dataset, it can cause the error: Resource exhausted 
@@ -916,7 +922,13 @@ class Tensor_NN (Dataset, Sklearn_model):
         tf.reset_default_graph ()
         os.system ("mkdir -p ../checkpoint/rm_outliers_NN/car2vect/regressor2")
         model_path = self.model_dir + "/rm_outliers_NN/car2vect/regressor" + str (2) + "/" + dataset_size + "_" + self.model_name  + "_" + self.label  + "_car2vect_" + str (self.no_neuron_embed) + "_" + str (self.no_neuron)
-        best_epoch = self.car2vect (train_data=new_train_data, train_label=new_train_label, test_data=test_data, test_label=test_label, test_car_ident=test_car_ident, d_ident=d_ident, d_embed=self.d_embed, d_remain=d_remain, no_neuron=self.no_neuron, no_neuron_embed=self.no_neuron_embed, loss_func=self.loss_func, model_path=model_path, y_predict_file_name=y_predict_file_name, mean_error_file_name=mean_error_file_name, x_ident_file_name=x_ident_file_name, x_embed_file_name=x_embed_file_name)
+        y_predict_file_name_ = y_predict_file_name + "_" + str (2)
+        mean_error_file_name_ = mean_error_file_name + "_" + str (2)
+        x_ident_file_name_ = x_ident_file_name + "_" + str (2)
+        x_embed_file_name_ = x_embed_file_name + "_" + str (2)
+        print ("\n\n===========Predictor2")
+        best_epoch = self.car2vect (train_data=new_train_data, train_label=new_train_label, test_data=test_data, test_label=test_label, test_car_ident=test_car_ident, d_ident=d_ident, d_embed=self.d_embed, d_remain=d_remain, no_neuron=self.no_neuron, no_neuron_embed=self.no_neuron_embed, loss_func=self.loss_func, model_path=model_path, y_predict_file_name=y_predict_file_name_, mean_error_file_name=mean_error_file_name_, x_ident_file_name=x_ident_file_name_, x_embed_file_name=x_embed_file_name_)
+        print ("Best epoch: ", best_epoch)
 
         # Apply the trained model to the test data
         # Restore the trained model
