@@ -472,7 +472,7 @@ class Tensor_NN (Dataset, Sklearn_model):
         output3 = slim.dropout (output3, self.dropout, scope='dropout3')
         #output4 = slim.fully_connected(output3, no_neuron, scope='hidden_main_2', activation_fn=tf.nn.relu)
         #output5 = slim.fully_connected(output4, no_neuron, scope='hidden_main_3', activation_fn=tf.nn.relu)
-        prediction = slim.fully_connected(output3, 1, scope='output_main', activation_fn=None) # 1-dimension of output
+        prediction = slim.fully_connected(output3, 1, scope='output_main', activation_fn=tf.nn.relu) #None) # 1-dimension of output
         tf.identity (prediction, name="prediction")
 
         return x_ident, x_remain, Y, x_embed, prediction, phase_train
@@ -738,6 +738,42 @@ class Tensor_NN (Dataset, Sklearn_model):
             np.savetxt(mean_error_file_name_ + "_" + str (epoch), line, fmt="%d\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f")
 
             return best_epoch
+
+
+    def cross_validation (self):
+        
+        with tf.Session() as sess:
+            """ In each iteration, we need to store training error and test error into 2 separare lists"""
+            print ("Start k-fold CV:")
+            test_err = []
+            for i in range (self.k_fold):
+                print ("Start fold:", i)
+                tf.reset_default_graph ()
+
+                # Prepare data 
+                train_data = self.X_train_set[i] 
+                train_label = self.y_train_set[i]
+                test_data = self.X_test_set[i]
+                test_label = self.y_test_set[i]
+                if using_car_ident_flag == 1:
+                    test_car_ident = self.car_ident_code_test_set[i]
+
+                # Shuffle train data
+                train_set = np.concatenate ((train_data, train_label), axis = 1)
+                train_set_shuffled = np.random.permutation(train_set)
+                train_data_shuffled = train_set_shuffled [:, 0:train_data.shape[1]]
+                train_label_shuffled = train_set_shuffled [:, train_data.shape[1]:]
+
+                # Train data corresponding to the type of model
+                if using_car_ident_flag == 1:
+                    best_epoch = self.car2vect (train_data=train_data, train_label=train_label, test_data=test_data, test_label=test_label, test_car_ident=test_car_ident, d_ident=d_ident, d_embed=self.d_embed, d_remain=d_remain, no_neuron=self.no_neuron, no_neuron_embed=self.no_neuron_embed, loss_func="rel_err", model_path=model_path, y_predict_file_name=y_predict_file_name_, mean_error_file_name=mean_error_file_name_, x_ident_file_name=x_ident_file_name_, x_embed_file_name=x_embed_file_name_)
+                else:
+                    best_epoch = self.baseline (train_data=train_data, train_label=train_label, test_data=test_data, test_label=test_label, no_neuron=no_neuron, no_hidden_layer=no_hidden_layer, loss_func="rel_err", model_path=model_path, y_predict_file_name=y_predict_file_name_, mean_error_file_name=mean_error_file_name_)
+
+                test_err.append (test_relative_err_val) 
+                print ("Fold:", i, test_relative_err_val)
+            print ("---Mean relative_err:", np.mean (test_err))
+            return np.mean (test_err)
     
     def gradient_boosting_NN_baseline (self, train_data, train_label, test_data, test_label, y_predict_file_name, mean_error_file_name, dataset_size):
         """
@@ -898,7 +934,7 @@ class Tensor_NN (Dataset, Sklearn_model):
         x_ident_file_name_ = x_ident_file_name + "_" + str (1)
         x_embed_file_name_ = x_embed_file_name + "_" + str (1)
         print ("\n\n===========Predictor1")
-        best_epoch = 28# best_epoch = self.car2vect (train_data=train_data, train_label=train_label, test_data=test_data, test_label=test_label, test_car_ident=test_car_ident, d_ident=d_ident, d_embed=self.d_embed, d_remain=d_remain, no_neuron=self.no_neuron, no_neuron_embed=self.no_neuron_embed, loss_func=self.loss_func, model_path=model_path, y_predict_file_name=y_predict_file_name_, mean_error_file_name=mean_error_file_name_, x_ident_file_name=x_ident_file_name_, x_embed_file_name=x_embed_file_name_)
+        best_epoch = 16# best_epoch = self.car2vect (train_data=train_data, train_label=train_label, test_data=test_data, test_label=test_label, test_car_ident=test_car_ident, d_ident=d_ident, d_embed=self.d_embed, d_remain=d_remain, no_neuron=self.no_neuron, no_neuron_embed=self.no_neuron_embed, loss_func=self.loss_func, model_path=model_path, y_predict_file_name=y_predict_file_name_, mean_error_file_name=mean_error_file_name_, x_ident_file_name=x_ident_file_name_, x_embed_file_name=x_embed_file_name_)
         print ("Best epoch: ", best_epoch)
 
         # Restore the trained model
@@ -908,6 +944,10 @@ class Tensor_NN (Dataset, Sklearn_model):
         meta_file = model_path + "_" + str (best_epoch) + ".meta"
         ckpt_file = model_path + "_" + str (best_epoch)
         (predicted_train_label, train_rmse_val, train_mae_val, train_relative_err_val, train_smape_val, total_arr_relative_err) = self.batch_computation_car2vect (5, train_data, train_label, d_ident, d_remain, meta_file, ckpt_file)
+        line = np.zeros(len (train_label), dtype=[('truth', float), ('pred', float)])
+        line['truth'] = train_label.reshape (train_label.shape[0])
+        line['pred'] = predicted_train_label.reshape (predicted_train_label.shape[0])
+        np.savetxt (y_predict_file_name + "_train_before_remove_outliers", line, fmt="%.2f\t%.2f")
 
         # Remove outliers from the train dataset baased on the train error
         new_train_set = self.remove_outliers (train_data, train_label, total_arr_relative_err, removal_percent)
@@ -936,8 +976,11 @@ class Tensor_NN (Dataset, Sklearn_model):
         # Devide the train set into smaller subsets (Eg. 5 subsets), push them to the model and concatenate the predictions later
         meta_file = model_path + "_" + str (best_epoch) + ".meta"
         ckpt_file = model_path + "_" + str (best_epoch)
-        (predicted_test_label, test_rmse_val, test_mae_val, test_relative_err_val, test_smape_val, total_arr_relative_err) = self.batch_computation_car2vect (5, test_data, test_label, d_ident, d_remain, meta_file, ckpt_file)
-        sys.exit (-1)
+        (new_predicted_train_label, new_train_rmse_val, new_train_mae_val, new_train_relative_err_val, new_train_smape_val, new_total_arr_relative_err) = self.batch_computation_car2vect (5, new_train_data, new_train_label, d_ident, d_remain, meta_file, ckpt_file)
+        line = np.zeros(len (new_train_label), dtype=[('truth', float), ('pred', float)])
+        line['truth'] = new_train_label.reshape (new_train_label.shape[0])
+        line['pred'] = new_predicted_train_label.reshape (new_predicted_train_label.shape[0])
+        np.savetxt (y_predict_file_name + "_train_after_remove_" + str (removal_percent), line, fmt="%.2f\t%.2f")
 
     def batch_computation_car2vect  (self, no_batch, train_data, train_label, d_ident, d_remain, meta_file, ckpt_file):
         train_data_remain = train_data [:, 0:d_remain]
