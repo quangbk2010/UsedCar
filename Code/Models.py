@@ -200,40 +200,6 @@ class Tensor_NN (Dataset, Sklearn_model):
             predicted_y, rmse_val, mae_val, relative_err_val, smape_val = sess.run([prediction, rmse, mae, relative_err, smape], feed_dict)
             return (predicted_y, rmse_val, mae_val, relative_err_val, smape_val)
 
-
-    def restore_model_car2vect (self, x_ident_, x_remain_, label, meta_file, ckpt_file, train_flag):
-        with tf.Session() as sess:
-            # Load meta graph and restore all variable values
-            saver = tf.train.import_meta_graph (meta_file)
-            saver.restore (sess, ckpt_file)
-
-            # Access and create placeholder variables, and create feedict to feed data 
-            graph = tf.get_default_graph ()
-            x_ident = graph.get_tensor_by_name ("x_ident:0")
-            x_remain = graph.get_tensor_by_name ("x_remain:0")
-            Y = graph.get_tensor_by_name ("Y:0")
-            feed_dict = {x_ident:x_ident_, x_remain:x_remain_, Y:label}
-
-            # Now, access the operators that we want to run
-            prediction = graph.get_tensor_by_name ("prediction:0")
-            rmse= graph.get_tensor_by_name ("rmse:0")
-            mae = graph.get_tensor_by_name ("mae:0")
-            relative_err = graph.get_tensor_by_name ("relative_err:0")
-            smape = graph.get_tensor_by_name ("smape:0")
-
-            sum_se= graph.get_tensor_by_name ("sum_se:0")
-            sum_ae = graph.get_tensor_by_name ("sum_ae:0")
-            sum_rel_err = graph.get_tensor_by_name ("sum_rel_err:0")
-            arr_rel_err = graph.get_tensor_by_name ("arr_rel_err:0")
-            sum_smape = graph.get_tensor_by_name ("sum_smape:0")
-            
-            # Feed data
-            predicted_y, rmse_val, mae_val, relative_err_val, smape_val, sum_se_val, sum_ae_val, sum_rel_err_val, sum_smape_val , arr_rel_err_val = sess.run([prediction, rmse, mae, relative_err, smape, sum_se, sum_ae, sum_rel_err, sum_smape, arr_rel_err], feed_dict)
-            if (train_flag == 0):
-                return (predicted_y, rmse_val, mae_val, relative_err_val, smape_val)
-            else:
-                return (predicted_y, sum_se_val, sum_ae_val, sum_rel_err_val, sum_smape_val, arr_rel_err_val)
-
     
     def baseline (self, train_data, train_label, test_data, test_label, no_neuron, no_hidden_layer, loss_func, model_path, y_predict_file_name, mean_error_file_name): # Used for 1train-1test
     #def baseline (self, train_data, train_label, test_data, test_label, model_path, X, Y, prediction, weights, fold): # used for Cross-validation 
@@ -451,12 +417,14 @@ class Tensor_NN (Dataset, Sklearn_model):
         phase_train = tf.placeholder(tf.bool, name='phase_train')
 
         print ("build_car2vect_model: d_ident:", d_ident, "d_remain:", d_remain, "d_embed:", d_embed, "no_neuron_embed:", no_neuron_embed, "no_neuron_main:", no_neuron)
-
-        output1 = slim.fully_connected (x_ident, no_neuron_embed, scope='hidden_embed1', activation_fn=tf.nn.relu) #None) #
+        
+        # He initializer
+        he_init = tf.contrib.layers.variance_scaling_initializer ()
+        output1 = slim.fully_connected (x_ident, no_neuron_embed, scope='hidden_embed1', activation_fn=tf.nn.relu, weights_initializer=he_init) #None) #
         output1 = slim.dropout (output1, self.dropout, scope='dropout1')
         #output2 = slim.fully_connected (output1, no_neuron_embed, scope='hidden_embed2', activation_fn=tf.nn.relu)
         #output2 = slim.dropout (output2, self.dropout, scope='dropout2')
-        x_embed = slim.fully_connected (output1, d_embed, scope='output_embed', activation_fn=None) #, activation_fn=tf.nn.relu)#, activation_fn=None) # 3-dimension of embeding NN
+        x_embed = slim.fully_connected (output1, d_embed, scope='output_embed', activation_fn=None, weights_initializer=he_init) #, activation_fn=tf.nn.relu)#, activation_fn=None) # 3-dimension of embeding NN
         #x_embed = slim.fully_connected (output1, d_embed, scope='output_embed', activation_fn=tf.nn.relu) # 3-dimension of embeding NN
         #x_embed = slim.fully_connected (output1, d_embed, scope='output_embed') # seperate the activation function to another step to use batch normalization.
         #x_embed = self.batch_norm (x_embed, phase_train) # batch normalization
@@ -468,21 +436,128 @@ class Tensor_NN (Dataset, Sklearn_model):
 
         input3 = tf.concat ([x_remain, x_embed], 1)
 
-        output3 = slim.fully_connected(input3, no_neuron, scope='hidden_main1', activation_fn=tf.nn.relu)
+        output3 = slim.fully_connected(input3, no_neuron, scope='hidden_main1', activation_fn=tf.nn.relu, weights_initializer=he_init)
         output3 = slim.dropout (output3, self.dropout, scope='dropout3')
         #output4 = slim.fully_connected(output3, no_neuron, scope='hidden_main_2', activation_fn=tf.nn.relu)
         #output5 = slim.fully_connected(output4, no_neuron, scope='hidden_main_3', activation_fn=tf.nn.relu)
         prediction = slim.fully_connected(output3, 1, scope='output_main', activation_fn=tf.nn.relu) #None) # 1-dimension of output
         tf.identity (prediction, name="prediction")
 
+
+    def build_car2vect_model_retrained (self, no_neuron, no_neuron_embed, d_ident, d_embed, d_remain, train_data, train_label, meta_file, ckpt_file):
+        """
+            Purpose: Use weights and biases from pre-trained model as initializations
+        """
+        train_data_remain = train_data [:, 0:d_remain]
+        train_data_ident = train_data [:, d_remain:]
+
+        x_ident = tf.placeholder(tf.float32, [None, d_ident], name="x_ident")
+        x_remain = tf.placeholder(tf.float32, [None, d_remain], name="x_remain")
+        Y = tf.placeholder(tf.float32, [None, 1], name="Y")
+        phase_train = tf.placeholder(tf.bool, name='phase_train')
+
+        print ("build_car2vect_model: d_ident:", d_ident, "d_remain:", d_remain, "d_embed:", d_embed, "no_neuron_embed:", no_neuron_embed, "no_neuron_main:", no_neuron)
+        
+        (init_w_hid_embed_1_val, init_bias_hid_embed_1_val, init_w_out_embed_val, init_bias_out_embed_val, init_w_hid_main_1_val, init_bias_hid_main_1_val, init_w_out_main_val, init_bias_out_main_val) = self.restore_weights_car2vect (train_data_ident, train_data_remain, train_label, meta_file, ckpt_file)
+
+        output1 = slim.fully_connected (x_ident, no_neuron_embed, scope='hidden_embed1', activation_fn=tf.nn.relu, weights_initializer=tf.constant_initializer (init_w_hid_embed_1_val), biases_initializer=tf.constant_initializer (init_bias_hid_embed_1_val)) #None) #
+        output1 = slim.dropout (output1, self.dropout, scope='dropout1')
+        x_embed = slim.fully_connected (output1, d_embed, scope='output_embed', activation_fn=None, weights_initializer=tf.constant_initializer (init_w_out_embed_val), biases_initializer=tf.constant_initializer (init_bias_out_embed_val)) 
+
+        input3 = tf.concat ([x_remain, x_embed], 1)
+
+        output3 = slim.fully_connected(input3, no_neuron, scope='hidden_main1', activation_fn=tf.nn.relu, weights_initializer=tf.constant_initializer (init_w_hid_main_1_val), biases_initializer=tf.constant_initializer (init_bias_hid_main_1_val))
+        output3 = slim.dropout (output3, self.dropout, scope='dropout3')
+        prediction = slim.fully_connected(output3, 1, scope='output_main', activation_fn=tf.nn.relu, weights_initializer=tf.constant_initializer (init_w_out_main_val), biases_initializer=tf.constant_initializer (init_bias_out_main_val)) #None) # 1-dimension of output
+        tf.identity (prediction, name="prediction")
+
         return x_ident, x_remain, Y, x_embed, prediction, phase_train
     
-    def car2vect(self, train_data, train_label, test_data, test_label, test_car_ident, d_ident, d_embed, d_remain, no_neuron, no_neuron_embed, loss_func, model_path, y_predict_file_name, mean_error_file_name, x_ident_file_name, x_embed_file_name): # Used for 1train-1test
+
+    def restore_model_car2vect (self, x_ident_, x_remain_, label, meta_file, ckpt_file, train_flag):
+        with tf.Session() as sess:
+            # Load meta graph and restore all variable values
+            saver = tf.train.import_meta_graph (meta_file)
+            saver.restore (sess, ckpt_file)
+
+            # Access and create placeholder variables, and create feedict to feed data 
+            graph = tf.get_default_graph ()
+            x_ident = graph.get_tensor_by_name ("x_ident:0")
+            x_remain = graph.get_tensor_by_name ("x_remain:0")
+            Y = graph.get_tensor_by_name ("Y:0")
+            feed_dict = {x_ident:x_ident_, x_remain:x_remain_, Y:label}
+
+            # Now, access the operators that we want to run
+            prediction = graph.get_tensor_by_name ("prediction:0")
+            rmse= graph.get_tensor_by_name ("rmse:0")
+            mae = graph.get_tensor_by_name ("mae:0")
+            relative_err = graph.get_tensor_by_name ("relative_err:0")
+            smape = graph.get_tensor_by_name ("smape:0")
+
+            sum_se= graph.get_tensor_by_name ("sum_se:0")
+            sum_ae = graph.get_tensor_by_name ("sum_ae:0")
+            sum_rel_err = graph.get_tensor_by_name ("sum_rel_err:0")
+            arr_rel_err = graph.get_tensor_by_name ("arr_rel_err:0")
+            sum_smape = graph.get_tensor_by_name ("sum_smape:0")
+            
+            # Feed data
+            predicted_y, rmse_val, mae_val, relative_err_val, smape_val, sum_se_val, sum_ae_val, sum_rel_err_val, sum_smape_val , arr_rel_err_val = sess.run([prediction, rmse, mae, relative_err, smape, sum_se, sum_ae, sum_rel_err, sum_smape, arr_rel_err], feed_dict)
+            if (train_flag == 0):
+                return (predicted_y, rmse_val, mae_val, relative_err_val, smape_val)
+            else:
+                return (predicted_y, sum_se_val, sum_ae_val, sum_rel_err_val, sum_smape_val, arr_rel_err_val)
+
+
+    def restore_weights_car2vect (self, x_ident_, x_remain_, label, meta_file, ckpt_file):
+        with tf.Session() as sess:
+            #init = tf.global_variables_initializer()
+            #sess.run (init)
+            # Load meta graph and restore all variables values
+            saver = tf.train.import_meta_graph (meta_file)
+            saver.restore (sess, ckpt_file)
+
+            # Access and create placeholder variables, and create feedict to feed data
+            graph = tf.get_default_graph ()
+            x_ident = graph.get_tensor_by_name ("x_ident:0")
+            x_remain = graph.get_tensor_by_name ("x_remain:0")
+            Y = graph.get_tensor_by_name ("Y:0")
+            feed_dict = {x_ident:x_ident_, x_remain:x_remain_, Y:label}
+
+            # Now, access the weights of the pre-trained model
+            w_hid_embed_1 = graph.get_tensor_by_name ("hidden_embed1/weights:0")
+            bias_hid_embed_1 = graph.get_tensor_by_name ("hidden_embed1/biases:0")
+
+            w_out_embed = graph.get_tensor_by_name ("output_embed/weights:0")
+            bias_out_embed = graph.get_tensor_by_name ("output_embed/biases:0")
+
+            w_hid_main_1 = graph.get_tensor_by_name ("hidden_main1/weights:0")
+            bias_hid_main_1 = graph.get_tensor_by_name ("hidden_main1/biases:0")
+
+            w_out_main = graph.get_tensor_by_name ("output_main/weights:0")
+            bias_out_main = graph.get_tensor_by_name ("output_main/biases:0")
+
+            # Feed data
+            #(w_hid_embed_1_val, bias_hid_embed_1_val, w_out_embed_val, bias_out_embed_val, w_hid_main_1_val, bias_hid_main_1_val, w_out_main_val, bias_out_main_val) 
+            return sess.run ([w_hid_embed_1, bias_hid_embed_1, w_out_embed, bias_out_embed, w_hid_main_1, bias_hid_main_1, w_out_main, bias_out_main], feed_dict)
+
+    
+
+    def car2vect(self, train_data, train_label, test_data, test_label, test_car_ident, d_ident, d_embed, d_remain, no_neuron, no_neuron_embed, loss_func, model_path, y_predict_file_name, mean_error_file_name, x_ident_file_name, x_embed_file_name, retrain): # Used for 1train-1test
     #def car2vect(self, train_data, train_label, test_data, test_label, test_car_ident, model_path, d_ident, d_embed, d_remain, x_ident, x_remain, Y, x_embed, prediction, fold): # used for Cross-validation 
 
         #building car embedding model
         if using_CV_flag == 0:
-            x_ident, x_remain, Y, x_embed, prediction, phase_train = self.build_car2vect_model(no_neuron, no_neuron_embed, d_ident, d_embed, d_remain)
+            if retrain == 0:
+                x_ident, x_remain, Y, x_embed, prediction, phase_train = self.build_car2vect_model(no_neuron, no_neuron_embed, d_ident, d_embed, d_remain)
+
+            ###########
+            else:
+                pre_model_path = self.model_dir + "/rm_outliers_NN/car2vect/regressor1/full_" + self.model_name  + "_" + self.label  + "_car2vect_" + str (self.no_neuron_embed) + "_" + str (self.no_neuron)
+                meta_file = pre_model_path + "_" + str (16) + ".meta"
+                ckpt_file = pre_model_path + "_" + str (16) 
+                x_ident, x_remain, Y, x_embed, prediction, phase_train = self.build_car2vect_model_retrained (no_neuron=no_neuron, no_neuron_embed=no_neuron_embed, d_ident=d_ident, d_embed=d_embed, d_remain=d_remain, train_data=train_data, train_label=train_label, meta_file=meta_file, ckpt_file=ckpt_file)
+            ###########
+
             x_ident_file_name_ = x_ident_file_name
             x_embed_file_name_ = x_embed_file_name
             mean_error_file_name_ = mean_error_file_name
@@ -492,7 +567,6 @@ class Tensor_NN (Dataset, Sklearn_model):
             x_embed_file_name_ = x_embed_file_name + "_" + "fold" + str (fold+1)
             mean_error_file_name_ = mean_error_file_name + "_" + "fold" + str (fold+1)
             y_predict_file_name_ = y_predict_file_name + "_" + "fold" + str (fold+1)
-
 
         # Try to use weights decay
         num_batches_per_epoch = int(len(train_data) / self.batch_size)
@@ -690,7 +764,7 @@ class Tensor_NN (Dataset, Sklearn_model):
 
                 # Save predicted label and determine the best epoch
                 if loss_func == "rel_err":
-                    threshold_err = 9.3 #8.5 #
+                    threshold_err = 8.5 #9.3 #8.5 #
                     epoch_test_err_val = epoch_test_relative_err_val
                 elif loss_func == "mae":
                     threshold_err = 150
@@ -934,15 +1008,16 @@ class Tensor_NN (Dataset, Sklearn_model):
         x_ident_file_name_ = x_ident_file_name + "_" + str (1)
         x_embed_file_name_ = x_embed_file_name + "_" + str (1)
         print ("\n\n===========Predictor1")
-        best_epoch = 16# best_epoch = self.car2vect (train_data=train_data, train_label=train_label, test_data=test_data, test_label=test_label, test_car_ident=test_car_ident, d_ident=d_ident, d_embed=self.d_embed, d_remain=d_remain, no_neuron=self.no_neuron, no_neuron_embed=self.no_neuron_embed, loss_func=self.loss_func, model_path=model_path, y_predict_file_name=y_predict_file_name_, mean_error_file_name=mean_error_file_name_, x_ident_file_name=x_ident_file_name_, x_embed_file_name=x_embed_file_name_)
+        best_epoch = 16# best_epoch = self.car2vect (train_data=train_data, train_label=train_label, test_data=test_data, test_label=test_label, test_car_ident=test_car_ident, d_ident=d_ident, d_embed=self.d_embed, d_remain=d_remain, no_neuron=self.no_neuron, no_neuron_embed=self.no_neuron_embed, loss_func=self.loss_func, model_path=model_path, y_predict_file_name=y_predict_file_name_, mean_error_file_name=mean_error_file_name_, x_ident_file_name=x_ident_file_name_, x_embed_file_name=x_embed_file_name_, retrain=0)
         print ("Best epoch: ", best_epoch)
-
+        
         # Restore the trained model
         # When restore model with the whole dataset, it can cause the error: Resource exhausted 
         # Devide the train set into smaller subsets (Eg. 5 subsets), push them to the model and concatenate the predictions later
         # TODO: change the "model_dir" arg to automatically set the directory
         meta_file = model_path + "_" + str (best_epoch) + ".meta"
         ckpt_file = model_path + "_" + str (best_epoch)
+
         (predicted_train_label, train_rmse_val, train_mae_val, train_relative_err_val, train_smape_val, total_arr_relative_err) = self.batch_computation_car2vect (5, train_data, train_label, d_ident, d_remain, meta_file, ckpt_file)
         line = np.zeros(len (train_label), dtype=[('truth', float), ('pred', float)])
         line['truth'] = train_label.reshape (train_label.shape[0])
@@ -966,21 +1041,23 @@ class Tensor_NN (Dataset, Sklearn_model):
         mean_error_file_name_ = mean_error_file_name + "_" + str (2)
         x_ident_file_name_ = x_ident_file_name + "_" + str (2)
         x_embed_file_name_ = x_embed_file_name + "_" + str (2)
+        
         print ("\n\n===========Predictor2")
-        best_epoch = self.car2vect (train_data=new_train_data, train_label=new_train_label, test_data=test_data, test_label=test_label, test_car_ident=test_car_ident, d_ident=d_ident, d_embed=self.d_embed, d_remain=d_remain, no_neuron=self.no_neuron, no_neuron_embed=self.no_neuron_embed, loss_func=self.loss_func, model_path=model_path, y_predict_file_name=y_predict_file_name_, mean_error_file_name=mean_error_file_name_, x_ident_file_name=x_ident_file_name_, x_embed_file_name=x_embed_file_name_)
+        best_epoch = self.car2vect (train_data=new_train_data, train_label=new_train_label, test_data=test_data, test_label=test_label, test_car_ident=test_car_ident, d_ident=d_ident, d_embed=self.d_embed, d_remain=d_remain, no_neuron=self.no_neuron, no_neuron_embed=self.no_neuron_embed, loss_func=self.loss_func, model_path=model_path, y_predict_file_name=y_predict_file_name_, mean_error_file_name=mean_error_file_name_, x_ident_file_name=x_ident_file_name_, x_embed_file_name=x_embed_file_name_, retrain=1)
         print ("Best epoch: ", best_epoch)
 
         # Apply the trained model to the test data
         # Restore the trained model
         # When restore model with the whole dataset, it can cause the error: Resource exhausted 
         # Devide the train set into smaller subsets (Eg. 5 subsets), push them to the model and concatenate the predictions later
-        meta_file = model_path + "_" + str (best_epoch) + ".meta"
+        """meta_file = model_path + "_" + str (best_epoch) + ".meta"
         ckpt_file = model_path + "_" + str (best_epoch)
         (new_predicted_train_label, new_train_rmse_val, new_train_mae_val, new_train_relative_err_val, new_train_smape_val, new_total_arr_relative_err) = self.batch_computation_car2vect (5, new_train_data, new_train_label, d_ident, d_remain, meta_file, ckpt_file)
+        sys.exit (-1)
         line = np.zeros(len (new_train_label), dtype=[('truth', float), ('pred', float)])
         line['truth'] = new_train_label.reshape (new_train_label.shape[0])
         line['pred'] = new_predicted_train_label.reshape (new_predicted_train_label.shape[0])
-        np.savetxt (y_predict_file_name + "_train_after_remove_" + str (removal_percent), line, fmt="%.2f\t%.2f")
+        np.savetxt (y_predict_file_name + "_train_after_remove_" + str (removal_percent), line, fmt="%.2f\t%.2f")"""
 
     def batch_computation_car2vect  (self, no_batch, train_data, train_label, d_ident, d_remain, meta_file, ckpt_file):
         train_data_remain = train_data [:, 0:d_remain]
