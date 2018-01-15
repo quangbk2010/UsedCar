@@ -553,8 +553,8 @@ class Tensor_NN (Dataset, Sklearn_model):
             ###########
             else:
                 pre_model_path = self.model_dir + "/rm_outliers_NN/car2vect/regressor1/full_" + self.model_name  + "_" + self.label  + "_car2vect_" + str (self.no_neuron_embed) + "_" + str (self.no_neuron)
-                meta_file = pre_model_path + "_" + str (16) + ".meta"
-                ckpt_file = pre_model_path + "_" + str (16) 
+                meta_file = pre_model_path + "_" + str (28) + ".meta"
+                ckpt_file = pre_model_path + "_" + str (28) 
                 x_ident, x_remain, Y, x_embed, prediction, phase_train = self.build_car2vect_model_retrained (no_neuron=no_neuron, no_neuron_embed=no_neuron_embed, d_ident=d_ident, d_embed=d_embed, d_remain=d_remain, train_data=train_data, train_label=train_label, meta_file=meta_file, ckpt_file=ckpt_file)
             ###########
 
@@ -1008,7 +1008,7 @@ class Tensor_NN (Dataset, Sklearn_model):
         x_ident_file_name_ = x_ident_file_name + "_" + str (1)
         x_embed_file_name_ = x_embed_file_name + "_" + str (1)
         print ("\n\n===========Predictor1")
-        best_epoch = 16# best_epoch = self.car2vect (train_data=train_data, train_label=train_label, test_data=test_data, test_label=test_label, test_car_ident=test_car_ident, d_ident=d_ident, d_embed=self.d_embed, d_remain=d_remain, no_neuron=self.no_neuron, no_neuron_embed=self.no_neuron_embed, loss_func=self.loss_func, model_path=model_path, y_predict_file_name=y_predict_file_name_, mean_error_file_name=mean_error_file_name_, x_ident_file_name=x_ident_file_name_, x_embed_file_name=x_embed_file_name_, retrain=0)
+        best_epoch = 28# best_epoch = self.car2vect (train_data=train_data, train_label=train_label, test_data=test_data, test_label=test_label, test_car_ident=test_car_ident, d_ident=d_ident, d_embed=self.d_embed, d_remain=d_remain, no_neuron=self.no_neuron, no_neuron_embed=self.no_neuron_embed, loss_func=self.loss_func, model_path=model_path, y_predict_file_name=y_predict_file_name_, mean_error_file_name=mean_error_file_name_, x_ident_file_name=x_ident_file_name_, x_embed_file_name=x_embed_file_name_, retrain=0)
         print ("Best epoch: ", best_epoch)
         
         # Restore the trained model
