@@ -554,7 +554,7 @@ class Tensor_NN (Dataset, Sklearn_model):
 
             ###########
             else:
-                self.learning_rate *= 10
+                #self.learning_rate *= 10
                 print ("=======new learning_rate:", self.learning_rate)
                 pre_model_path = self.model_dir + "/rm_outliers_total_set_NN/car2vect/regressor1/full_" + self.model_name  + "_" + self.label  + "_car2vect_" + str (self.no_neuron_embed) + "_" + str (self.no_neuron) + "_total_set"
                 meta_file = pre_model_path + ".meta"
@@ -848,10 +848,10 @@ class Tensor_NN (Dataset, Sklearn_model):
         sum_relative_err = tf.multiply (tf.reduce_sum (tf.divide (tf.abs (prediction - Y), Y)), 100, name = "sum_rel_err")
         arr_relative_err = tf.multiply (tf.divide (tf.abs (prediction - Y), Y), 100, name = "arr_rel_err")
         sum_smape = tf.multiply (tf.reduce_sum (tf.divide (tf.abs (prediction - Y), tf.abs (Y) + tf.abs (prediction) )), 100, name = "sum_smape")
-        rmse = tf.sqrt (tf.reduce_mean(tf.squared_difference(prediction, Y_)), name = "rmse")
-        mae = tf.reduce_mean (tf.abs (prediction - Y_), name = "mae")
-        relative_err = tf.multiply (tf.reduce_mean (tf.divide (tf.abs (prediction - Y_), (Y_))), 100, name = "relative_err") 
-        smape = tf.multiply (tf.reduce_mean (tf.divide (tf.abs (prediction - Y_), tf.abs (Y_) + tf.abs (prediction) )), 100, name = "smape")
+        rmse = tf.sqrt (tf.reduce_mean(tf.squared_difference(prediction, Y)), name = "rmse")
+        mae = tf.reduce_mean (tf.abs (prediction - Y), name = "mae")
+        relative_err = tf.multiply (tf.reduce_mean (tf.divide (tf.abs (prediction - Y), (Y))), 100, name = "relative_err") 
+        smape = tf.multiply (tf.reduce_mean (tf.divide (tf.abs (prediction - Y), tf.abs (Y) + tf.abs (prediction) )), 100, name = "smape")
 
         
         init = tf.global_variables_initializer()
@@ -1112,7 +1112,7 @@ class Tensor_NN (Dataset, Sklearn_model):
             - Remove outliers of the total dataset: the data points in the training set with the corresponding relative error in top (removal_percent)%
             - Then, sort the dataset by actual_advertising_date
         """
-        np_arr_file = "./Dataframe/[" + dataset_size + "]total_numpy_array_after_remove_outliers.h5"
+        np_arr_file = "./Dataframe/[" + dataset_size + "]total_numpy_array_after_remove_outliers.h5" + str (removal_percent)
         key = "df"
         if os.path.isfile (np_arr_file) == False:
             print ("Remove outliers from the original array")
@@ -1200,7 +1200,7 @@ class Tensor_NN (Dataset, Sklearn_model):
     def retrain_car2vect_from_total_set (self, total_data, total_label, total_car_ident_code, act_adv_date, d_ident, d_remain, y_predict_file_name, mean_error_file_name, x_ident_file_name, x_embed_file_name, dataset_size, removal_percent):
 
         # First train the model on the original train data (can remove a part of outliers previously)
-        """os.system ("mkdir -p ../checkpoint/rm_outliers_total_set_NN/car2vect/regressor1")
+        os.system ("mkdir -p ../checkpoint/rm_outliers_total_set_NN/car2vect/regressor1")
         model_path = self.model_dir + "/rm_outliers_total_set_NN/car2vect/regressor1/" + dataset_size + "_" + self.model_name  + "_" + self.label  + "_car2vect_" + str (self.no_neuron_embed) + "_" + str (self.no_neuron) + "_total_set"
         print ("\n\n===========Train total set")
         #self.train_car2vect(train_data=total_data, train_label=total_label, d_ident=d_ident, d_embed=self.d_embed, d_remain=d_remain, no_neuron=self.no_neuron, no_neuron_embed=self.no_neuron_embed, loss_func=self.loss_func, model_path=model_path)
@@ -1216,11 +1216,11 @@ class Tensor_NN (Dataset, Sklearn_model):
         line = np.zeros (len (total_label), dtype=[('truth', float), ('pred', float)])
         line['truth'] = total_label.reshape (total_label.shape[0])
         line['pred'] = predicted_total_label.reshape (predicted_total_label.shape[0])
-        np.savetxt (y_predict_file_name + "_total_before_remove_outliers", line, fmt="%.2f\t%.2f")"""
+        np.savetxt (y_predict_file_name + "_total_before_remove_outliers", line, fmt="%.2f\t%.2f")
 
         # Remove outliers from the total dataset based on the relative error from the first train, on the other hand sort the dataset by act_adv_date
         # TODO: save this dataset
-        total_arr_relative_err = []
+        #total_arr_relative_err = []
         stime = time.time()
         new_total_set = self.remove_outliers_total_set (total_data, total_label, total_car_ident_code, act_adv_date, total_arr_relative_err, dataset_size, removal_percent)
         print ("Time for remove outliers from dataset: %.3f" % (time.time() - stime))
