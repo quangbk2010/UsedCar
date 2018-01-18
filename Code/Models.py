@@ -1112,7 +1112,8 @@ class Tensor_NN (Dataset, Sklearn_model):
             - Remove outliers of the total dataset: the data points in the training set with the corresponding relative error in top (removal_percent)%
             - Then, sort the dataset by actual_advertising_date
         """
-        np_arr_file = "./Dataframe/[" + dataset_size + "]total_numpy_array_after_remove_outliers.h5" + str (removal_percent)
+        #np_arr_file = "./Dataframe/[{0}]total_numpy_array_after_remove_outliers.h5_{1}".format (dataset_size, removal_percent)
+        np_arr_file = "./Dataframe/[{0}]total_numpy_array_after_remove_outliers".format (dataset_size)
         key = "df"
         if os.path.isfile (np_arr_file) == False:
             print ("Remove outliers from the original array")
@@ -1123,15 +1124,15 @@ class Tensor_NN (Dataset, Sklearn_model):
             new_dataset = dataset [idx] # TODO: sort by adv_date
             new_dataset = new_dataset [new_dataset[:, -2].argsort()]
             new_dataset = new_dataset[:, :-2] # The new dataset will store car_ident_code at the end of the matrix
-            #np.save (np_arr_file, new_dataset)
-            df_dataset = pd.DataFrame (new_dataset)
-            df_dataset.to_hdf (np_arr_file, key)       
+            np.save (np_arr_file, new_dataset)
+            #df_dataset = pd.DataFrame (new_dataset)
+            #df_dataset.to_hdf (np_arr_file, key)       
             return (new_dataset) 
         else:
             print ("Remove ouliers by reloading the preprocessed data:", np_arr_file)
-            #return np.load (np_arr_file + ".npy")
-            df_dataset = pd.read_hdf (np_arr_file, key)
-            return (np.array (df_dataset))
+            return np.load (np_arr_file + ".npy")
+            #df_dataset = pd.read_hdf (np_arr_file, key)
+            #return (np.array (df_dataset))
 
     def retrain_car2vect_after_remove_outliers (self, train_data, train_label, test_data, test_label, test_car_ident, d_ident, d_remain, y_predict_file_name, mean_error_file_name, x_ident_file_name, x_embed_file_name, dataset_size, removal_percent):
         train_data_remain = train_data [:, 0:d_remain]
@@ -1141,11 +1142,11 @@ class Tensor_NN (Dataset, Sklearn_model):
 
         # First train the model on the original train data (can remove a part of outliers previously)
         os.system ("mkdir -p ../checkpoint/rm_outliers_NN/car2vect/regressor1")
-        model_path = self.model_dir + "/rm_outliers_NN/car2vect/regressor" + str (1) + "/" + dataset_size + "_" + self.model_name  + "_" + self.label  + "_car2vect_" + str (self.no_neuron_embed) + "_" + str (self.no_neuron)
-        y_predict_file_name_ = y_predict_file_name + "_" + str (1)
-        mean_error_file_name_ = mean_error_file_name + "_" + str (1)
-        x_ident_file_name_ = x_ident_file_name + "_" + str (1)
-        x_embed_file_name_ = x_embed_file_name + "_" + str (1)
+        model_path = self.model_dir + "/rm_outliers_NN/car2vect/regressor{0}/{1}_{2}_{3}_car2vect_{4}_{5}".format (1, dataset_size, self.model_name, self.label, self.no_neuron_embed, self.no_neuron)
+        y_predict_file_name_ = y_predict_file_name + "_{0}".format (1)
+        mean_error_file_name_ = mean_error_file_name + "_{0}".format (1)
+        x_ident_file_name_ = x_ident_file_name + "_{0}".format (1)
+        x_embed_file_name_ = x_embed_file_name + "_{0}".format (1)
         print ("\n\n===========Predictor1")
         best_epoch = 33
         #best_epoch = self.car2vect (train_data=train_data, train_label=train_label, test_data=test_data, test_label=test_label, test_car_ident=test_car_ident, d_ident=d_ident, d_embed=self.d_embed, d_remain=d_remain, no_neuron=self.no_neuron, no_neuron_embed=self.no_neuron_embed, loss_func=self.loss_func, model_path=model_path, y_predict_file_name=y_predict_file_name_, mean_error_file_name=mean_error_file_name_, x_ident_file_name=x_ident_file_name_, x_embed_file_name=x_embed_file_name_, retrain=0)
@@ -1155,8 +1156,8 @@ class Tensor_NN (Dataset, Sklearn_model):
         # When restore model with the whole dataset, it can cause the error: Resource exhausted 
         # Devide the train set into smaller subsets (Eg. 5 subsets), push them to the model and concatenate the predictions later
         # TODO: change the "model_dir" arg to automatically set the directory
-        meta_file = model_path + "_" + str (best_epoch) + ".meta"
-        ckpt_file = model_path + "_" + str (best_epoch)
+        meta_file = model_path + "_{0}.meta".format (best_epoch)
+        ckpt_file = model_path + "_{0}.meta".format (best_epoch)
 
         (predicted_train_label, train_rmse_val, train_mae_val, train_relative_err_val, train_smape_val, total_arr_relative_err) = self.batch_computation_car2vect (5, train_data, train_label, d_ident, d_remain, meta_file, ckpt_file)
         line = np.zeros(len (train_label), dtype=[('truth', float), ('pred', float)])
@@ -1174,11 +1175,11 @@ class Tensor_NN (Dataset, Sklearn_model):
 
         tf.reset_default_graph ()
         os.system ("mkdir -p ../checkpoint/rm_outliers_NN/car2vect/regressor2")
-        model_path = self.model_dir + "/rm_outliers_NN/car2vect/regressor" + str (2) + "/" + dataset_size + "_" + self.model_name  + "_" + self.label  + "_car2vect_" + str (self.no_neuron_embed) + "_" + str (self.no_neuron)
-        y_predict_file_name_ = y_predict_file_name + "_" + str (2)
-        mean_error_file_name_ = mean_error_file_name + "_" + str (2)
-        x_ident_file_name_ = x_ident_file_name + "_" + str (2)
-        x_embed_file_name_ = x_embed_file_name + "_" + str (2)
+        model_path = self.model_dir + "/rm_outliers_NN/car2vect/regressor{0}/{1}_{2}_{3}_car2vect_{4}_{5}".format (2, dataset_size, self.model_name, self.label, self.no_neuron_embed, self.no_neuron)
+        y_predict_file_name_ = y_predict_file_name + "_{0}".format (2)
+        mean_error_file_name_ = mean_error_file_name + "_{0}".format (2)
+        x_ident_file_name_ = x_ident_file_name + "_{0}".format (2)
+        x_embed_file_name_ = x_embed_file_name + "_{0}".format (2)
         
         print ("\n\n===========Predictor2")
         best_epoch = self.car2vect (train_data=new_train_data, train_label=new_train_label, test_data=test_data, test_label=test_label, test_car_ident=test_car_ident, d_ident=d_ident, d_embed=self.d_embed, d_remain=d_remain, no_neuron=self.no_neuron, no_neuron_embed=self.no_neuron_embed, loss_func=self.loss_func, model_path=model_path, y_predict_file_name=y_predict_file_name_, mean_error_file_name=mean_error_file_name_, x_ident_file_name=x_ident_file_name_, x_embed_file_name=x_embed_file_name_, retrain=1)
@@ -1201,7 +1202,7 @@ class Tensor_NN (Dataset, Sklearn_model):
 
         # First train the model on the original train data (can remove a part of outliers previously)
         os.system ("mkdir -p ../checkpoint/rm_outliers_total_set_NN/car2vect/regressor1")
-        model_path = self.model_dir + "/rm_outliers_total_set_NN/car2vect/regressor1/" + dataset_size + "_" + self.model_name  + "_" + self.label  + "_car2vect_" + str (self.no_neuron_embed) + "_" + str (self.no_neuron) + "_total_set"
+        model_path = self.model_dir + "/rm_outliers_total_set_NN/car2vect/regressor{0}/{1}_{2}_{3}_car2vect_{4}_{5}_total_set".format (1, dataset_size, self.model_name, self.label, self.no_neuron_embed, self.no_neuron)
         print ("\n\n===========Train total set")
         #self.train_car2vect(train_data=total_data, train_label=total_label, d_ident=d_ident, d_embed=self.d_embed, d_remain=d_remain, no_neuron=self.no_neuron, no_neuron_embed=self.no_neuron_embed, loss_func=self.loss_func, model_path=model_path)
         
@@ -1220,7 +1221,6 @@ class Tensor_NN (Dataset, Sklearn_model):
 
         # Remove outliers from the total dataset based on the relative error from the first train, on the other hand sort the dataset by act_adv_date
         # TODO: save this dataset
-        #total_arr_relative_err = []
         stime = time.time()
         new_total_set = self.remove_outliers_total_set (total_data, total_label, total_car_ident_code, act_adv_date, total_arr_relative_err, dataset_size, removal_percent)
         print ("Time for remove outliers from dataset: %.3f" % (time.time() - stime))
@@ -1249,7 +1249,7 @@ class Tensor_NN (Dataset, Sklearn_model):
 
         tf.reset_default_graph ()
         os.system ("mkdir -p ../checkpoint/rm_outliers_total_set_NN/car2vect/regressor2")
-        model_path = self.model_dir + "/rm_outliers_total_set_NN/car2vect/regressor2/" + dataset_size + "_" + self.model_name  + "_" + self.label  + "_car2vect_" + str (self.no_neuron_embed) + "_" + str (self.no_neuron) + "_total_set"
+        model_path = self.model_dir + "/rm_outliers_total_set_NN/car2vect/regressor{0}/{1}_{2}_{3}_car2vect_{4}_{5}_total_set".format (2, dataset_size, self.model_name, self.label, self.no_neuron_embed, self.no_neuron)
         y_predict_file_name_ = y_predict_file_name + "_2"
         mean_error_file_name_ = mean_error_file_name + "_2"
         x_ident_file_name_ = x_ident_file_name + "_2"
