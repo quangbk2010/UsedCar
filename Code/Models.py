@@ -1125,14 +1125,14 @@ class Tensor_NN (Dataset, Sklearn_model):
             new_dataset = new_dataset [new_dataset[:, -2].argsort()]
             new_dataset = new_dataset[:, :-2] # The new dataset will store car_ident_code at the end of the matrix
             np.save (np_arr_file, new_dataset)
-            #df_dataset = pd.DataFrame (new_dataset)
-            #df_dataset.to_hdf (np_arr_file, key)       
-            return (new_dataset) 
+            df_dataset = pd.DataFrame (new_dataset)
+            df_dataset.to_hdf (np_arr_file, key)       
+            #return (new_dataset) 
         else:
             print ("Remove ouliers by reloading the preprocessed data:", np_arr_file)
-            return np.load (np_arr_file + ".npy")
-            #df_dataset = pd.read_hdf (np_arr_file, key)
-            #return (np.array (df_dataset))
+            #return np.load (np_arr_file + ".npy")
+            df_dataset = pd.read_hdf (np_arr_file, key)
+            return (np.array (df_dataset))
 
     def retrain_car2vect_after_remove_outliers (self, train_data, train_label, test_data, test_label, test_car_ident, d_ident, d_remain, y_predict_file_name, mean_error_file_name, x_ident_file_name, x_embed_file_name, dataset_size, removal_percent):
         train_data_remain = train_data [:, 0:d_remain]
