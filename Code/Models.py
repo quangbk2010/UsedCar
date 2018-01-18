@@ -1125,14 +1125,14 @@ class Tensor_NN (Dataset, Sklearn_model):
             new_dataset = new_dataset [new_dataset[:, -2].argsort()]
             new_dataset = new_dataset[:, :-2] # The new dataset will store car_ident_code at the end of the matrix
             np.save (np_arr_file, new_dataset)
-            df_dataset = pd.DataFrame (new_dataset)
-            df_dataset.to_hdf (np_arr_file, key)       
-            #return (new_dataset) 
+            #df_dataset = pd.DataFrame (new_dataset)
+            #df_dataset.to_hdf (np_arr_file, key)       
+            return (new_dataset) 
         else:
             print ("Remove ouliers by reloading the preprocessed data:", np_arr_file)
-            #return np.load (np_arr_file + ".npy")
-            df_dataset = pd.read_hdf (np_arr_file, key)
-            return (np.array (df_dataset))
+            return np.load (np_arr_file + ".npy")
+            #df_dataset = pd.read_hdf (np_arr_file, key)
+            #return (np.array (df_dataset))
 
     def retrain_car2vect_after_remove_outliers (self, train_data, train_label, test_data, test_label, test_car_ident, d_ident, d_remain, y_predict_file_name, mean_error_file_name, x_ident_file_name, x_embed_file_name, dataset_size, removal_percent):
         train_data_remain = train_data [:, 0:d_remain]
@@ -1256,7 +1256,7 @@ class Tensor_NN (Dataset, Sklearn_model):
         x_embed_file_name_ = x_embed_file_name + "_2"
         
         print ("\n\n===========Predictor2")
-        best_epoch = self.car2vect (train_data=new_train_data, train_label=new_train_label, test_data=new_test_data, test_label=new_test_label, test_car_ident=new_test_car_ident, d_ident=d_ident, d_embed=self.d_embed, d_remain=d_remain, no_neuron=self.no_neuron, no_neuron_embed=self.no_neuron_embed, loss_func=self.loss_func, model_path=model_path, y_predict_file_name=y_predict_file_name_, mean_error_file_name=mean_error_file_name_, x_ident_file_name=x_ident_file_name_, x_embed_file_name=x_embed_file_name_, retrain=1)
+        best_epoch = self.car2vect (train_data=new_train_data, train_label=new_train_label, test_data=new_test_data, test_label=new_test_label, test_car_ident=new_test_car_ident, d_ident=d_ident, d_embed=self.d_embed, d_remain=d_remain, no_neuron=self.no_neuron, no_neuron_embed=self.no_neuron_embed, loss_func=self.loss_func, model_path=model_path, y_predict_file_name=y_predict_file_name_, mean_error_file_name=mean_error_file_name_, x_ident_file_name=x_ident_file_name_, x_embed_file_name=x_embed_file_name_, retrain=0) # if use retrain=1 -> initialize weights from the previous model
         print ("Best epoch: ", best_epoch)
 
     def batch_computation_car2vect  (self, no_batch, train_data, train_label, d_ident, d_remain, meta_file, ckpt_file):
