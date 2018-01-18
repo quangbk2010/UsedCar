@@ -1116,11 +1116,6 @@ class Tensor_NN (Dataset, Sklearn_model):
         key = "df"
         if os.path.isfile (np_arr_file) == False:
             print ("Remove outliers from the original array")
-            print (total_data.shape, total_label.shape)
-            print (total_car_ident_code.shape)
-            print (act_ad_date.shape)
-            print (total_rel_err.shape)
-            sys.exit (-1)
             dataset = np.concatenate ((total_data, total_label, total_car_ident_code, act_ad_date, total_rel_err), axis=1)
             len_dataset = total_data.shape[0]
             remain_len = int (len_dataset * (1 - removal_percent /100.0)+0.5)
@@ -1225,7 +1220,7 @@ class Tensor_NN (Dataset, Sklearn_model):
 
         # Remove outliers from the total dataset based on the relative error from the first train, on the other hand sort the dataset by act_adv_date
         # TODO: save this dataset
-        total_arr_relative_err = []
+        #total_arr_relative_err = []
         stime = time.time()
         new_total_set = self.remove_outliers_total_set (total_data, total_label, total_car_ident_code, act_adv_date, total_arr_relative_err, dataset_size, removal_percent)
         print ("Time for remove outliers from dataset: %.3f" % (time.time() - stime))
