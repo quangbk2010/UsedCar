@@ -1116,12 +1116,12 @@ class Tensor_NN (Dataset, Sklearn_model):
         key = "df"
         if os.path.isfile (np_arr_file) == False:
             print ("Remove outliers from the original array")
-            dataset = np.concatenate ((total_data, total_label, total_car_ident_code, act_ad_date, total_rel_err), axis=1)
             print (total_data.shape, total_label.shape)
             print (total_car_ident_code.shape)
             print (act_ad_date.shape)
             print (total_rel_err.shape)
             sys.exit (-1)
+            dataset = np.concatenate ((total_data, total_label, total_car_ident_code, act_ad_date, total_rel_err), axis=1)
             len_dataset = total_data.shape[0]
             remain_len = int (len_dataset * (1 - removal_percent /100.0)+0.5)
             idx = np.argpartition (dataset[:,-1], remain_len)[:remain_len]
