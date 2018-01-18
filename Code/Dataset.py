@@ -210,7 +210,7 @@ class Dataset ():
         self.k_fold = k_fold
         
         if car_ident_flag == 1:
-            (self.car_ident_code_total_set, self.X_total_set, self.y_total_set, self.X_train_set, self.y_train_set, self.X_test_set, self.y_test_set, self.d_ident, self.d_remain, self.car_ident_code_test_set) = self.get_data_label_car_ident (self.features, label)
+            (self.act_adv_date_total_set, self.car_ident_code_total_set, self.X_total_set, self.y_total_set, self.X_train_set, self.y_train_set, self.X_test_set, self.y_test_set, self.d_ident, self.d_remain, self.car_ident_code_test_set) = self.get_data_label_car_ident (self.features, label)
         else:
             (self.X_total_set, self.y_total_set, self.X_train_set, self.y_train_set, self.X_test_set, self.y_test_set) = self.get_data_label (self.features, label)
     
@@ -309,16 +309,6 @@ class Dataset ():
         total_data_array = np.array ([self.get_total_dataset()[feature]])
         data_array = np.array ([dataset[feature]])
         
-        if using_one_hot_flag == 1:
-            if feature in self.features_need_encoding:
-                if total_data_array.shape[0] != data_array.shape[0]:
-                    data_array = self.encode_one_hot_feature (total_data_array, feature, data_array) # TODO: Problem when use constraint
-                else:
-                    data_array = self.encode_one_hot_feature (total_data_array, feature, total_data_array)
-                data_array = data_array.T
-
-        
-        #print ("no constraint:", data_array.T.shape, "feature:", feature)
         return data_array.T
     
     def get_days_between(self, d1, d2):
@@ -469,6 +459,7 @@ class Dataset ():
         """
         
         car_ident_code_total_set, X_total_set, d_ident, d_remain = self.get_data_matrix_car_ident (self.get_total_dataset ()) 
+        act_adv_date = self.get_data_array (self.get_total_dataset (), "actual_advertising_date")
 
         len_total_set = X_total_set.shape[0]    
         train_length     = int (0.5 + len_total_set * self.data_training_percentage)
@@ -506,7 +497,7 @@ class Dataset ():
             y_test_set = y_total_set[train_length:, :]
             car_ident_code_test_set = car_ident_code_total_set[train_length:, :]
             
-        return (car_ident_code_total_set, X_total_set, y_total_set, X_train_set, y_train_set, X_test_set, y_test_set, d_ident, d_remain, car_ident_code_test_set) 
+        return (act_adv_date, car_ident_code_total_set, X_total_set, y_total_set, X_train_set, y_train_set, X_test_set, y_test_set, d_ident, d_remain, car_ident_code_test_set) 
 
     def __str__(self):
         """
