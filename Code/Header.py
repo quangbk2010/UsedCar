@@ -24,6 +24,7 @@ from collections import Counter
 
 # For saving model 
 import pickle
+import tables
 
 # For parsing arguments that passed to python file
 import argparse

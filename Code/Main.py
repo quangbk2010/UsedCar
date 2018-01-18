@@ -19,7 +19,7 @@ if __name__ == '__main__':
     parser.add_argument('--model_set', type=str, default = 'sklearn') # "Sklearn" or "DL"
     parser.add_argument('--dataset_size', type=str, default = 'full') # "full", or "partial", or "small"
     parser.add_argument('--car_ident_flag', type=int, default = 0) # 1-yes, 0-no
-    parser.add_argument('--ensemble_NN_flag', type=int, default = 0) # 0-no, 1-gb_NN_baseline, 2-gb_NN_car2vect, 3-gb_NN_baseline_tree, 4-bagging_NN_baseline, 5-bagging_NN_car2vect, 6-retrain_car2vect_after_remove_outliers
+    parser.add_argument('--ensemble_NN_flag', type=int, default = 0) # 0-no, 1-gb_NN_baseline, 2-gb_NN_car2vect, 3-gb_NN_baseline_tree, 4-bagging_NN_baseline, 5-bagging_NN_car2vect, 6-retrain_car2vect_after_remove_outliers, 7-retrain_car2vect_from_total_set
     parser.add_argument('--num_regressor', type=int, default = 0) # the number of regressors used for gradient boosting
     parser.add_argument('--sample_ratio', type=float, default = 1.0) # the percentage of data sample in the total dataset used in bagging ensemble method
     parser.add_argument('--outliers_removal_percent', type=float, default = 0.0) # the percentage of data sample in the total dataset used in bagging ensemble method
@@ -121,10 +121,15 @@ if __name__ == '__main__':
     # Get the dataset
     ##################################
     dataset = Dataset (args.dataset_size, dataset_excel_file, args.k_fold, args.label, args.car_ident_flag)
-    train_data = dataset.X_train_set
+    total_data  = dataset.X_total_set
+    total_label = dataset.y_total_set
+    total_act_adv_date= dataset.act_adv_date_total_set
+    total_car_ident_code= dataset.car_ident_code_total_set
+    
+    train_data  = dataset.X_train_set
     train_label = dataset.y_train_set
-    test_data = dataset.X_test_set
-    test_label = dataset.y_test_set
+    test_data   = dataset.X_test_set
+    test_label  = dataset.y_test_set
     if args.car_ident_flag == 1:
         test_car_ident = dataset.car_ident_code_total_set[train_data.shape[0]:]
     print ("train_data:", train_data.shape)
@@ -161,6 +166,9 @@ if __name__ == '__main__':
 
         elif args.ensemble_NN_flag == 6:
             nn.retrain_car2vect_after_remove_outliers (train_data=train_data, train_label=train_label, test_data=test_data, test_label=test_label, test_car_ident=test_car_ident, d_ident=dataset.d_ident, d_remain=dataset.d_remain, y_predict_file_name=y_predict_file_name, mean_error_file_name=mean_error_file_name, x_ident_file_name=x_ident_file_name, x_embed_file_name=x_embed_file_name, dataset_size=dataset_size, removal_percent=args.outliers_removal_percent)
+
+        elif args.ensemble_NN_flag == 7:
+            nn.retrain_car2vect_from_total_set (total_data=total_data, total_label=total_label, total_car_ident_code=total_car_ident_code, act_adv_date=total_act_adv_date, d_ident=dataset.d_ident, d_remain=dataset.d_remain, y_predict_file_name=y_predict_file_name, mean_error_file_name=mean_error_file_name, x_ident_file_name=x_ident_file_name, x_embed_file_name=x_embed_file_name, dataset_size=dataset_size, removal_percent=args.outliers_removal_percent)
 
         elif nn.car_ident_flag == 1:
             model_path = nn.model_dir + "/car2vect/" + "[" + dataset_size + "]" + nn.model_name  + "_" + args.label  + "_car2vect_" + str (nn.no_neuron) + "_" + str (nn.no_neuron_embed) + "_" + str (nn.d_embed) + "_" + nn.loss_func
