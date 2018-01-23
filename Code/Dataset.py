@@ -139,11 +139,11 @@ class Dataset ():
             print ("Load dataset from excel file")
             total_dataset = pd.read_excel (dataset_excel_file, names = self.headers, converters = dtype_dict, header = 0)
             # Shuffle dataset (dataframe)
-            #total_dataset = total_dataset.reindex(np.random.permutation(total_dataset.index))
+            total_dataset = total_dataset.reindex(np.random.permutation(total_dataset.index))
 
             
             # Sort by actual advertising date
-            total_dataset = total_dataset.sort_values ("actual_advertising_date", ascending=True)
+            #total_dataset = total_dataset.sort_values ("actual_advertising_date", ascending=True)
             
             # Remove the data points with sale_state == "advertising"
             #total_dataset = total_dataset[total_dataset["sale_state"] == "Sold-out"]
