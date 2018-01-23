@@ -146,27 +146,27 @@ class Dataset ():
             total_dataset = total_dataset.sort_values ("actual_advertising_date", ascending=True)
             
             # Remove the data points with sale_state == "advertising"
-            total_dataset = total_dataset[total_dataset["sale_state"] == "Sold-out"]
-            print ("2.", total_dataset.shape)
+            #total_dataset = total_dataset[total_dataset["sale_state"] == "Sold-out"]
+            #print ("2.", total_dataset.shape)
 
             # Remove the data points with price == 0
             #total_dataset = total_dataset[total_dataset["price"] != 0]
-            total_dataset = total_dataset[total_dataset["price"] >= 200] # 400]
-            print ("3.1", total_dataset.shape)
-            total_dataset = total_dataset[total_dataset["price"] < 9000]
-            print ("3.2", total_dataset.shape)
+            #total_dataset = total_dataset[total_dataset["price"] >= 200] # 400]
+            #print ("3.1", total_dataset.shape)
+            #total_dataset = total_dataset[total_dataset["price"] < 9000]
+            #print ("3.2", total_dataset.shape)
 
             # Remove outliers
             #total_dataset = total_dataset[np.abs(total_dataset["price"] - total_dataset["price"].mean()) / total_dataset["price"].std() < 1]
             #print ("4.", total_dataset.shape)
 
             # Just keep hyundai and kia
-            total_dataset = total_dataset[(total_dataset["manufacture_code"] == 101) | (total_dataset["manufacture_code"] == 102)]
-            print ("5.", total_dataset.shape)
+            #total_dataset = total_dataset[(total_dataset["manufacture_code"] == 101) | (total_dataset["manufacture_code"] == 102)]
+            #print ("5.", total_dataset.shape)
 
             # Just keep passenger cars
-            total_dataset = total_dataset[(total_dataset["car_type"] == "Passenger car")]
-            print ("6.", total_dataset.shape)
+            #total_dataset = total_dataset[(total_dataset["car_type"] == "Passenger car")]
+            #print ("6.", total_dataset.shape)
 
             # Remove the data points with sale duration = 0
             if label == "sale_duration":

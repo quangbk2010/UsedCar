@@ -952,7 +952,7 @@ class Tensor_NN (Dataset, Sklearn_model):
 
                 # Train data corresponding to the type of model
                 if using_car_ident_flag == 1:
-                    best_epoch = self.car2vect (train_data=train_data, train_label=train_label, test_data=test_data, test_label=test_label, test_car_ident=test_car_ident, d_ident=d_ident, d_embed=self.d_embed, d_remain=d_remain, no_neuron=self.no_neuron, no_neuron_embed=self.no_neuron_embed, loss_func="rel_err", model_path=model_path, y_predict_file_name=y_predict_file_name_, mean_error_file_name=mean_error_file_name_, x_ident_file_name=x_ident_file_name_, x_embed_file_name=x_embed_file_name_)
+                    best_epoch = self.car2vect (train_data=train_data, train_label=train_label, test_data=test_data, test_label=test_label, test_car_ident=test_car_ident, d_ident=d_ident, d_embed=self.d_embed, d_remain=d_remain, no_neuron=self.no_neuron, no_neuron_embed=self.no_neuron_embed, loss_func="rel_err", model_path=model_path, y_predict_file_name=y_predict_file_name_, mean_error_file_name=mean_error_file_name_, x_ident_file_name=x_ident_file_name_, x_embed_file_name=x_embed_file_name_, retrain=0)
                 else:
                     best_epoch = self.baseline (train_data=train_data, train_label=train_label, test_data=test_data, test_label=test_label, no_neuron=no_neuron, no_hidden_layer=no_hidden_layer, loss_func="rel_err", model_path=model_path, y_predict_file_name=y_predict_file_name_, mean_error_file_name=mean_error_file_name_)
 
@@ -1062,7 +1062,7 @@ class Tensor_NN (Dataset, Sklearn_model):
 
             tf.reset_default_graph ()
             os.system ("mkdir -p ../checkpoint/gb_NN/car2vect/regressor" + str (i+1))
-            best_epoch = self.car2vect (train_data=train_data, train_label=train_label_copy, test_data=test_data, test_label=test_label_copy, test_car_ident=test_car_ident, d_ident=d_ident, d_embed=self.d_embed, d_remain=d_remain, no_neuron=self.no_neuron, no_neuron_embed=self.no_neuron_embed, loss_func=loss_func, model_path=model_path, y_predict_file_name=y_predict_file_name_, mean_error_file_name=mean_error_file_name_, x_ident_file_name=x_ident_file_name_, x_embed_file_name=x_embed_file_name_)
+            best_epoch = self.car2vect (train_data=train_data, train_label=train_label_copy, test_data=test_data, test_label=test_label_copy, test_car_ident=test_car_ident, d_ident=d_ident, d_embed=self.d_embed, d_remain=d_remain, no_neuron=self.no_neuron, no_neuron_embed=self.no_neuron_embed, loss_func=loss_func, model_path=model_path, y_predict_file_name=y_predict_file_name_, mean_error_file_name=mean_error_file_name_, x_ident_file_name=x_ident_file_name_, x_embed_file_name=x_embed_file_name_, retrain=0)
             
             print ("Best epoch: ", best_epoch)
             bash_cmd = "cd ../checkpoint/gb_NN/car2vect/regressor" + str (i+1) + "; mkdir temp_save; rm temp_save/*; cp checkpoint *" + str (best_epoch) + "*" + " temp_save; cd ../../../../Code"
@@ -1112,27 +1112,45 @@ class Tensor_NN (Dataset, Sklearn_model):
             - Remove outliers of the total dataset: the data points in the training set with the corresponding relative error in top (removal_percent)%
             - Then, sort the dataset by actual_advertising_date
         """
-        #np_arr_file = "./Dataframe/[{0}]total_numpy_array_after_remove_outliers.h5_{1}".format (dataset_size, removal_percent)
-        np_arr_file = "./Dataframe/[{0}]total_numpy_array_after_remove_outliers".format (dataset_size)
-        key = "df"
-        if os.path.isfile (np_arr_file) == False:
-            print ("Remove outliers from the original array")
-            dataset = np.concatenate ((total_data, total_label, total_car_ident_code, act_ad_date, total_rel_err), axis=1)
-            len_dataset = total_data.shape[0]
-            remain_len = int (len_dataset * (1 - removal_percent /100.0)+0.5)
-            idx = np.argpartition (dataset[:,-1], remain_len)[:remain_len]
-            new_dataset = dataset [idx] # TODO: sort by adv_date
-            new_dataset = new_dataset [new_dataset[:, -2].argsort()]
-            new_dataset = new_dataset[:, :-2] # The new dataset will store car_ident_code at the end of the matrix
-            np.save (np_arr_file, new_dataset)
-            #df_dataset = pd.DataFrame (new_dataset)
-            #df_dataset.to_hdf (np_arr_file, key)       
-            return (new_dataset) 
-        else:
-            print ("Remove ouliers by reloading the preprocessed data:", np_arr_file)
-            return np.load (np_arr_file + ".npy")
-            #df_dataset = pd.read_hdf (np_arr_file, key)
-            #return (np.array (df_dataset))
+        # Save and load file take a lot of times, much more than the common way
+        #stored_np_arr_file = "./Dataframe/[{0}]total_numpy_array_after_remove_outliers.h5_{1}".format (dataset_size, removal_percent)
+        #removed_np_arr_file = "./Dataframe/[{0}]removed_numpy_array_after_remove_outliers.h5_{1}".format (dataset_size, removal_percent)
+        #stored_np_arr_file = "./Dataframe/[{0}]total_numpy_array_after_remove_outliers.h5_{1}".format (dataset_size, removal_percent)
+        #key = "df"
+        #if os.path.isfile (stored_np_arr_file + ".npy") == False:# or os.path.isfile (removed_np_arr_file) == False:
+
+        print ("Remove outliers from the original array")
+        dataset = np.concatenate ((total_data, total_label, total_car_ident_code, act_ad_date, total_rel_err), axis=1)
+
+        # Get the dataset after removing removal_percent no. data points with the highest relative error from the total dataset
+        len_dataset = total_data.shape[0]
+        remain_len = int (len_dataset * (1 - removal_percent / 100.0) + 0.5)
+
+        # Get the indexes of the dataset sorted by rel_err (the last column), (remain_len - 1) data points with rel_err < (remain_len)th data point's rel_err
+        new_idx = np.argpartition (dataset[:,-1], remain_len)
+
+        # The indexes of (remain_len) data points with the smallest rel_err.
+        idx = new_idx [:remain_len]
+        new_dataset = dataset [idx]
+
+        # Sort by adv_date
+        new_dataset = new_dataset [new_dataset[:, -2].argsort()]
+
+        # The new dataset will store car_ident_code at the end of the matrix
+        new_dataset = new_dataset[:, :-2] 
+
+        # Save the dataset into a binary file
+        #np.save (stored_np_arr_file, new_dataset)
+        # Convert numpy array to dataframe format and save the dataset into a pytable file (compressed)
+        #df_dataset = pd.DataFrame (new_dataset)
+        #df_dataset.to_hdf (stored_np_arr_file, key)       
+
+        return new_dataset 
+
+        #else:
+        #    print ("Remove ouliers by reloading the preprocessed data:", stored_np_arr_file)
+        #    return np.load (stored_np_arr_file + ".npy")
+        #    df_dataset = pd.read_hdf (stored_np_arr_file, key)
 
     def retrain_car2vect_after_remove_outliers (self, train_data, train_label, test_data, test_label, test_car_ident, d_ident, d_remain, y_predict_file_name, mean_error_file_name, x_ident_file_name, x_embed_file_name, dataset_size, removal_percent):
         train_data_remain = train_data [:, 0:d_remain]
@@ -1199,11 +1217,22 @@ class Tensor_NN (Dataset, Sklearn_model):
         np.savetxt (y_predict_file_name + "_train_after_remove_" + str (removal_percent), line, fmt="%.2f\t%.2f")"""
 
     def retrain_car2vect_from_total_set (self, total_data, total_label, total_car_ident_code, act_adv_date, d_ident, d_remain, y_predict_file_name, mean_error_file_name, x_ident_file_name, x_embed_file_name, dataset_size, removal_percent):
+        """
+            - Purpose: 
+                + Train the model car2vect with the whole dataset, and then remove the data points with removal_percent highest relative error.
+                + Sort the remaining dataset by act_adv_date, and divide it into train and test sets
+                + Retrain the model car3vect with the new training data (if the "retrain" flag == 1 -> use the initial weights from the 1st train, 
+                otherwise retrain from scratch.
+        """
+        #print (type (act_adv_date[0][0]))
+        #sys.exit (-1)
 
         # First train the model on the original train data (can remove a part of outliers previously)
         os.system ("mkdir -p ../checkpoint/rm_outliers_total_set_NN/car2vect/regressor1")
         model_path = self.model_dir + "/rm_outliers_total_set_NN/car2vect/regressor{0}/{1}_{2}_{3}_car2vect_{4}_{5}_total_set".format (1, dataset_size, self.model_name, self.label, self.no_neuron_embed, self.no_neuron)
+
         print ("\n\n===========Train total set")
+        # If comment the below line, you need to check the checkpoint file in regressor1 (it should be compatible with the dataset) 
         #self.train_car2vect(train_data=total_data, train_label=total_label, d_ident=d_ident, d_embed=self.d_embed, d_remain=d_remain, no_neuron=self.no_neuron, no_neuron_embed=self.no_neuron_embed, loss_func=self.loss_func, model_path=model_path)
         
         # Restore the trained model
@@ -1214,10 +1243,9 @@ class Tensor_NN (Dataset, Sklearn_model):
         ckpt_file = model_path
 
         (predicted_total_label, total_rmse_val, total_mae_val, total_relative_err_val, total_smape_val, total_arr_relative_err) = self.batch_computation_car2vect (5, total_data, total_label, d_ident, d_remain, meta_file, ckpt_file)
-        line = np.zeros (len (total_label), dtype=[('truth', float), ('pred', float)])
-        line['truth'] = total_label.reshape (total_label.shape[0])
-        line['pred'] = predicted_total_label.reshape (predicted_total_label.shape[0])
-        np.savetxt (y_predict_file_name + "_total_before_remove_outliers", line, fmt="%.2f\t%.2f")
+        total_np_arr = np.concatenate ((total_car_ident_code, act_adv_date, total_label, predicted_total_label), axis=1)
+        total_df = pd.DataFrame (total_np_arr)
+        np.savetxt (y_predict_file_name + "_total_before_remove_outliers", total_df, fmt="%d\t%d\t%d\t%d\t%s\t%.0f\t%d\t%.2f")
 
         # Remove outliers from the total dataset based on the relative error from the first train, on the other hand sort the dataset by act_adv_date
         # TODO: save this dataset
@@ -1256,7 +1284,7 @@ class Tensor_NN (Dataset, Sklearn_model):
         x_embed_file_name_ = x_embed_file_name + "_2"
         
         print ("\n\n===========Predictor2")
-        best_epoch = self.car2vect (train_data=new_train_data, train_label=new_train_label, test_data=new_test_data, test_label=new_test_label, test_car_ident=new_test_car_ident, d_ident=d_ident, d_embed=self.d_embed, d_remain=d_remain, no_neuron=self.no_neuron, no_neuron_embed=self.no_neuron_embed, loss_func=self.loss_func, model_path=model_path, y_predict_file_name=y_predict_file_name_, mean_error_file_name=mean_error_file_name_, x_ident_file_name=x_ident_file_name_, x_embed_file_name=x_embed_file_name_, retrain=0) # if use retrain=1 -> initialize weights from the previous model
+        best_epoch = self.car2vect (train_data=new_train_data, train_label=new_train_label, test_data=new_test_data, test_label=new_test_label, test_car_ident=new_test_car_ident, d_ident=d_ident, d_embed=self.d_embed, d_remain=d_remain, no_neuron=self.no_neuron, no_neuron_embed=self.no_neuron_embed, loss_func=self.loss_func, model_path=model_path, y_predict_file_name=y_predict_file_name_, mean_error_file_name=mean_error_file_name_, x_ident_file_name=x_ident_file_name_, x_embed_file_name=x_embed_file_name_, retrain=1) # if use retrain=1 -> initialize weights from the previous model
         print ("Best epoch: ", best_epoch)
 
     def batch_computation_car2vect  (self, no_batch, train_data, train_label, d_ident, d_remain, meta_file, ckpt_file):
@@ -1431,7 +1459,7 @@ class Tensor_NN (Dataset, Sklearn_model):
             # Training
             os.system ("mkdir -p ../checkpoint/bagging_NN/car2vect/regressor" + str (i+1)) # TODO: move this line to Main.py
             
-            best_epoch = self.car2vect (train_data=train_data, train_label=train_label, test_data=test_data, test_label=test_label, test_car_ident=test_car_ident, d_ident=d_ident, d_embed=self.d_embed, d_remain=d_remain, no_neuron=self.no_neuron, no_neuron_embed=self.no_neuron_embed, loss_func="rel_err", model_path=model_path, y_predict_file_name=y_predict_file_name_, mean_error_file_name=mean_error_file_name_, x_ident_file_name=x_ident_file_name_, x_embed_file_name=x_embed_file_name_)
+            best_epoch = self.car2vect (train_data=train_data, train_label=train_label, test_data=test_data, test_label=test_label, test_car_ident=test_car_ident, d_ident=d_ident, d_embed=self.d_embed, d_remain=d_remain, no_neuron=self.no_neuron, no_neuron_embed=self.no_neuron_embed, loss_func="rel_err", model_path=model_path, y_predict_file_name=y_predict_file_name_, mean_error_file_name=mean_error_file_name_, x_ident_file_name=x_ident_file_name_, x_embed_file_name=x_embed_file_name_, retrain=0)
             bash_cmd = "cd ../checkpoint/bagging_NN/car2vect/regressor" + str (i+1) + "; mkdir temp_save; rm temp_save/*; cp checkpoint *_" + str (best_epoch) + ".*" + " temp_save; cd ../../../../Code"
             print ("bash_cmd:", bash_cmd)
             os.system (bash_cmd)
