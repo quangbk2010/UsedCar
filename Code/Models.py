@@ -452,7 +452,7 @@ class Tensor_NN (Dataset, Sklearn_model):
         """
         train_data_remain = train_data [:, 0:d_remain]
         train_data_ident = train_data [:, d_remain:]
-        (init_w_hid_embed_1_val, init_bias_hid_embed_1_val, init_w_out_embed_val, init_bias_out_embed_val, init_w_hid_main_1_val, init_bias_hid_main_1_val, init_w_out_main_val, init_bias_out_main_val) = self.restore_weights_car2vect (train_data_ident, train_data_remain, train_label, meta_file, ckpt_file) # TODO: ???why if I leave this line after placeholder initialization, it causes the error: some nodes: x_ident_1, x_remain_1, Y_1, phase_train_1 is created in the graph?
+        (init_w_hid_embed_1_val, init_bias_hid_embed_1_val, init_w_out_embed_val, init_bias_out_embed_val, init_w_hid_main_1_val, init_bias_hid_main_1_val, init_w_out_main_val, init_bias_out_main_val) = self.restore_weights_car2vect (train_data_ident, train_data_remain, train_label, meta_file, ckpt_file) # TODO: ???why if I leave this line after placeholder initialization, it causes the error: some nodes: x_ident_1, x_remain_1, Y_1, phase_train_1 will be created in the graph?
 
 
         x_ident = tf.placeholder(tf.float32, [None, d_ident], name="x_ident")
@@ -615,6 +615,7 @@ class Tensor_NN (Dataset, Sklearn_model):
         rmse = tf.sqrt (tf.reduce_mean(tf.squared_difference(prediction, Y_)), name = "rmse")
         mae = tf.reduce_mean (tf.abs (prediction - Y_), name = "mae")
         relative_err = tf.multiply (tf.reduce_mean (tf.divide (tf.abs (prediction - Y_), (Y_))), 100, name = "relative_err") 
+        #median_rel_err = tf.contrib.distributions.percentile (tf.divide (tf.abs (prediction - Y_), (Y_)), 50.0, name = "median_rel_err")
         smape = tf.multiply (tf.reduce_mean (tf.divide (tf.abs (prediction - Y_), tf.abs (Y_) + tf.abs (prediction) )), 100, name = "smape")
 
         
@@ -1232,7 +1233,7 @@ class Tensor_NN (Dataset, Sklearn_model):
 
         print ("\n\n===========Train total set")
         # If comment the below line, you need to check the checkpoint file in regressor1 (it should be compatible with the dataset) 
-        self.train_car2vect(train_data=total_data, train_label=total_label, d_ident=d_ident, d_embed=self.d_embed, d_remain=d_remain, no_neuron=self.no_neuron, no_neuron_embed=self.no_neuron_embed, loss_func="rel_err", model_path=model_path)
+        #self.train_car2vect(train_data=total_data, train_label=total_label, d_ident=d_ident, d_embed=self.d_embed, d_remain=d_remain, no_neuron=self.no_neuron, no_neuron_embed=self.no_neuron_embed, loss_func="rel_err", model_path=model_path)
         
         # Restore the trained model
         # When restore model with the whole dataset, it can cause the error: Resource exhausted 
