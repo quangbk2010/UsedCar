@@ -138,6 +138,7 @@ class Tensor_NN (Dataset, Sklearn_model):
         self.scale_label = args.scale_label
         self.label = args.label
         self.num_regressor = args.num_regressor
+        self.sample_ratio = args.sample_ratio
         
         self.model_dir = args.model_dir
         self.model_name = args.model_name
@@ -405,7 +406,7 @@ class Tensor_NN (Dataset, Sklearn_model):
     def build_car2vect_model (self, no_neuron, no_neuron_embed, d_ident, d_embed, d_remain):
         """
             - Args:
-                + no_neuron: the number of neuron in 'main' hiddenlayers.
+                + no_neuron: the number of neuron n 'main' hiddenlayers.
                 + no_neuron_embed: the number of neuron in 'embedding' hiddenlayers.
                 + d_ident: the dimension of the one-hot vector of a car identification (manufacture_code, ..., rating_code)
                 + d_remain: the dimension of the remaining features (after one-hot encoding)
@@ -440,7 +441,7 @@ class Tensor_NN (Dataset, Sklearn_model):
         output3 = slim.dropout (output3, self.dropout, scope='dropout3')
         #output4 = slim.fully_connected(output3, no_neuron, scope='hidden_main_2', activation_fn=tf.nn.relu)
         #output5 = slim.fully_connected(output4, no_neuron, scope='hidden_main_3', activation_fn=tf.nn.relu)
-        prediction = slim.fully_connected(output3, 1, scope='output_main', activation_fn=tf.nn.relu) #None) # 1-dimension of output
+        prediction = slim.fully_connected(output3, 1, scope='output_main')#, activation_fn=tf.nn.relu) #None) # 1-dimension of output NOTE: only remove relu activation function in the last layer if using Gradient Boosting, because the differece can be negative
         tf.identity (prediction, name="prediction")
 
         return x_ident, x_remain, Y, x_embed, prediction, phase_train
@@ -451,6 +452,8 @@ class Tensor_NN (Dataset, Sklearn_model):
         """
         train_data_remain = train_data [:, 0:d_remain]
         train_data_ident = train_data [:, d_remain:]
+        (init_w_hid_embed_1_val, init_bias_hid_embed_1_val, init_w_out_embed_val, init_bias_out_embed_val, init_w_hid_main_1_val, init_bias_hid_main_1_val, init_w_out_main_val, init_bias_out_main_val) = self.restore_weights_car2vect (train_data_ident, train_data_remain, train_label, meta_file, ckpt_file) # TODO: ???why if I leave this line after placeholder initialization, it causes the error: some nodes: x_ident_1, x_remain_1, Y_1, phase_train_1 is created in the graph?
+
 
         x_ident = tf.placeholder(tf.float32, [None, d_ident], name="x_ident")
         x_remain = tf.placeholder(tf.float32, [None, d_remain], name="x_remain")
@@ -459,8 +462,6 @@ class Tensor_NN (Dataset, Sklearn_model):
 
         print ("build_car2vect_model: d_ident:", d_ident, "d_remain:", d_remain, "d_embed:", d_embed, "no_neuron_embed:", no_neuron_embed, "no_neuron_main:", no_neuron)
         
-        (init_w_hid_embed_1_val, init_bias_hid_embed_1_val, init_w_out_embed_val, init_bias_out_embed_val, init_w_hid_main_1_val, init_bias_hid_main_1_val, init_w_out_main_val, init_bias_out_main_val) = self.restore_weights_car2vect (train_data_ident, train_data_remain, train_label, meta_file, ckpt_file)
-
         output1 = slim.fully_connected (x_ident, no_neuron_embed, scope='hidden_embed1', activation_fn=tf.nn.relu, weights_initializer=tf.constant_initializer (init_w_hid_embed_1_val), biases_initializer=tf.constant_initializer (init_bias_hid_embed_1_val)) #None) #
         output1 = slim.dropout (output1, self.dropout, scope='dropout1')
         x_embed = slim.fully_connected (output1, d_embed, scope='output_embed', activation_fn=None, weights_initializer=tf.constant_initializer (init_w_out_embed_val), biases_initializer=tf.constant_initializer (init_bias_out_embed_val)) 
@@ -490,23 +491,22 @@ class Tensor_NN (Dataset, Sklearn_model):
 
             # Now, access the operators that we want to run
             prediction = graph.get_tensor_by_name ("prediction:0")
-            """rmse= graph.get_tensor_by_name ("rmse:0")
+            rmse= graph.get_tensor_by_name ("rmse:0")
             mae = graph.get_tensor_by_name ("mae:0")
             relative_err = graph.get_tensor_by_name ("relative_err:0")
-            smape = graph.get_tensor_by_name ("smape:0")"""
+            smape = graph.get_tensor_by_name ("smape:0")
 
             sum_se= graph.get_tensor_by_name ("sum_se:0")
             sum_ae = graph.get_tensor_by_name ("sum_ae:0")
             sum_rel_err = graph.get_tensor_by_name ("sum_rel_err:0")
             arr_rel_err = graph.get_tensor_by_name ("arr_rel_err:0")
             sum_smape = graph.get_tensor_by_name ("sum_smape:0")
-            
             # Feed data
-            #predicted_y, rmse_val, mae_val, relative_err_val, smape_val, sum_se_val, sum_ae_val, sum_rel_err_val, sum_smape_val , arr_rel_err_val = sess.run([prediction, rmse, mae, relative_err, smape, sum_se, sum_ae, sum_rel_err, sum_smape, arr_rel_err], feed_dict)
-            predicted_y, sum_se_val, sum_ae_val, sum_rel_err_val, sum_smape_val , arr_rel_err_val = sess.run([prediction, sum_se, sum_ae, sum_rel_err, sum_smape, arr_rel_err], feed_dict)
             if (train_flag == 0):
+                predicted_y, rmse_val, mae_val, relative_err_val, smape_val = sess.run([prediction, rmse, mae, relative_err, smape], feed_dict)
                 return (predicted_y, rmse_val, mae_val, relative_err_val, smape_val)
             else:
+                predicted_y, sum_se_val, sum_ae_val, sum_rel_err_val, sum_smape_val , arr_rel_err_val = sess.run([prediction, sum_se, sum_ae, sum_rel_err, sum_smape, arr_rel_err], feed_dict)
                 return (predicted_y, sum_se_val, sum_ae_val, sum_rel_err_val, sum_smape_val, arr_rel_err_val)
 
 
@@ -554,13 +554,11 @@ class Tensor_NN (Dataset, Sklearn_model):
 
             ###########
             else:
-                #self.learning_rate *= 10
+                self.learning_rate /= 10
                 print ("=======new learning_rate:", self.learning_rate)
-                pre_model_path = self.model_dir + "/rm_outliers_total_set_NN/car2vect/regressor1/full_" + self.model_name  + "_" + self.label  + "_car2vect_" + str (self.no_neuron_embed) + "_" + str (self.no_neuron) + "_total_set"
+                pre_model_path = self.model_dir + "/rm_outliers_total_set_NN/car2vect/regressor1/full_{0}_{1}_car2vect_{2}_{3}_total_set".format (self.model_name, self.label, self.no_neuron_embed, self.no_neuron)
                 meta_file = pre_model_path + ".meta"
                 ckpt_file = pre_model_path 
-                #meta_file = pre_model_path + "_" + str (33) + ".meta"
-                #ckpt_file = pre_model_path + "_" + str (33) 
                 x_ident, x_remain, Y, x_embed, prediction, phase_train = self.build_car2vect_model_retrained (no_neuron=no_neuron, no_neuron_embed=no_neuron_embed, d_ident=d_ident, d_embed=d_embed, d_remain=d_remain, train_data=train_data, train_label=train_label, meta_file=meta_file, ckpt_file=ckpt_file)
             ###########
 
@@ -770,13 +768,13 @@ class Tensor_NN (Dataset, Sklearn_model):
 
                 # Save predicted label and determine the best epoch
                 if loss_func == "rel_err":
-                    threshold_err = 7#6.5 #9.3 #8.5 #
+                    threshold_err = 7.5#7#6.5 #9.3 #8.5 #
                     epoch_test_err_val = epoch_test_relative_err_val
                 elif loss_func == "mae":
                     threshold_err = 150
                     epoch_test_err_val = epoch_test_mae_val
                 elif loss_func == "mse":
-                    threshold_err = 200 #140
+                    threshold_err = 170 #140
                     epoch_test_err_val = epoch_test_rmse_val
 
                 #if (epoch + 1) % 1 == 0:
@@ -1029,7 +1027,7 @@ class Tensor_NN (Dataset, Sklearn_model):
             line['pred'] = predicted_test_label.reshape (predicted_test_label.shape[0])
             np.savetxt (y_predict_file_name_ + "_final" + str(i), line, fmt="%.2f\t%.2f")
 
-    def gradient_boosting_NN_car2vect (self, train_data, train_label, test_data, test_label, test_car_ident, d_ident, d_remain, y_predict_file_name, mean_error_file_name, x_ident_file_name, x_embed_file_name, dataset_size):
+    def gradient_boosting_NN_car2vect (self, train_data, train_label, test_data, test_label, test_car_ident, d_ident, d_remain, y_predict_file_name, mean_error_file_name, x_ident_file_name, x_embed_file_name, dataset_size, retrain):
         """
             - Purpose: Apply Gradient Boosting (a kind of ensemble method) using car2vect NN.
         """
@@ -1046,9 +1044,13 @@ class Tensor_NN (Dataset, Sklearn_model):
             print ("\n\n==============regressor%d" %(i+1))
             if i == 0:
                 loss_func = "rel_err"
+                if retrain == 2: # In case of retrain model after removing outliers from the 1st train, retrain_flag = 2, but it should be 1 in the 1st regressor if using Gradient Boosting.
+                    retrain_ = 1
             else:
                 loss_func = self.loss_func
-            model_path = self.model_dir + "/gb_NN/car2vect/regressor" + str (i+1) + "/" + dataset_size + "_" + self.model_name  + "_" + self.label  + "_car2vect_" + str (self.no_neuron_embed) + "_" + str (self.no_neuron) + "_" + loss_func
+                if retrain == 2: # In case of retrain model after removing outliers from the 1st train, retrain_flag = 2, but it should be 0 after the 1st regressor if using Gradient Boosting.
+                    retrain_ = 0
+            model_path = self.model_dir + "/gb_NN/car2vect/regressor{0}/{1}_{2}_{3}_car2vect_{4}_{5}_{6}".format (i+1, dataset_size, self.model_name, self.label, self.no_neuron_embed, self.no_neuron, loss_func)
             y_predict_file_name_ = y_predict_file_name + "_" + str (i+1)
             mean_error_file_name_ = mean_error_file_name + "_" + str (i+1)
             x_ident_file_name_ = x_ident_file_name + "_" + str (i+1)
@@ -1062,7 +1064,7 @@ class Tensor_NN (Dataset, Sklearn_model):
 
             tf.reset_default_graph ()
             os.system ("mkdir -p ../checkpoint/gb_NN/car2vect/regressor" + str (i+1))
-            best_epoch = self.car2vect (train_data=train_data, train_label=train_label_copy, test_data=test_data, test_label=test_label_copy, test_car_ident=test_car_ident, d_ident=d_ident, d_embed=self.d_embed, d_remain=d_remain, no_neuron=self.no_neuron, no_neuron_embed=self.no_neuron_embed, loss_func=loss_func, model_path=model_path, y_predict_file_name=y_predict_file_name_, mean_error_file_name=mean_error_file_name_, x_ident_file_name=x_ident_file_name_, x_embed_file_name=x_embed_file_name_, retrain=0)
+            best_epoch = self.car2vect (train_data=train_data, train_label=train_label_copy, test_data=test_data, test_label=test_label_copy, test_car_ident=test_car_ident, d_ident=d_ident, d_embed=self.d_embed, d_remain=d_remain, no_neuron=self.no_neuron, no_neuron_embed=self.no_neuron_embed, loss_func=loss_func, model_path=model_path, y_predict_file_name=y_predict_file_name_, mean_error_file_name=mean_error_file_name_, x_ident_file_name=x_ident_file_name_, x_embed_file_name=x_embed_file_name_, retrain=retrain_)
             
             print ("Best epoch: ", best_epoch)
             bash_cmd = "cd ../checkpoint/gb_NN/car2vect/regressor" + str (i+1) + "; mkdir temp_save; rm temp_save/*; cp checkpoint *" + str (best_epoch) + "*" + " temp_save; cd ../../../../Code"
@@ -1076,10 +1078,10 @@ class Tensor_NN (Dataset, Sklearn_model):
             (predicted_train_label, train_rmse_val, train_mae_val, train_relative_err_val, train_smape_val, total_arr_relative_err) = self.batch_computation_car2vect (5, train_data, train_label_copy, d_ident, d_remain, meta_file, ckpt_file)
 
             # TODO: when restore model with train data is imported -> it will return sum_se, sum_ae, ... -> need to get the average or sqrt
-            # If the lenght of train data is small as the number of train data in case of testing only Hyundai, Kia -> can use train_flag=0
+            # If the length of train data is small as the number of train data in case of testing only Hyundai, Kia -> can use train_flag=0
             #(predicted_train_label, train_rmse_val, train_mae_val, train_relative_err_val, train_smape_val) = self.restore_model_car2vect (train_data_ident, train_data_remain, train_label_copy, meta_file, ckpt_file, train_flag=1)
             (predicted_test_label, test_rmse_val, test_mae_val, test_relative_err_val, test_smape_val) = self.restore_model_car2vect (test_data_ident, test_data_remain, test_label_copy, meta_file, ckpt_file, train_flag=0)
-            print (predicted_test_label[:10], test_label_copy[:10])
+            print ("(truth, prediction):", np.c_[test_label_copy[:10], predicted_test_label[:10]])
             print ("=================================")
 
             list_predicted_test_label.append (predicted_test_label)
@@ -1216,7 +1218,7 @@ class Tensor_NN (Dataset, Sklearn_model):
         line['pred'] = new_predicted_train_label.reshape (new_predicted_train_label.shape[0])
         np.savetxt (y_predict_file_name + "_train_after_remove_" + str (removal_percent), line, fmt="%.2f\t%.2f")"""
 
-    def retrain_car2vect_from_total_set (self, total_data, total_label, total_car_ident_code, act_adv_date, d_ident, d_remain, y_predict_file_name, mean_error_file_name, x_ident_file_name, x_embed_file_name, dataset_size, removal_percent):
+    def retrain_car2vect_from_total_set (self, total_data, total_label, total_car_ident_code, act_adv_date, d_ident, d_remain, y_predict_file_name, mean_error_file_name, x_ident_file_name, x_embed_file_name, dataset_size, removal_percent, ensemble_flag):
         """
             - Purpose: 
                 + Train the model car2vect with the whole dataset, and then remove the data points with removal_percent highest relative error.
@@ -1224,16 +1226,13 @@ class Tensor_NN (Dataset, Sklearn_model):
                 + Retrain the model car3vect with the new training data (if the "retrain" flag == 1 -> use the initial weights from the 1st train, 
                 otherwise retrain from scratch.
         """
-        #print (type (act_adv_date[0][0]))
-        #sys.exit (-1)
-
         # First train the model on the original train data (can remove a part of outliers previously)
         os.system ("mkdir -p ../checkpoint/rm_outliers_total_set_NN/car2vect/regressor1")
         model_path = self.model_dir + "/rm_outliers_total_set_NN/car2vect/regressor{0}/{1}_{2}_{3}_car2vect_{4}_{5}_total_set".format (1, dataset_size, self.model_name, self.label, self.no_neuron_embed, self.no_neuron)
 
         print ("\n\n===========Train total set")
         # If comment the below line, you need to check the checkpoint file in regressor1 (it should be compatible with the dataset) 
-        #self.train_car2vect(train_data=total_data, train_label=total_label, d_ident=d_ident, d_embed=self.d_embed, d_remain=d_remain, no_neuron=self.no_neuron, no_neuron_embed=self.no_neuron_embed, loss_func=self.loss_func, model_path=model_path)
+        self.train_car2vect(train_data=total_data, train_label=total_label, d_ident=d_ident, d_embed=self.d_embed, d_remain=d_remain, no_neuron=self.no_neuron, no_neuron_embed=self.no_neuron_embed, loss_func="rel_err", model_path=model_path)
         
         # Restore the trained model
         # When restore model with the whole dataset, it can cause the error: Resource exhausted 
@@ -1275,17 +1274,35 @@ class Tensor_NN (Dataset, Sklearn_model):
         print ("New test dataset:", new_test_data.shape, new_test_label.shape)
         print ("New test_car_ident:", new_test_car_ident.shape)
 
-        tf.reset_default_graph ()
-        os.system ("mkdir -p ../checkpoint/rm_outliers_total_set_NN/car2vect/regressor2")
-        model_path = self.model_dir + "/rm_outliers_total_set_NN/car2vect/regressor{0}/{1}_{2}_{3}_car2vect_{4}_{5}_total_set".format (2, dataset_size, self.model_name, self.label, self.no_neuron_embed, self.no_neuron)
-        y_predict_file_name_ = y_predict_file_name + "_2"
-        mean_error_file_name_ = mean_error_file_name + "_2"
-        x_ident_file_name_ = x_ident_file_name + "_2"
-        x_embed_file_name_ = x_embed_file_name + "_2"
-        
-        print ("\n\n===========Predictor2")
-        best_epoch = self.car2vect (train_data=new_train_data, train_label=new_train_label, test_data=new_test_data, test_label=new_test_label, test_car_ident=new_test_car_ident, d_ident=d_ident, d_embed=self.d_embed, d_remain=d_remain, no_neuron=self.no_neuron, no_neuron_embed=self.no_neuron_embed, loss_func=self.loss_func, model_path=model_path, y_predict_file_name=y_predict_file_name_, mean_error_file_name=mean_error_file_name_, x_ident_file_name=x_ident_file_name_, x_embed_file_name=x_embed_file_name_, retrain=1) # if use retrain=1 -> initialize weights from the previous model
-        print ("Best epoch: ", best_epoch)
+        if ensemble_flag == 0:
+            tf.reset_default_graph ()
+            os.system ("mkdir -p ../checkpoint/rm_outliers_total_set_NN/car2vect/regressor2")
+            model_path = self.model_dir + "/rm_outliers_total_set_NN/car2vect/regressor{0}/{1}_{2}_{3}_car2vect_{4}_{5}_total_set".format (2, dataset_size, self.model_name, self.label, self.no_neuron_embed, self.no_neuron)
+            y_predict_file_name_ = y_predict_file_name + "_2"
+            mean_error_file_name_ = mean_error_file_name + "_2"
+            x_ident_file_name_ = x_ident_file_name + "_2"
+            x_embed_file_name_ = x_embed_file_name + "_2"
+            
+            print ("\n\n===========Predictor2")
+            best_epoch = self.car2vect (train_data=new_train_data, train_label=new_train_label, test_data=new_test_data, test_label=new_test_label, test_car_ident=new_test_car_ident, d_ident=d_ident, d_embed=self.d_embed, d_remain=d_remain, no_neuron=self.no_neuron, no_neuron_embed=self.no_neuron_embed, loss_func=self.loss_func, model_path=model_path, y_predict_file_name=y_predict_file_name_, mean_error_file_name=mean_error_file_name_, x_ident_file_name=x_ident_file_name_, x_embed_file_name=x_embed_file_name_, retrain=1) # if use retrain=1 -> initialize weights from the previous model
+            print ("Best epoch: ", best_epoch)
+
+            """#####################
+            meta_file = model_path + "_" + str (best_epoch) + ".meta"
+            ckpt_file = model_path + "_" + str (best_epoch) 
+            test_data_remain = new_test_data [:, 0:d_remain]
+            test_data_ident = new_test_data [:, d_remain:]
+            (predicted_test_label, test_rmse_val, test_mae_val, test_relative_err_val, test_smape_val) = self.restore_model_car2vect (test_data_ident, test_data_remain, new_test_label, meta_file, ckpt_file, train_flag=0)
+            #####################"""
+
+        elif ensemble_flag == 2:
+           self.gradient_boosting_NN_car2vect (new_train_data, new_train_label, new_test_data, new_test_label, new_test_car_ident, d_ident, d_remain, y_predict_file_name, mean_error_file_name, x_ident_file_name, x_embed_file_name, dataset_size, retrain=2) 
+
+        elif ensemble_flag == 5:
+            self.bagging_NN_car2vect (new_train_data, new_train_label, new_test_data, new_test_label, new_test_car_ident, d_ident, d_remain, y_predict_file_name, mean_error_file_name, x_ident_file_name, x_embed_file_name, dataset_size, self.sample_ratio, retrain=1)
+
+        else:
+            raise ValueError ("[retrain_car2vect_from_total_set] This model is not supported!")
 
     def batch_computation_car2vect  (self, no_batch, train_data, train_label, d_ident, d_remain, meta_file, ckpt_file):
         train_data_remain = train_data [:, 0:d_remain]
@@ -1432,7 +1449,7 @@ class Tensor_NN (Dataset, Sklearn_model):
             line['pred'] = predicted_test_label.reshape (predicted_test_label.shape[0])
             np.savetxt (y_predict_file_name_ + "_final" + str(i), line, fmt="%.2f\t%.2f")
 
-    def bagging_NN_car2vect (self, train_data, train_label, test_data, test_label, test_car_ident, d_ident, d_remain, y_predict_file_name, mean_error_file_name, x_ident_file_name, x_embed_file_name, dataset_size, ratio):
+    def bagging_NN_car2vect (self, train_data, train_label, test_data, test_label, test_car_ident, d_ident, d_remain, y_predict_file_name, mean_error_file_name, x_ident_file_name, x_embed_file_name, dataset_size, ratio, retrain):
         """
             - Purpose: Apply bagging (a kind of ensemble method) using car2vect.
         """
@@ -1446,8 +1463,7 @@ class Tensor_NN (Dataset, Sklearn_model):
         for i in range (self.num_regressor):
             print ("\n\n==============regressor%d" %(i+1))
             (X_train, y_train) = self.subsample (train_data, train_label, ratio)
-            #model_path = self.model_dir + "/bagging_NN/car2vect/regressor" + str (i+1) + "/" + dataset_size + "_" + self.model_name  + "_" + self.label  + "_baseline_" + str (self.no_neuron) + "_" + str (self.no_hidden_layer) #TODO: replace this line by the below line
-            model_path = self.model_dir + "/bagging_NN/car2vect/regressor" + str (i+1) + "/" + dataset_size + "_" + self.model_name  + "_" + self.label  + "_car2vect_" + str (self.no_neuron_embed) + "_" + str (self.no_neuron)
+            model_path = self.model_dir + "/bagging_NN/car2vect/regressor{0}/{1}_{2}_{3}_car2vect_{4}_{5}".format (i+1, dataset_size, self.model_name, self.label, self.no_neuron_embed, self.no_neuron)
             y_predict_file_name_ = y_predict_file_name + "_" + str (i+1)
             mean_error_file_name_ = mean_error_file_name + "_" + str (i+1)
             x_ident_file_name_ = x_ident_file_name + "_" + str (i+1)
@@ -1459,7 +1475,7 @@ class Tensor_NN (Dataset, Sklearn_model):
             # Training
             os.system ("mkdir -p ../checkpoint/bagging_NN/car2vect/regressor" + str (i+1)) # TODO: move this line to Main.py
             
-            best_epoch = self.car2vect (train_data=train_data, train_label=train_label, test_data=test_data, test_label=test_label, test_car_ident=test_car_ident, d_ident=d_ident, d_embed=self.d_embed, d_remain=d_remain, no_neuron=self.no_neuron, no_neuron_embed=self.no_neuron_embed, loss_func="rel_err", model_path=model_path, y_predict_file_name=y_predict_file_name_, mean_error_file_name=mean_error_file_name_, x_ident_file_name=x_ident_file_name_, x_embed_file_name=x_embed_file_name_, retrain=0)
+            best_epoch = self.car2vect (train_data=train_data, train_label=train_label, test_data=test_data, test_label=test_label, test_car_ident=test_car_ident, d_ident=d_ident, d_embed=self.d_embed, d_remain=d_remain, no_neuron=self.no_neuron, no_neuron_embed=self.no_neuron_embed, loss_func="rel_err", model_path=model_path, y_predict_file_name=y_predict_file_name_, mean_error_file_name=mean_error_file_name_, x_ident_file_name=x_ident_file_name_, x_embed_file_name=x_embed_file_name_, retrain=retrain)
             bash_cmd = "cd ../checkpoint/bagging_NN/car2vect/regressor" + str (i+1) + "; mkdir temp_save; rm temp_save/*; cp checkpoint *_" + str (best_epoch) + ".*" + " temp_save; cd ../../../../Code"
             print ("bash_cmd:", bash_cmd)
             os.system (bash_cmd)
