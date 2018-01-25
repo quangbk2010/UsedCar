@@ -490,9 +490,10 @@ class Tensor_NN (Dataset, Sklearn_model):
             feed_dict = {x_ident:x_ident_, x_remain:x_remain_, Y:label}
 
             # Now, access the operators that we want to run
+            prediction = graph.get_tensor_by_name ("prediction:0")
+
             # And feed data
             if (train_flag == 0):
-                prediction = graph.get_tensor_by_name ("prediction:0")
                 rmse= graph.get_tensor_by_name ("rmse:0")
                 mae = graph.get_tensor_by_name ("mae:0")
                 relative_err = graph.get_tensor_by_name ("relative_err:0")
