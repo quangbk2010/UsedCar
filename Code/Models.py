@@ -490,22 +490,23 @@ class Tensor_NN (Dataset, Sklearn_model):
             feed_dict = {x_ident:x_ident_, x_remain:x_remain_, Y:label}
 
             # Now, access the operators that we want to run
-            prediction = graph.get_tensor_by_name ("prediction:0")
-            rmse= graph.get_tensor_by_name ("rmse:0")
-            mae = graph.get_tensor_by_name ("mae:0")
-            relative_err = graph.get_tensor_by_name ("relative_err:0")
-            smape = graph.get_tensor_by_name ("smape:0")
-
-            sum_se= graph.get_tensor_by_name ("sum_se:0")
-            sum_ae = graph.get_tensor_by_name ("sum_ae:0")
-            sum_rel_err = graph.get_tensor_by_name ("sum_rel_err:0")
-            arr_rel_err = graph.get_tensor_by_name ("arr_rel_err:0")
-            sum_smape = graph.get_tensor_by_name ("sum_smape:0")
-            # Feed data
+            # And feed data
             if (train_flag == 0):
+                prediction = graph.get_tensor_by_name ("prediction:0")
+                rmse= graph.get_tensor_by_name ("rmse:0")
+                mae = graph.get_tensor_by_name ("mae:0")
+                relative_err = graph.get_tensor_by_name ("relative_err:0")
+                smape = graph.get_tensor_by_name ("smape:0")
+
                 predicted_y, rmse_val, mae_val, relative_err_val, smape_val = sess.run([prediction, rmse, mae, relative_err, smape], feed_dict)
                 return (predicted_y, rmse_val, mae_val, relative_err_val, smape_val)
             else:
+                sum_se= graph.get_tensor_by_name ("sum_se:0")
+                sum_ae = graph.get_tensor_by_name ("sum_ae:0")
+                sum_rel_err = graph.get_tensor_by_name ("sum_rel_err:0")
+                arr_rel_err = graph.get_tensor_by_name ("arr_rel_err:0")
+                sum_smape = graph.get_tensor_by_name ("sum_smape:0")
+
                 predicted_y, sum_se_val, sum_ae_val, sum_rel_err_val, sum_smape_val , arr_rel_err_val = sess.run([prediction, sum_se, sum_ae, sum_rel_err, sum_smape, arr_rel_err], feed_dict)
                 return (predicted_y, sum_se_val, sum_ae_val, sum_rel_err_val, sum_smape_val, arr_rel_err_val)
 
@@ -1242,7 +1243,7 @@ class Tensor_NN (Dataset, Sklearn_model):
         meta_file = model_path + ".meta"
         ckpt_file = model_path
 
-        (predicted_total_label, total_rmse_val, total_mae_val, total_relative_err_val, total_smape_val, total_arr_relative_err) = self.batch_computation_car2vect (5, total_data, total_label, d_ident, d_remain, meta_file, ckpt_file)
+        (predicted_total_label, total_rmse_val, total_mae_val, total_relative_err_val, total_smape_val, total_arr_relative_err) = self.batch_computtion_car2vect (5, total_data, total_label, d_ident, d_remain, meta_file, ckpt_file)
         total_np_arr = np.concatenate ((total_car_ident_code, act_adv_date, total_label, predicted_total_label), axis=1)
         total_df = pd.DataFrame (total_np_arr)
         np.savetxt (y_predict_file_name + "_total_before_remove_outliers", total_df, fmt="%d\t%d\t%d\t%d\t%s\t%.0f\t%d\t%.2f")
