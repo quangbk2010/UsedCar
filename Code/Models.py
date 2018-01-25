@@ -1243,7 +1243,7 @@ class Tensor_NN (Dataset, Sklearn_model):
         meta_file = model_path + ".meta"
         ckpt_file = model_path
 
-        (predicted_total_label, total_rmse_val, total_mae_val, total_relative_err_val, total_smape_val, total_arr_relative_err) = self.batch_computtion_car2vect (5, total_data, total_label, d_ident, d_remain, meta_file, ckpt_file)
+        (predicted_total_label, total_rmse_val, total_mae_val, total_relative_err_val, total_smape_val, total_arr_relative_err) = self.batch_computation_car2vect (5, total_data, total_label, d_ident, d_remain, meta_file, ckpt_file)
         total_np_arr = np.concatenate ((total_car_ident_code, act_adv_date, total_label, predicted_total_label), axis=1)
         total_df = pd.DataFrame (total_np_arr)
         np.savetxt (y_predict_file_name + "_total_before_remove_outliers", total_df, fmt="%d\t%d\t%d\t%d\t%s\t%.0f\t%d\t%.2f")
