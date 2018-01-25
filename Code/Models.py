@@ -441,7 +441,7 @@ class Tensor_NN (Dataset, Sklearn_model):
         output3 = slim.dropout (output3, self.dropout, scope='dropout3')
         #output4 = slim.fully_connected(output3, no_neuron, scope='hidden_main_2', activation_fn=tf.nn.relu)
         #output5 = slim.fully_connected(output4, no_neuron, scope='hidden_main_3', activation_fn=tf.nn.relu)
-        prediction = slim.fully_connected(output3, 1, scope='output_main')#, activation_fn=tf.nn.relu) #None) # 1-dimension of output NOTE: only remove relu activation function in the last layer if using Gradient Boosting, because the differece can be negative
+        prediction = slim.fully_connected(output3, 1, scope='output_main', activation_fn=None, weights_initializer=he_init) #tf.nn.relu) #None) # 1-dimension of output NOTE: only remove relu activation function in the last layer if using Gradient Boosting, because the differece can be negative (default activation function of fully_connected is relu))
         tf.identity (prediction, name="prediction")
 
         return x_ident, x_remain, Y, x_embed, prediction, phase_train
@@ -454,7 +454,7 @@ class Tensor_NN (Dataset, Sklearn_model):
         train_data_ident = train_data [:, d_remain:]
         (init_w_hid_embed_1_val, init_bias_hid_embed_1_val, init_w_out_embed_val, init_bias_out_embed_val, init_w_hid_main_1_val, init_bias_hid_main_1_val, init_w_out_main_val, init_bias_out_main_val) = self.restore_weights_car2vect (train_data_ident, train_data_remain, train_label, meta_file, ckpt_file) # TODO: ???why if I leave this line after placeholder initialization, it causes the error: some nodes: x_ident_1, x_remain_1, Y_1, phase_train_1 will be created in the graph?
 
-
+        tf.reset_default_graph () # This line is really important, if I restore weights from the pre-trained model, and don't reset the graph to default, the results are weird!
         x_ident = tf.placeholder(tf.float32, [None, d_ident], name="x_ident")
         x_remain = tf.placeholder(tf.float32, [None, d_remain], name="x_remain")
         Y = tf.placeholder(tf.float32, [None, 1], name="Y")
@@ -470,7 +470,8 @@ class Tensor_NN (Dataset, Sklearn_model):
 
         output3 = slim.fully_connected(input3, no_neuron, scope='hidden_main1', activation_fn=tf.nn.relu, weights_initializer=tf.constant_initializer (init_w_hid_main_1_val), biases_initializer=tf.constant_initializer (init_bias_hid_main_1_val))
         output3 = slim.dropout (output3, self.dropout, scope='dropout3')
-        prediction = slim.fully_connected(output3, 1, scope='output_main', activation_fn=tf.nn.relu, weights_initializer=tf.constant_initializer (init_w_out_main_val), biases_initializer=tf.constant_initializer (init_bias_out_main_val)) #None) # 1-dimension of output
+        #prediction = slim.fully_connected(output3, 1, scope='output_main', activation_fn=tf.nn.relu, weights_initializer=tf.constant_initializer (init_w_out_main_val), biases_initializer=tf.constant_initializer (init_bias_out_main_val)) #None) # 1-dimension of output
+        prediction = slim.fully_connected(output3, 1, scope='output_main', activation_fn=None, weights_initializer=tf.constant_initializer (init_w_out_main_val), biases_initializer=tf.constant_initializer (init_bias_out_main_val)) #None) # 1-dimension of output
         tf.identity (prediction, name="prediction")
 
         return x_ident, x_remain, Y, x_embed, prediction, phase_train
@@ -508,7 +509,7 @@ class Tensor_NN (Dataset, Sklearn_model):
                 arr_rel_err = graph.get_tensor_by_name ("arr_rel_err:0")
                 sum_smape = graph.get_tensor_by_name ("sum_smape:0")
 
-                predicted_y, sum_se_val, sum_ae_val, sum_rel_err_val, sum_smape_val , arr_rel_err_val = sess.run([prediction, sum_se, sum_ae, sum_rel_err, sum_smape, arr_rel_err], feed_dict)
+                predicted_y, sum_se_val, sum_ae_val, sum_rel_err_val, sum_smape_val, arr_rel_err_val = sess.run([prediction, sum_se, sum_ae, sum_rel_err, sum_smape, arr_rel_err], feed_dict)
                 return (predicted_y, sum_se_val, sum_ae_val, sum_rel_err_val, sum_smape_val, arr_rel_err_val)
 
 
@@ -771,7 +772,7 @@ class Tensor_NN (Dataset, Sklearn_model):
 
                 # Save predicted label and determine the best epoch
                 if loss_func == "rel_err":
-                    threshold_err = 7#6.5 #9.3 #8.5 #
+                    threshold_err = 7.5#8#6.5 #9.3 #8.5 #
                     epoch_test_err_val = epoch_test_relative_err_val
                 elif loss_func == "mae":
                     threshold_err = 150
@@ -1290,12 +1291,13 @@ class Tensor_NN (Dataset, Sklearn_model):
             best_epoch = self.car2vect (train_data=new_train_data, train_label=new_train_label, test_data=new_test_data, test_label=new_test_label, test_car_ident=new_test_car_ident, d_ident=d_ident, d_embed=self.d_embed, d_remain=d_remain, no_neuron=self.no_neuron, no_neuron_embed=self.no_neuron_embed, loss_func=self.loss_func, model_path=model_path, y_predict_file_name=y_predict_file_name_, mean_error_file_name=mean_error_file_name_, x_ident_file_name=x_ident_file_name_, x_embed_file_name=x_embed_file_name_, retrain=1) # if use retrain=1 -> initialize weights from the previous model
             print ("Best epoch: ", best_epoch)
 
-            """#####################
+            #####################
             meta_file = model_path + "_" + str (best_epoch) + ".meta"
             ckpt_file = model_path + "_" + str (best_epoch) 
             test_data_remain = new_test_data [:, 0:d_remain]
             test_data_ident = new_test_data [:, d_remain:]
             (predicted_test_label, test_rmse_val, test_mae_val, test_relative_err_val, test_smape_val) = self.restore_model_car2vect (test_data_ident, test_data_remain, new_test_label, meta_file, ckpt_file, train_flag=0)
+            print (predicted_test_label[:5])
             #####################"""
 
         elif ensemble_flag == 2:
@@ -1478,22 +1480,23 @@ class Tensor_NN (Dataset, Sklearn_model):
             # Training
             os.system ("mkdir -p ../checkpoint/bagging_NN/car2vect/regressor" + str (i+1)) # TODO: move this line to Main.py
             
-            best_epoch = self.car2vect (train_data=train_data, train_label=train_label, test_data=test_data, test_label=test_label, test_car_ident=test_car_ident, d_ident=d_ident, d_embed=self.d_embed, d_remain=d_remain, no_neuron=self.no_neuron, no_neuron_embed=self.no_neuron_embed, loss_func="rel_err", model_path=model_path, y_predict_file_name=y_predict_file_name_, mean_error_file_name=mean_error_file_name_, x_ident_file_name=x_ident_file_name_, x_embed_file_name=x_embed_file_name_, retrain=retrain)
+            best_epoch = self.car2vect (train_data=train_data, train_label=train_label, test_data=test_data, test_label=test_label, test_car_ident=test_car_ident, d_ident=d_ident, d_embed=self.d_embed, d_remain=d_remain, no_neuron=self.no_neuron, no_neuron_embed=self.no_neuron_embed, loss_func="rel_err", model_path=model_path, y_predict_file_name=y_predict_file_name_, mean_error_file_name=mean_error_file_name_, x_ident_file_name=x_ident_file_name_, x_embed_file_name=x_embed_file_name_, retrain=1)#retrain)
             bash_cmd = "cd ../checkpoint/bagging_NN/car2vect/regressor" + str (i+1) + "; mkdir temp_save; rm temp_save/*; cp checkpoint *_" + str (best_epoch) + ".*" + " temp_save; cd ../../../../Code"
             print ("bash_cmd:", bash_cmd)
             os.system (bash_cmd)
             print ("Best epoch: ", best_epoch)
             meta_file = model_path + "_" + str (best_epoch) + ".meta"
             ckpt_file = model_path + "_" + str (best_epoch) 
+            print ("=== meta_file: {0}, ckpt_file: {1}".format (meta_file, ckpt_file))
             (predicted_test_label, test_rmse_val, test_mae_val, test_relative_err_val, test_smape_val) = self.restore_model_car2vect (test_data_ident, test_data_remain, test_label, meta_file, ckpt_file, train_flag=0)
             list_predicted_test_label.append (predicted_test_label)
-            print ("predicted_test_label (" + str(i) + ")", predicted_test_label[:10])
+            print ("(truth, prediction):", np.c_[test_label[:10], predicted_test_label[:10]])
             print ("=================================")
 
         print ("label", test_label[:10])
         for i in range (self.num_regressor):
             predicted_test_label = sum (pred_y for pred_y in list_predicted_test_label[:i+1]) / (i+1)
-            print ("predicted_test_label (" + str(i) + ")", predicted_test_label[:10])
+            print ("(truth, prediction): regressor {0}\n{1}".format (i, np.c_[test_label[:10], predicted_test_label[:10]]))
             (test_rmse_val, test_mae_val, test_relative_err_val, test_smape_val) = get_err (predicted_test_label, test_label)
             print ("Err after " + str (i+1)  + " regressors:", test_rmse_val, test_mae_val, test_relative_err_val, test_smape_val)
             line = np.zeros(len (test_label), dtype=[('truth', float), ('pred', float)])
