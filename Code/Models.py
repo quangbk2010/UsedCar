@@ -778,7 +778,7 @@ class Tensor_NN (Dataset, Sklearn_model):
                     threshold_err = 150
                     epoch_test_err_val = epoch_test_mae_val
                 elif loss_func == "mse":
-                    threshold_err = 170 #140
+                    threshold_err = 120 #140
                     epoch_test_err_val = epoch_test_rmse_val
 
                 #if (epoch + 1) % 1 == 0:
@@ -1093,7 +1093,7 @@ class Tensor_NN (Dataset, Sklearn_model):
         print ("label", test_label[:10])
         for i in range (self.num_regressor):
             predicted_test_label = sum (pred_y for pred_y in list_predicted_test_label[:i+1])
-            print ("predicted_test_label (" + str(i) + ")", predicted_test_label[:10])
+            print ("(truth, prediction): regressor {0}\n{1}".format (i, np.c_[test_label[:10], predicted_test_label[:10]]))
             (test_rmse_val, test_mae_val, test_relative_err_val, test_smape_val) = get_err (predicted_test_label, test_label)
             print ("Err after " + str (i+1)  + " regressors:", test_rmse_val, test_mae_val, test_relative_err_val, test_smape_val)
             line = np.zeros(len (test_label), dtype=[('truth', float), ('pred', float)])
