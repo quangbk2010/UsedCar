@@ -562,9 +562,9 @@ class Tensor_NN (Dataset, Sklearn_model):
         regul_out1 = slim.fully_connected (regul_in, 1000, scope='hidden_regul', activation_fn=tf.nn.relu, weights_initializer=he_init)
         regul_out = slim.fully_connected (regul_out1, 1, scope='out_regul', activation_fn=None, weights_initializer=he_init)"""
 
-        gama = 1e-1
+        gama = 1e-2
         alpha = 1e-4
-        beta = 1 * 1e-2
+        beta = 1e-1
         regul_out = gama * regul1 + alpha * regul_gather + beta * 1 / regul_spread
         #regul_out = regul1 - alpha * regul_gather * regul_spread
         ####################################
@@ -656,6 +656,9 @@ class Tensor_NN (Dataset, Sklearn_model):
         alpha = 1e-4
         beta = 1e-1
         regul_out = gama * regul1 + alpha * regul_gather + beta * 1 / regul_spread
+        #def f1(): return tf.constant (1.)
+        #def f2(): return regul_out
+        #regul_out = tf.cond (tf.greater (tf.abs (regul_out), 1), f1, f2)
         ####################################
 
         return x_ident, x_remain, Y, x_embed, prediction, phase_train, car_ident, regul1, regul_gather, regul_spread, regul_out #, rep_model_code, centroid, x_embed_add_rep_sorted, regul_gather, regul_spread, regul_out
@@ -847,7 +850,7 @@ class Tensor_NN (Dataset, Sklearn_model):
         #loss = tf.reduce_mean (tf.abs (prediction - Y)) #+ lamb * tf.reduce_mean (tf.norm (x_embed, axis=0, keep_dims=True))
         #loss = tf.reduce_mean (tf.divide (tf.abs (prediction - Y), tf.abs (Y) + tf.abs (prediction) ))
 
-        optimizer = tf.train.AdamOptimizer(learning_rate).minimize(loss + regul, global_step=global_step) # + regul
+        optimizer = tf.train.AdamOptimizer(learning_rate).minimize(loss, global_step=global_step) # + regul
     
         # Use in case of scale label
         if self.scale_label == 1:
@@ -1515,7 +1518,7 @@ class Tensor_NN (Dataset, Sklearn_model):
 
         print ("\n\n===========Train total set")
         # If comment the below line, you need to check the checkpoint file in regressor1 (it should be compatible with the dataset) 
-        self.train_car2vect(train_data=total_data, train_label=total_label, total_car_ident=total_car_ident_code, d_ident=d_ident, d_embed=self.d_embed, d_remain=d_remain, no_neuron=self.no_neuron, no_neuron_embed=self.no_neuron_embed, loss_func="rel_err", model_path=model_path)
+        #self.train_car2vect(train_data=total_data, train_label=total_label, total_car_ident=total_car_ident_code, d_ident=d_ident, d_embed=self.d_embed, d_remain=d_remain, no_neuron=self.no_neuron, no_neuron_embed=self.no_neuron_embed, loss_func="rel_err", model_path=model_path)
         
         # Restore the trained model
         # When restore model with the whole dataset, it can cause the error: Resource exhausted 
