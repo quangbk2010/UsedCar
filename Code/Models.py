@@ -850,7 +850,7 @@ class Tensor_NN (Dataset, Sklearn_model):
         #loss = tf.reduce_mean (tf.abs (prediction - Y)) #+ lamb * tf.reduce_mean (tf.norm (x_embed, axis=0, keep_dims=True))
         #loss = tf.reduce_mean (tf.divide (tf.abs (prediction - Y), tf.abs (Y) + tf.abs (prediction) ))
 
-        optimizer = tf.train.AdamOptimizer(learning_rate).minimize(loss, global_step=global_step) # + regul
+        optimizer = tf.train.AdamOptimizer(learning_rate).minimize(loss + regul, global_step=global_step) # + regul
     
         # Use in case of scale label
         if self.scale_label == 1:
