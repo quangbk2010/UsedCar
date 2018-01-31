@@ -1035,7 +1035,7 @@ class Tensor_NN (Dataset, Sklearn_model):
 
                 # Save predicted label and determine the best epoch
                 if loss_func == "rel_err":
-                    threshold_err = 8 #6.5 #9.3 #8.5 #
+                    threshold_err = 5 #6.5 #9.3 #8.5 #
                     epoch_test_err_val = epoch_test_relative_err_val
                 elif loss_func == "mae":
                     threshold_err = 150
