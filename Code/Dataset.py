@@ -140,33 +140,42 @@ class Dataset ():
             total_dataset = pd.read_excel (dataset_excel_file, names = self.headers, converters = dtype_dict, header = 0)
             # Shuffle dataset (dataframe)
             #total_dataset = total_dataset.reindex(np.random.permutation(total_dataset.index))
-
-            
-            # Sort by actual advertising date
-            total_dataset = total_dataset.sort_values ("actual_advertising_date", ascending=True)
             
             # Remove the data points with sale_state == "advertising"
             total_dataset = total_dataset[total_dataset["sale_state"] == "Sold-out"]
-            print ("2.", total_dataset.shape)
+            print ("1.", total_dataset.shape)
+
+            # Remove the data points with cylinder_displayment >=10000 
+            total_dataset = total_dataset[total_dataset["cylinder_disp"] < 10000]
+            print ("2.1", total_dataset.shape)
+
+            # Remove the data points with  vehicle_mile >=1,000,000,000
+            total_dataset = total_dataset[total_dataset["vehicle_mile"] < 1000000000]
+            print ("2.2", total_dataset.shape)
+
+            # Remove the data points with maker_year < 2000, > 2018 
+            total_dataset = total_dataset[(total_dataset["year"] > 2000) & (total_dataset["year"] < 2018)]
+            print ("3.", total_dataset.shape)
 
             # Remove the data points with price == 0
-            #total_dataset = total_dataset[total_dataset["price"] != 0]
-            total_dataset = total_dataset[total_dataset["price"] >= 200] # 400]
-            print ("3.1", total_dataset.shape)
-            total_dataset = total_dataset[total_dataset["price"] < 9000]
-            print ("3.2", total_dataset.shape)
+            total_dataset = total_dataset[total_dataset["price"] != 0]
+            print ("4.", total_dataset.shape)
+            #total_dataset = total_dataset[total_dataset["price"] >= 200] # 400]
+            #print ("3.1", total_dataset.shape)
+            #total_dataset = total_dataset[total_dataset["price"] < 9000]
+            #print ("3.2", total_dataset.shape)
 
             # Remove outliers
             #total_dataset = total_dataset[np.abs(total_dataset["price"] - total_dataset["price"].mean()) / total_dataset["price"].std() < 1]
             #print ("4.", total_dataset.shape)
 
             # Just keep hyundai and kia
-            total_dataset = total_dataset[(total_dataset["manufacture_code"] == 101) | (total_dataset["manufacture_code"] == 102)]
-            print ("5.", total_dataset.shape)
+            #total_dataset = total_dataset[(total_dataset["manufacture_code"] == 101) | (total_dataset["manufacture_code"] == 102)]
+            #print ("5.", total_dataset.shape)
 
             # Just keep passenger cars
-            total_dataset = total_dataset[(total_dataset["car_type"] == "Passenger car")]
-            print ("6.", total_dataset.shape)
+            #total_dataset = total_dataset[(total_dataset["car_type"] == "Passenger car")]
+            #print ("6.", total_dataset.shape)
 
             # Remove the data points with sale duration = 0
             if label == "sale_duration":
@@ -174,6 +183,10 @@ class Dataset ():
                 total_dataset = total_dataset[diff_date != 0] 
                 print ("7.", total_dataset.shape)
 
+            # After removing all likely-outliers data points or keep sample items
+            # Sort by actual advertising date
+            total_dataset = total_dataset.sort_values ("actual_advertising_date", ascending=True)
+            
             # use the information about advertising date: use year and month separately
             """adv_date = total_dataset ["actual_advertising_date"]
             manufacture_year = total_dataset ["year"]
