@@ -1063,7 +1063,7 @@ class Tensor_NN (Dataset, Sklearn_model):
                     epoch_test_err_val = epoch_test_rmse_val
 
                 #if (epoch + 1) % 1 == 0:
-                if epoch_test_err_val < threshold_err:
+                if epoch_test_err_val < threshold_err or epoch == self.epoch:
                     print (epoch_test_err_val, threshold_err)
                     np.savetxt (x_embed_file_name_ + "_" + str (epoch), x_embed_val, fmt="%.2f\t%.2f\t%.2f")
                     np.savetxt (y_predict_file_name_ + "_" + str (epoch), line, fmt="%.2f\t%.2f")
@@ -1539,7 +1539,7 @@ class Tensor_NN (Dataset, Sklearn_model):
         #self.train_car2vect(train_data=total_data, train_label=total_label, total_car_ident=total_car_ident_code, d_ident=d_ident, d_embed=self.d_embed, d_remain=d_remain, no_neuron=self.no_neuron, no_neuron_embed=self.no_neuron_embed, loss_func="rel_err", model_path=model_path)
 
         # Flexible rel_err.
-        #self.train_car2vect(train_data=total_data, train_label=total_label, total_car_ident=total_car_ident_code, d_ident=d_ident, d_embed=self.d_embed, d_remain=d_remain, no_neuron=self.no_neuron, no_neuron_embed=self.no_neuron_embed, loss_func=self.loss_func, model_path=model_path)
+        self.train_car2vect(train_data=total_data, train_label=total_label, total_car_ident=total_car_ident_code, d_ident=d_ident, d_embed=self.d_embed, d_remain=d_remain, no_neuron=self.no_neuron, no_neuron_embed=self.no_neuron_embed, loss_func=self.loss_func, model_path=model_path)
         
         # Restore the trained model
         # When restore model with the whole dataset, it can cause the error: Resource exhausted 
