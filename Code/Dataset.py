@@ -105,7 +105,7 @@ class Dataset ():
         if label == "price":
             self.features = features
         elif label == "sale_duration":
-            self.features = features + "price"
+            self.features = features + ["price"]
 
         print ("================length of features:", len (self.features))
         dtype_dict = full_features_dict
@@ -182,11 +182,18 @@ class Dataset ():
             total_dataset = total_dataset[(total_dataset["car_type"] == "Passenger car")]
             print ("6.", total_dataset.shape)
 
-            # Remove the data points with sale duration = 0
+            # Replace missing rating_code with 0
+            total_dataset["rating_code"] = total_dataset["rating_code"].fillna (0)
+
+            # Remove items with missing actual_adv_date or missing sale_date 
+            total_dataset = total_dataset[total_dataset["actual_advertising_date"].notnull() & total_dataset["sale_date"].notnull()]
+            print ("7.", total_dataset.shape)
+
+            # Remove the data points with sale duration <= 0
             if label == "sale_duration":
                 diff_date = total_dataset["sale_date"]-total_dataset["actual_advertising_date"]
-                total_dataset = total_dataset[diff_date != 0] 
-                print ("7.", total_dataset.shape)
+                total_dataset = total_dataset[diff_date > 0] 
+                print ("8.", total_dataset.shape)
 
             # After removing all likely-outliers data points or keep sample items
             # Sort by actual advertising date
@@ -201,6 +208,7 @@ class Dataset ():
 
             # Impute missing values from here
             total_dataset = DataFrameImputer().fit_transform (total_dataset)
+
 
             # There are some columns with string values (E.g. Car type) -> need to label it as numerical labels
             total_dataset = MultiColumnLabelEncoder(columns = feature_need_label).fit_transform(total_dataset)
