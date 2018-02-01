@@ -183,7 +183,7 @@ if __name__ == '__main__':
         elif nn.car_ident_flag == 1:
             #model_path = nn.model_dir + "/car2vect/" + "[" + dataset_size + "]" + nn.model_name  + "_" + args.label  + "_car2vect_" + str (nn.no_neuron) + "_" + str (nn.no_neuron_embed) + "_" + str (nn.d_embed) + "_" + nn.loss_func
             model_path = nn.model_dir + "/car2vect/[{0}]{1}_{2}_car2vect_{3}_{4}_{5}_{6}".format (dataset_size, nn.model_name, args.label, nn.no_neuron, nn.no_neuron_embed, nn.d_embed, nn.loss_func)
-            nn.car2vect (train_data=train_data, train_label=train_label, test_data=test_data, test_label=test_label, test_car_ident=test_car_ident, d_ident=dataset.d_ident, d_embed=nn.d_embed, d_remain=dataset.d_remain, no_neuron=nn.no_neuron, no_neuron_embed=nn.no_neuron_embed, loss_func=nn.loss_func, model_path=model_path, y_predict_file_name=y_predict_file_name, mean_error_file_name=mean_error_file_name, x_ident_file_name=x_ident_file_name, x_embed_file_name=x_embed_file_name, retrain=0) 
+            nn.car2vect (train_data=train_data, train_label=train_label, test_data=test_data, test_label=test_label, total_car_ident=total_car_ident_code, d_ident=dataset.d_ident, d_embed=nn.d_embed, d_remain=dataset.d_remain, no_neuron=nn.no_neuron, no_neuron_embed=nn.no_neuron_embed, loss_func=nn.loss_func, model_path=model_path, y_predict_file_name=y_predict_file_name, mean_error_file_name=mean_error_file_name, x_ident_file_name=x_ident_file_name, x_embed_file_name=x_embed_file_name, retrain=0) 
 
         else:
             #model_path = nn.model_dir + "/baseline/" + "[" + dataset_size + "]" + nn.model_name  + "_" + args.label  + "_baseline_" + str (nn.no_neuron) + "_" + str (nn.no_hidden_layer) + "_" + nn.loss_func

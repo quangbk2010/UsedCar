@@ -148,6 +148,11 @@ class Tensor_NN (Dataset, Sklearn_model):
         self.min_price = 1.0
         self.max_price = 100.0
 
+        # Regularization hyper-parameters
+        self.gama = 1e-4
+        self.alpha = 1e-4
+        self.beta = 1e-1
+
     
     def batch_norm (self, x, phase_train, scope='bn'):
         """
@@ -505,7 +510,6 @@ class Tensor_NN (Dataset, Sklearn_model):
         Y = tf.placeholder(tf.float32, [None, 1], name="Y")
         phase_train = tf.placeholder(tf.bool, name='phase_train')
 
-        beta = 1e-4
         print ("build_car2vect_model: d_ident:", d_ident, "d_remain:", d_remain, "d_embed:", d_embed, "no_neuron_embed:", no_neuron_embed, "no_neuron_main:", no_neuron)
         rep_model_code = tf.reshape (car_ident[:, 1], [-1, 1])
         len_data = tf.shape (rep_model_code)[0]
@@ -513,24 +517,24 @@ class Tensor_NN (Dataset, Sklearn_model):
         # He initializer
         # Embeding NN
         he_init = tf.contrib.layers.variance_scaling_initializer ()
-        output1 = slim.fully_connected (x_ident, no_neuron_embed, scope='hidden_embed1', activation_fn=tf.nn.relu, weights_initializer=he_init, weights_regularizer = tf.contrib.layers.l2_regularizer(beta))
+        output1 = slim.fully_connected (x_ident, no_neuron_embed, scope='hidden_embed1', activation_fn=tf.nn.relu, weights_initializer=he_init, weights_regularizer = tf.contrib.layers.l2_regularizer(self.beta))
         output1_ = slim.dropout (output1, self.dropout, scope='dropout1')
 
-        output2 = slim.fully_connected (output1_, no_neuron_embed, scope='hidden_embed2', activation_fn=tf.nn.relu, weights_initializer=he_init, weights_regularizer = tf.contrib.layers.l2_regularizer(beta)) #None) #
+        output2 = slim.fully_connected (output1_, no_neuron_embed, scope='hidden_embed2', activation_fn=tf.nn.relu, weights_initializer=he_init, weights_regularizer = tf.contrib.layers.l2_regularizer(self.beta)) #None) #
         output2_ = slim.dropout (output2, self.dropout, scope='dropout2')
 
-        x_embed = slim.fully_connected (output2_, d_embed, scope='output_embed', activation_fn=None, weights_initializer=he_init, weights_regularizer = tf.contrib.layers.l2_regularizer(beta)) # 3-dimension of embeding NN
+        x_embed = slim.fully_connected (output2_, d_embed, scope='output_embed', activation_fn=None, weights_initializer=he_init, weights_regularizer = tf.contrib.layers.l2_regularizer(self.beta)) # 3-dimension of embeding NN
 
         input3 = tf.concat ([x_remain, x_embed], 1)
 
         # Main NN
-        output3 = slim.fully_connected(input3, no_neuron, scope='hidden_main1', activation_fn=tf.nn.relu, weights_initializer=he_init, weights_regularizer = tf.contrib.layers.l2_regularizer(beta))
+        output3 = slim.fully_connected(input3, no_neuron, scope='hidden_main1', activation_fn=tf.nn.relu, weights_initializer=he_init, weights_regularizer = tf.contrib.layers.l2_regularizer(self.beta))
         output3_ = slim.dropout (output3, self.dropout, scope='dropout3')
 
-        output4 = slim.fully_connected(output3_, no_neuron, scope='hidden_main2', activation_fn=tf.nn.relu, weights_initializer=he_init, weights_regularizer = tf.contrib.layers.l2_regularizer(beta))
+        output4 = slim.fully_connected(output3_, no_neuron, scope='hidden_main2', activation_fn=tf.nn.relu, weights_initializer=he_init, weights_regularizer = tf.contrib.layers.l2_regularizer(self.beta))
         output4_ = slim.dropout (output4, self.dropout, scope='dropout4')
 
-        prediction = slim.fully_connected(output4_, 1, scope='output_main', activation_fn=None, weights_initializer=he_init, weights_regularizer = tf.contrib.layers.l2_regularizer(beta)) #tf.nn.relu) #None) # 1-dimension of output NOTE: only remove relu activation function in the last layer if using Gradient Boosting, because the differece can be negative (default activation function of fully_connected is relu))
+        prediction = slim.fully_connected(output4_, 1, scope='output_main', activation_fn=None, weights_initializer=he_init, weights_regularizer = tf.contrib.layers.l2_regularizer(self.beta)) #tf.nn.relu) #None) # 1-dimension of output NOTE: only remove relu activation function in the last layer if using Gradient Boosting, because the differece can be negative (default activation function of fully_connected is relu))
         tf.identity (prediction, name="prediction")
         
         ####################################
@@ -562,11 +566,8 @@ class Tensor_NN (Dataset, Sklearn_model):
         regul_out1 = slim.fully_connected (regul_in, 1000, scope='hidden_regul', activation_fn=tf.nn.relu, weights_initializer=he_init)
         regul_out = slim.fully_connected (regul_out1, 1, scope='out_regul', activation_fn=None, weights_initializer=he_init)"""
 
-        gama = 1e-2
-        alpha = 1e-4
-        beta = 1e-1
-        regul_out = gama * regul1 + alpha * regul_gather + beta * 1 / regul_spread
-        #regul_out = regul1 - alpha * regul_gather * regul_spread
+        regul_out = self.gama * regul1 + self.alpha * regul_gather + self.beta * 1 / regul_spread
+        #regul_out = regul1 - self.alpha * regul_gather * regul_spread
         ####################################
 
         return x_ident, x_remain, Y, x_embed, prediction, phase_train, car_ident, regul1, regul_gather, regul_spread, regul_out #, rep_model_code, centroid, x_embed_add_rep_sorted, regul_gather, regul_spread, regul_out
@@ -600,7 +601,6 @@ class Tensor_NN (Dataset, Sklearn_model):
         Y = tf.placeholder(tf.float32, [None, 1], name="Y")
         phase_train = tf.placeholder(tf.bool, name='phase_train')
 
-        beta = 1e-4
         print ("build_car2vect_model: d_ident:", d_ident, "d_remain:", d_remain, "d_embed:", d_embed, "no_neuron_embed:", no_neuron_embed, "no_neuron_main:", no_neuron)
         rep_model_code = tf.reshape (car_ident[:, 1], [-1, 1])
         len_data = tf.shape (rep_model_code)[0]
@@ -608,24 +608,24 @@ class Tensor_NN (Dataset, Sklearn_model):
         # He initializer
         # Embeding NN
         he_init = tf.contrib.layers.variance_scaling_initializer ()
-        output1 = slim.fully_connected (x_ident, no_neuron_embed, scope='hidden_embed1', activation_fn=tf.nn.relu, weights_initializer=tf.constant_initializer (init_w_hid_embed_1_val), biases_initializer=tf.constant_initializer (init_bias_hid_embed_1_val), weights_regularizer = tf.contrib.layers.l2_regularizer(beta))
+        output1 = slim.fully_connected (x_ident, no_neuron_embed, scope='hidden_embed1', activation_fn=tf.nn.relu, weights_initializer=tf.constant_initializer (init_w_hid_embed_1_val), biases_initializer=tf.constant_initializer (init_bias_hid_embed_1_val), weights_regularizer = tf.contrib.layers.l2_regularizer(self.beta))
         output1_ = slim.dropout (output1, self.dropout, scope='dropout1')
 
-        output2 = slim.fully_connected (output1_, no_neuron_embed, scope='hidden_embed2', activation_fn=tf.nn.relu, weights_initializer=tf.constant_initializer (init_w_hid_embed_2_val), biases_initializer=tf.constant_initializer (init_bias_hid_embed_2_val), weights_regularizer = tf.contrib.layers.l2_regularizer(beta)) #None) #
+        output2 = slim.fully_connected (output1_, no_neuron_embed, scope='hidden_embed2', activation_fn=tf.nn.relu, weights_initializer=tf.constant_initializer (init_w_hid_embed_2_val), biases_initializer=tf.constant_initializer (init_bias_hid_embed_2_val), weights_regularizer = tf.contrib.layers.l2_regularizer(self.beta)) #None) #
         output2_ = slim.dropout (output2, self.dropout, scope='dropout2')
 
-        x_embed = slim.fully_connected (output2_, d_embed, scope='output_embed', activation_fn=None, weights_initializer=tf.constant_initializer (init_w_out_embed_val), biases_initializer=tf.constant_initializer (init_bias_out_embed_val), weights_regularizer = tf.contrib.layers.l2_regularizer(beta)) # 3-dimension of embeding NN
+        x_embed = slim.fully_connected (output2_, d_embed, scope='output_embed', activation_fn=None, weights_initializer=tf.constant_initializer (init_w_out_embed_val), biases_initializer=tf.constant_initializer (init_bias_out_embed_val), weights_regularizer = tf.contrib.layers.l2_regularizer(self.beta)) # 3-dimension of embeding NN
 
         input3 = tf.concat ([x_remain, x_embed], 1)
 
         # Main NN
-        output3 = slim.fully_connected(input3, no_neuron, scope='hidden_main1', activation_fn=tf.nn.relu, weights_initializer=tf.constant_initializer (init_w_hid_main_1_val), biases_initializer=tf.constant_initializer (init_bias_hid_main_1_val), weights_regularizer = tf.contrib.layers.l2_regularizer(beta))
+        output3 = slim.fully_connected(input3, no_neuron, scope='hidden_main1', activation_fn=tf.nn.relu, weights_initializer=tf.constant_initializer (init_w_hid_main_1_val), biases_initializer=tf.constant_initializer (init_bias_hid_main_1_val), weights_regularizer = tf.contrib.layers.l2_regularizer(self.beta))
         output3_ = slim.dropout (output3, self.dropout, scope='dropout3')
 
-        output4 = slim.fully_connected(output3_, no_neuron, scope='hidden_main2', activation_fn=tf.nn.relu, weights_initializer=tf.constant_initializer (init_w_hid_main_2_val), biases_initializer=tf.constant_initializer (init_bias_hid_main_2_val), weights_regularizer = tf.contrib.layers.l2_regularizer(beta))
+        output4 = slim.fully_connected(output3_, no_neuron, scope='hidden_main2', activation_fn=tf.nn.relu, weights_initializer=tf.constant_initializer (init_w_hid_main_2_val), biases_initializer=tf.constant_initializer (init_bias_hid_main_2_val), weights_regularizer = tf.contrib.layers.l2_regularizer(self.beta))
         output4_ = slim.dropout (output4, self.dropout, scope='dropout4')
 
-        prediction = slim.fully_connected(output4_, 1, scope='output_main', activation_fn=None, weights_initializer=tf.constant_initializer (init_w_out_main_val), biases_initializer=tf.constant_initializer (init_bias_out_main_val), weights_regularizer = tf.contrib.layers.l2_regularizer(beta)) 
+        prediction = slim.fully_connected(output4_, 1, scope='output_main', activation_fn=None, weights_initializer=tf.constant_initializer (init_w_out_main_val), biases_initializer=tf.constant_initializer (init_bias_out_main_val), weights_regularizer = tf.contrib.layers.l2_regularizer(self.beta)) 
         tf.identity (prediction, name="prediction")
         
         ####################################
@@ -652,10 +652,7 @@ class Tensor_NN (Dataset, Sklearn_model):
         # The distance between every centroid is added cummulatively 
         regul_spread = cosine_dist_1tensor (x_embed_mean) # want to keep this value large
 
-        gama = 1e-2
-        alpha = 1e-4
-        beta = 1e-1
-        regul_out = gama * regul1 + alpha * regul_gather + beta * 1 / regul_spread
+        regul_out = self.gama * regul1 + self.alpha * regul_gather + self.beta * 1 / regul_spread
         #def f1(): return tf.constant (1.)
         #def f2(): return regul_out
         #regul_out = tf.cond (tf.greater (tf.abs (regul_out), 1), f1, f2)
@@ -1518,7 +1515,7 @@ class Tensor_NN (Dataset, Sklearn_model):
 
         print ("\n\n===========Train total set")
         # If comment the below line, you need to check the checkpoint file in regressor1 (it should be compatible with the dataset) 
-        self.train_car2vect(train_data=total_data, train_label=total_label, total_car_ident=total_car_ident_code, d_ident=d_ident, d_embed=self.d_embed, d_remain=d_remain, no_neuron=self.no_neuron, no_neuron_embed=self.no_neuron_embed, loss_func="rel_err", model_path=model_path)
+        #self.train_car2vect(train_data=total_data, train_label=total_label, total_car_ident=total_car_ident_code, d_ident=d_ident, d_embed=self.d_embed, d_remain=d_remain, no_neuron=self.no_neuron, no_neuron_embed=self.no_neuron_embed, loss_func="rel_err", model_path=model_path)
         
         # Restore the trained model
         # When restore model with the whole dataset, it can cause the error: Resource exhausted 
@@ -1535,7 +1532,10 @@ class Tensor_NN (Dataset, Sklearn_model):
         # Remove outliers from the total dataset based on the relative error from the first train, on the other hand sort the dataset by act_adv_date
         # TODO: save this dataset
         stime = time.time()
-        new_total_set = self.remove_outliers_total_set (total_data, total_label, total_car_ident_code, act_adv_date, total_arr_relative_err, dataset_size, removal_percent)
+        if removal_percent > 0:
+            new_total_set = self.remove_outliers_total_set (total_data, total_label, total_car_ident_code, act_adv_date, total_arr_relative_err, dataset_size, removal_percent)
+        else:
+            raise ValueError ("Removal perentage is 0!")
         print ("Time for remove outliers from dataset: %.3f" % (time.time() - stime))
 
         # Train the car2vect model based on the new dataset
@@ -1570,8 +1570,8 @@ class Tensor_NN (Dataset, Sklearn_model):
             x_embed_file_name_ = x_embed_file_name + "_2"
             
             print ("\n\n===========Predictor2")
-            self.epoch = 30
-            best_epoch = self.car2vect (train_data=new_train_data, train_label=new_train_label, test_data=new_test_data, test_label=new_test_label, total_car_ident=new_total_car_ident_code, d_ident=d_ident, d_embed=self.d_embed, d_remain=d_remain, no_neuron=self.no_neuron, no_neuron_embed=self.no_neuron_embed, loss_func=self.loss_func, model_path=model_path, y_predict_file_name=y_predict_file_name_, mean_error_file_name=mean_error_file_name_, x_ident_file_name=x_ident_file_name_, x_embed_file_name=x_embed_file_name_, retrain=1) # if use retrain=1 -> initialize weights from the previous model
+            #self.epoch = 30
+            best_epoch = self.car2vect (train_data=new_train_data, train_label=new_train_label, test_data=new_test_data, test_label=new_test_label, total_car_ident=new_total_car_ident_code, d_ident=d_ident, d_embed=self.d_embed, d_remain=d_remain, no_neuron=self.no_neuron, no_neuron_embed=self.no_neuron_embed, loss_func=self.loss_func, model_path=model_path, y_predict_file_name=y_predict_file_name_, mean_error_file_name=mean_error_file_name_, x_ident_file_name=x_ident_file_name_, x_embed_file_name=x_embed_file_name_, retrain=0) # if use retrain=1 -> initialize weights from the previous model
             #best_epoch = self.car2vect (train_data=new_train_data, train_label=new_train_label, test_data=new_test_data, test_label=new_test_label, test_car_ident=new_test_car_ident, d_ident=d_ident, d_embed=self.d_embed, d_remain=d_remain, no_neuron=self.no_neuron, no_neuron_embed=self.no_neuron_embed, loss_func=self.loss_func, model_path=model_path, y_predict_file_name=y_predict_file_name_, mean_error_file_name=mean_error_file_name_, x_ident_file_name=x_ident_file_name_, x_embed_file_name=x_embed_file_name_, retrain=1) # if use retrain=1 -> initialize weights from the previous model
             print ("Best epoch: ", best_epoch)
 
