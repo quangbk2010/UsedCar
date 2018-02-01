@@ -149,7 +149,7 @@ class Tensor_NN (Dataset, Sklearn_model):
         self.max_price = 100.0
 
         # Regularization hyper-parameters
-        self.gama = 1e-2
+        self.gama = 1e-4
         self.alpha = 1e-4
         self.beta = 1e-1
 
