@@ -150,8 +150,8 @@ class Tensor_NN (Dataset, Sklearn_model):
 
         # Regularization hyper-parameters
         self.gama = 1e-4
-        self.alpha = 1e-4
-        self.beta = 1e-1
+        self.alpha = 1e-3
+        self.beta = 1e-3
 
     
     def batch_norm (self, x, phase_train, scope='bn'):
@@ -548,25 +548,35 @@ class Tensor_NN (Dataset, Sklearn_model):
         x_embed_add_rep_sorted = tf.gather (x_embed_add_rep, tf.nn.top_k (x_embed_add_rep [:, 0], k=len_data).indices) 
         rep_model_unique, idx, count = tf.unique_with_counts (x_embed_add_rep_sorted[:, 0])
 
+        # Compute the centroid vectors of every vector in each cluster (rep_model)
         x_embed_mean = tf.segment_mean (x_embed_add_rep_sorted, idx) # the 1st column is rep_model_code, the 3 other columns are x_embed_mean
-        centroid = tf.gather (x_embed_mean, idx)
-        centroid = centroid [:, 1:]
+        # Remove 1st column
+        x_embed_mean = x_embed_mean [:, 1:]
+
+        # Normalize all of the centroid vector
+        norm = tf.norm (x_embed_mean, 1)
+        x_embed_mean_normed = x_embed_mean #/ norm
+
+        # Expand to a vector, compatible with the index of x_embed_sorted
+        centroid_normed = tf.gather (x_embed_mean_normed, idx)
+
+        # Remove 1st column
         x_embed_sorted = x_embed_add_rep_sorted [:, 1:]
 
         # The similiraty of every point with its centroid is added cummulatively 
         #regul_gather = tf.reduce_sum (cosine_sim (x_embed_sorted, centroid)) # want to keep this value large
         # The distance of every point with its centroid is added cummulatively
-        regul_gather = tf.sqrt (tf.reduce_sum ((x_embed_sorted - centroid) ** 2)) # want to keep this value small 
+        regul_gather = tf.sqrt (tf.reduce_sum ((x_embed_sorted - centroid_normed) ** 2)) # want to keep this value small 
 
         # The distance between every centroid is added cummulatively 
-        regul_spread = cosine_dist_1tensor (x_embed_mean) # want to keep this value large
+        regul_spread = cosine_dist_1tensor (x_embed_mean_normed) # want to keep this value large
 
         """# Apply a NN to get the regularization item for the loss function
         regul_in = tf.stack ([[regul_gather], [regul_spread]])
         regul_out1 = slim.fully_connected (regul_in, 1000, scope='hidden_regul', activation_fn=tf.nn.relu, weights_initializer=he_init)
         regul_out = slim.fully_connected (regul_out1, 1, scope='out_regul', activation_fn=None, weights_initializer=he_init)"""
 
-        regul_out = self.gama * regul1 + self.alpha * regul_gather + self.beta * 1 / regul_spread
+        regul_out = self.gama * regul1 + self.alpha * regul_gather - self.beta * regul_spread #+ self.beta * 1 / regul_spread
         #regul_out = regul1 - self.alpha * regul_gather * regul_spread
         ####################################
 
@@ -639,20 +649,30 @@ class Tensor_NN (Dataset, Sklearn_model):
         x_embed_add_rep_sorted = tf.gather (x_embed_add_rep, tf.nn.top_k (x_embed_add_rep [:, 0], k=len_data).indices) 
         rep_model_unique, idx, count = tf.unique_with_counts (x_embed_add_rep_sorted[:, 0])
 
+        # Compute the centroid vectors of every vector in each cluster (rep_model)
         x_embed_mean = tf.segment_mean (x_embed_add_rep_sorted, idx) # the 1st column is rep_model_code, the 3 other columns are x_embed_mean
-        centroid = tf.gather (x_embed_mean, idx)
-        centroid = centroid [:, 1:]
+        # Remove 1st column
+        x_embed_mean = x_embed_mean [:, 1:]
+
+        # Normalize all of the centroid vector
+        norm = tf.norm (x_embed_mean, 1)
+        x_embed_mean_normed = x_embed_mean #/ norm
+
+        # Expand to a vector, compatible with the index of x_embed_sorted
+        centroid_normed = tf.gather (x_embed_mean_normed, idx)
+
+        # Remove 1st column
         x_embed_sorted = x_embed_add_rep_sorted [:, 1:]
 
         # The similiraty of every point with its centroid is added cummulatively 
         #regul_gather = tf.reduce_sum (cosine_sim (x_embed_sorted, centroid)) # want to keep this value large
         # The distance of every point with its centroid is added cummulatively
-        regul_gather = tf.sqrt (tf.reduce_sum ((x_embed_sorted - centroid) ** 2)) # want to keep this value small 
+        regul_gather = tf.sqrt (tf.reduce_sum ((x_embed_sorted - centroid_normed) ** 2)) # want to keep this value small 
 
         # The distance between every centroid is added cummulatively 
-        regul_spread = cosine_dist_1tensor (x_embed_mean) # want to keep this value large
+        regul_spread = cosine_dist_1tensor (x_embed_mean_normed) # want to keep this value large
 
-        regul_out = self.gama * regul1 + self.alpha * regul_gather + self.beta * 1 / regul_spread
+        regul_out = self.gama * regul1 + self.alpha * regul_gather - self.beta * regul_spread #+ self.beta * 1 / regul_spread
         #def f1(): return tf.constant (1.)
         #def f2(): return regul_out
         #regul_out = tf.cond (tf.greater (tf.abs (regul_out), 1), f1, f2)
@@ -847,7 +867,7 @@ class Tensor_NN (Dataset, Sklearn_model):
         #loss = tf.reduce_mean (tf.abs (prediction - Y)) #+ lamb * tf.reduce_mean (tf.norm (x_embed, axis=0, keep_dims=True))
         #loss = tf.reduce_mean (tf.divide (tf.abs (prediction - Y), tf.abs (Y) + tf.abs (prediction) ))
 
-        optimizer = tf.train.AdamOptimizer(learning_rate).minimize(loss + regul, global_step=global_step) # + regul
+        optimizer = tf.train.AdamOptimizer(learning_rate).minimize(loss, global_step=global_step) # + regul
     
         # Use in case of scale label
         if self.scale_label == 1:
@@ -908,6 +928,7 @@ class Tensor_NN (Dataset, Sklearn_model):
             print ("len train_data_ident:", train_data_ident_shuffled.shape)
             print ("len train_data_remain:", train_data_remain_shuffled.shape)
             print ("len train_label:", train_label_shuffled.shape)
+            print ("len test_data:", test_data.shape)
 
             train_total_batch = int (np.ceil (float (len_train)/self.batch_size))
             test_total_batch = int (np.ceil (float (len_test)/self.batch_size))
@@ -1042,12 +1063,12 @@ class Tensor_NN (Dataset, Sklearn_model):
                     epoch_test_err_val = epoch_test_rmse_val
 
                 #if (epoch + 1) % 1 == 0:
-                if epoch_test_err_val < threshold_err:
+                if epoch_test_err_val < threshold_err or epoch == self.epoch:
                     print (epoch_test_err_val, threshold_err)
                     np.savetxt (x_embed_file_name_ + "_" + str (epoch), x_embed_val, fmt="%.2f\t%.2f\t%.2f")
                     np.savetxt (y_predict_file_name_ + "_" + str (epoch), line, fmt="%.2f\t%.2f")
-                    save_path = saver.save (sess, model_path + "_" + str (epoch)) #, global_step=global_step)
-                    print('Model saved in file: %s' % save_path)
+                    #save_path = saver.save (sess, model_path + "_" + str (epoch)) #, global_step=global_step)
+                    #print('Model saved in file: %s' % save_path)
 
                 if epoch_test_err_val < smallest_epoch_test_err_val:
                     smallest_epoch_test_err_val = epoch_test_err_val 
@@ -1516,6 +1537,9 @@ class Tensor_NN (Dataset, Sklearn_model):
         print ("\n\n===========Train total set")
         # If comment the below line, you need to check the checkpoint file in regressor1 (it should be compatible with the dataset) 
         #self.train_car2vect(train_data=total_data, train_label=total_label, total_car_ident=total_car_ident_code, d_ident=d_ident, d_embed=self.d_embed, d_remain=d_remain, no_neuron=self.no_neuron, no_neuron_embed=self.no_neuron_embed, loss_func="rel_err", model_path=model_path)
+
+        # Flexible rel_err.
+        self.train_car2vect(train_data=total_data, train_label=total_label, total_car_ident=total_car_ident_code, d_ident=d_ident, d_embed=self.d_embed, d_remain=d_remain, no_neuron=self.no_neuron, no_neuron_embed=self.no_neuron_embed, loss_func=self.loss_func, model_path=model_path)
         
         # Restore the trained model
         # When restore model with the whole dataset, it can cause the error: Resource exhausted 
