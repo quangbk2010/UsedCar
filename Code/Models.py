@@ -1532,7 +1532,10 @@ class Tensor_NN (Dataset, Sklearn_model):
         # Remove outliers from the total dataset based on the relative error from the first train, on the other hand sort the dataset by act_adv_date
         # TODO: save this dataset
         stime = time.time()
-        new_total_set = self.remove_outliers_total_set (total_data, total_label, total_car_ident_code, act_adv_date, total_arr_relative_err, dataset_size, removal_percent)
+        if removal_percent > 0:
+            new_total_set = self.remove_outliers_total_set (total_data, total_label, total_car_ident_code, act_adv_date, total_arr_relative_err, dataset_size, removal_percent)
+        else:
+            raise ValueError ("Removal perentage is 0!")
         print ("Time for remove outliers from dataset: %.3f" % (time.time() - stime))
 
         # Train the car2vect model based on the new dataset
