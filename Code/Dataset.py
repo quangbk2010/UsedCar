@@ -107,7 +107,7 @@ class Dataset ():
         elif label == "sale_duration":
             self.features = features + ["price"]
 
-        print ("================length of features:", len (self.features))
+        print ("================length of features:", len (self.features), len (features))
         dtype_dict = full_features_dict
 
         """ These below parameters used in Validation"""
@@ -126,9 +126,9 @@ class Dataset ():
         feature_need_remove_outlier = ["vehicle_mile", "no_click", "recovery_fee"]#, "price"]
 
         # list of features whether it needs remove outliers 
-        feature_need_not_remove_outlier = [feature for feature in features if feature not in feature_need_remove_outlier] 
+        feature_need_not_remove_outlier = [feature for feature in self.features if feature not in feature_need_remove_outlier] 
         self.car_ident = ["manufacture_code","rep_model_code","car_code","model_code","rating_code"]
-        features_remove_car_ident = [feature for feature in features if feature not in self.car_ident] 
+        features_remove_car_ident = [feature for feature in self.features if feature not in self.car_ident] 
 
         # list of features whether it needs one-hot encode
         self.features_not_need_encoding = [feature for feature in features_remove_car_ident if feature not in self.features_need_encoding] 
@@ -494,12 +494,21 @@ class Dataset ():
             y_total_set = self.get_data_array (self.total_dataset, label)
         elif label == "sale_duration":
             y_total_set = self.get_sale_duration_array (self.total_dataset)
+            # Save price, sale_duration
+            price = self.get_data_array (self.get_total_dataset (), "price")
+            actual_advertising_date = self.get_data_array (self.get_total_dataset (), "actual_advertising_date")
+            sale_date = self.get_data_array (self.get_total_dataset (), "sale_date")
+            np_arr = np.concatenate ((price, y_total_set, actual_advertising_date, sale_date), axis=1)
+            df = pd.DataFrame (np_arr)
+            np.savetxt ("../Results/Price_SaleDuration.txt", df, fmt="%d\t%d\t%s\t%s") 
+            sys.exit (-1)
+            
         X_train_set = []
         y_train_set = []
         X_test_set = []
         y_test_set = []
         car_ident_code_test_set = []
-        
+
         if self.k_fold > 0:
             kf = KFold(self.k_fold, shuffle=True)
             
