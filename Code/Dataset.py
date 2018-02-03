@@ -495,13 +495,13 @@ class Dataset ():
         elif label == "sale_duration":
             y_total_set = self.get_sale_duration_array (self.total_dataset)
             # Save price, sale_duration
-            price = self.get_data_array (self.get_total_dataset (), "price")
+            """price = self.get_data_array (self.get_total_dataset (), "price")
             actual_advertising_date = self.get_data_array (self.get_total_dataset (), "actual_advertising_date")
             sale_date = self.get_data_array (self.get_total_dataset (), "sale_date")
             np_arr = np.concatenate ((price, y_total_set, actual_advertising_date, sale_date), axis=1)
             df = pd.DataFrame (np_arr)
             np.savetxt ("../Results/Price_SaleDuration.txt", df, fmt="%d\t%d\t%s\t%s") 
-            sys.exit (-1)
+            sys.exit (-1)"""
             
         X_train_set = []
         y_train_set = []

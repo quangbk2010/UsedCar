@@ -446,7 +446,7 @@ class Tensor_NN (Dataset, Sklearn_model):
         output3_ = slim.dropout (output3, self.dropout, scope='dropout3')
         output4 = slim.fully_connected(output3_, no_neuron, scope='hidden_main_2', activation_fn=tf.nn.relu)
         output4_ = slim.dropout (output4, self.dropout, scope='dropout3')
-        prediction = slim.fully_connected(output4_, 1, scope='output_main', activation_fn=None, weights_initializer=he_init) #tf.nn.relu) #None) # 1-dimension of output NOTE: only remove relu activation function in the last layer if using Gradient Boosting, because the differece can be negative (default activation function of fully_connected is relu))
+        prediction = slim.fully_connected(output3_, 1, scope='output_main', activation_fn=None, weights_initializer=he_init) #tf.nn.relu) #None) # 1-dimension of output NOTE: only remove relu activation function in the last layer if using Gradient Boosting, because the differece can be negative (default activation function of fully_connected is relu))
         tf.identity (prediction, name="prediction")
 
         return x_ident, x_remain, Y, x_embed, prediction, phase_train
@@ -1534,14 +1534,15 @@ class Tensor_NN (Dataset, Sklearn_model):
         """
         # First train the model on the original train data (can remove a part of outliers previously)
         os.system ("mkdir -p ../checkpoint/rm_outliers_total_set_NN/car2vect/regressor1")
-        model_path = self.model_dir + "/rm_outliers_total_set_NN/car2vect/regressor{0}/{1}_{2}_{3}_car2vect_{4}x2_{5}x2_total_set".format (1, dataset_size, self.model_name, self.label, self.no_neuron_embed, self.no_neuron)
+        model_path = self.model_dir + "/rm_outliers_total_set_NN/car2vect/regressor{0}/{1}_{2}_{3}_car2vect_{4}_{5}_total_set".format (1, dataset_size, self.model_name, self.label, self.no_neuron_embed, self.no_neuron)
+        #model_path = self.model_dir + "/rm_outliers_total_set_NN/car2vect/regressor{0}/{1}_{2}_{3}_car2vect_{4}x2_{5}x2_total_set".format (1, dataset_size, self.model_name, self.label, self.no_neuron_embed, self.no_neuron)
         #os.system ("mkdir -p ../checkpoint/rm_outliers_total_set_NN/car2vect_regul/regressor1")
         #model_path = self.model_dir + "/rm_outliers_total_set_NN/car2vect_regul/regressor{0}/{1}_{2}_{3}_car2vect_{4}_{5}_total_set".format (1, dataset_size, self.model_name, self.label, self.no_neuron_embed, self.no_neuron)
 
         print ("\n\n===========Train total set")
         # If comment the below line, you need to check the checkpoint file in regressor1 (it should be compatible with the dataset) 
         # Flexible rel_err.
-        self.train_car2vect(train_data=total_data, train_label=total_label, total_car_ident=total_car_ident_code, d_ident=d_ident, d_embed=self.d_embed, d_remain=d_remain, no_neuron=self.no_neuron, no_neuron_embed=self.no_neuron_embed, loss_func=self.loss_func, model_path=model_path)
+        #self.train_car2vect(train_data=total_data, train_label=total_label, total_car_ident=total_car_ident_code, d_ident=d_ident, d_embed=self.d_embed, d_remain=d_remain, no_neuron=self.no_neuron, no_neuron_embed=self.no_neuron_embed, loss_func=self.loss_func, model_path=model_path)
         # Only use the below line for Gradient Boosting 
         #self.train_car2vect(train_data=total_data, train_label=total_label, total_car_ident=total_car_ident_code, d_ident=d_ident, d_embed=self.d_embed, d_remain=d_remain, no_neuron=self.no_neuron, no_neuron_embed=self.no_neuron_embed, loss_func="rel_err", model_path=model_path)
 
@@ -1595,7 +1596,8 @@ class Tensor_NN (Dataset, Sklearn_model):
         print ("New test dataset:", new_test_data.shape, new_test_label.shape)
         print ("New test_car_ident:", new_test_car_ident.shape)
 
-
+        #self.no_neuron_embed = 6000
+        #self.no_neuron = 6000
         if ensemble_flag == 0:
             tf.reset_default_graph ()
             self.label = "sale_duration" ###########
