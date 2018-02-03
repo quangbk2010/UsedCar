@@ -1534,7 +1534,8 @@ class Tensor_NN (Dataset, Sklearn_model):
         """
         # First train the model on the original train data (can remove a part of outliers previously)
         os.system ("mkdir -p ../checkpoint/rm_outliers_total_set_NN/car2vect/regressor1")
-        model_path = self.model_dir + "/rm_outliers_total_set_NN/car2vect/regressor{0}/{1}_{2}_{3}_car2vect_{4}_{5}_total_set".format (1, dataset_size, self.model_name, self.label, self.no_neuron_embed, self.no_neuron)
+        #model_path = self.model_dir + "/rm_outliers_total_set_NN/car2vect/regressor{0}/{1}_{2}_{3}_car2vect_{4}_{5}_total_set".format (1, dataset_size, self.model_name, self.label, self.no_neuron_embed, self.no_neuron)
+        model_path = self.model_dir + "/rm_outliers_total_set_NN/car2vect/regressor{0}/{1}_{2}_{3}_car2vect_{4}_{5}_total_set".format (1, dataset_size, self.model_name, self.label, 1000, 6000)
         #model_path = self.model_dir + "/rm_outliers_total_set_NN/car2vect/regressor{0}/{1}_{2}_{3}_car2vect_{4}x2_{5}x2_total_set".format (1, dataset_size, self.model_name, self.label, self.no_neuron_embed, self.no_neuron)
         #os.system ("mkdir -p ../checkpoint/rm_outliers_total_set_NN/car2vect_regul/regressor1")
         #model_path = self.model_dir + "/rm_outliers_total_set_NN/car2vect_regul/regressor{0}/{1}_{2}_{3}_car2vect_{4}_{5}_total_set".format (1, dataset_size, self.model_name, self.label, self.no_neuron_embed, self.no_neuron)
