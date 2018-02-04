@@ -428,9 +428,9 @@ class Tensor_NN (Dataset, Sklearn_model):
         he_init = tf.contrib.layers.variance_scaling_initializer ()
         output1 = slim.fully_connected (x_ident, no_neuron_embed, scope='hidden_embed1', activation_fn=tf.nn.relu, weights_initializer=he_init) #None) #
         output1_ = slim.dropout (output1, self.dropout, scope='dropout1')
-        output2 = slim.fully_connected (output1_, no_neuron_embed, scope='hidden_embed2', activation_fn=tf.nn.relu)
-        output2_ = slim.dropout (output2, self.dropout, scope='dropout2')
-        x_embed = slim.fully_connected (output2_, d_embed, scope='output_embed', activation_fn=None, weights_initializer=he_init) #, activation_fn=tf.nn.relu)#, activation_fn=None) # 3-dimension of embeding NN
+        #output2 = slim.fully_connected (output1_, no_neuron_embed, scope='hidden_embed2', activation_fn=tf.nn.relu)
+        #output2_ = slim.dropout (output2, self.dropout, scope='dropout2')
+        x_embed = slim.fully_connected (output1_, d_embed, scope='output_embed', activation_fn=None, weights_initializer=he_init) #, activation_fn=tf.nn.relu)#, activation_fn=None) # 3-dimension of embeding NN
         #x_embed = slim.fully_connected (output1, d_embed, scope='output_embed', activation_fn=tf.nn.relu) # 3-dimension of embeding NN
         #x_embed = slim.fully_connected (output1, d_embed, scope='output_embed') # seperate the activation function to another step to use batch normalization.
         #x_embed = self.batch_norm (x_embed, phase_train) # batch normalization
@@ -444,9 +444,9 @@ class Tensor_NN (Dataset, Sklearn_model):
 
         output3 = slim.fully_connected(input3, no_neuron, scope='hidden_main1', activation_fn=tf.nn.relu, weights_initializer=he_init)
         output3_ = slim.dropout (output3, self.dropout, scope='dropout3')
-        output4 = slim.fully_connected(output3_, no_neuron, scope='hidden_main_2', activation_fn=tf.nn.relu)
-        output4_ = slim.dropout (output4, self.dropout, scope='dropout3')
-        prediction = slim.fully_connected(output4_, 1, scope='output_main', activation_fn=None, weights_initializer=he_init) #tf.nn.relu) #None) # 1-dimension of output NOTE: only remove relu activation function in the last layer if using Gradient Boosting, because the differece can be negative (default activation function of fully_connected is relu))
+        #output4 = slim.fully_connected(output3_, no_neuron, scope='hidden_main_2', activation_fn=tf.nn.relu)
+        #output4_ = slim.dropout (output4, self.dropout, scope='dropout3')
+        prediction = slim.fully_connected(output3_, 1, scope='output_main', activation_fn=None, weights_initializer=he_init) #tf.nn.relu) #None) # 1-dimension of output NOTE: only remove relu activation function in the last layer if using Gradient Boosting, because the differece can be negative (default activation function of fully_connected is relu))
         tf.identity (prediction, name="prediction")
 
         return x_ident, x_remain, Y, x_embed, prediction, phase_train
@@ -1543,7 +1543,7 @@ class Tensor_NN (Dataset, Sklearn_model):
         print ("\n\n===========Train total set")
         # If comment the below line, you need to check the checkpoint file in regressor1 (it should be compatible with the dataset) 
         # Flexible rel_err.
-        #self.train_car2vect(train_data=total_data, train_label=total_label, total_car_ident=total_car_ident_code, d_ident=d_ident, d_embed=self.d_embed, d_remain=d_remain, no_neuron=self.no_neuron, no_neuron_embed=self.no_neuron_embed, loss_func=self.loss_func, model_path=model_path)
+        self.train_car2vect(train_data=total_data, train_label=total_label, total_car_ident=total_car_ident_code, d_ident=d_ident, d_embed=self.d_embed, d_remain=d_remain, no_neuron=self.no_neuron, no_neuron_embed=self.no_neuron_embed, loss_func=self.loss_func, model_path=model_path)
         # Only use the below line for Gradient Boosting 
         #self.train_car2vect(train_data=total_data, train_label=total_label, total_car_ident=total_car_ident_code, d_ident=d_ident, d_embed=self.d_embed, d_remain=d_remain, no_neuron=self.no_neuron, no_neuron_embed=self.no_neuron_embed, loss_func="rel_err", model_path=model_path)
 
@@ -1630,7 +1630,7 @@ class Tensor_NN (Dataset, Sklearn_model):
            self.gradient_boosting_NN_car2vect (new_train_data, new_train_label, new_test_data, new_test_label, new_test_car_ident, d_ident, d_remain, y_predict_file_name, mean_error_file_name, x_ident_file_name, x_embed_file_name, dataset_size, retrain=2) 
 
         elif ensemble_flag == 5:
-            self.bagging_NN_car2vect (new_train_data, new_train_label, new_test_data, new_test_label, new_test_car_ident, d_ident, d_remain, y_predict_file_name, mean_error_file_name, x_ident_file_name, x_embed_file_name, dataset_size, self.sample_ratio, retrain=1)
+            self.bagging_NN_car2vect (new_train_data, new_train_label, new_test_data, new_test_label, new_total_car_ident_code, d_ident, d_remain, y_predict_file_name, mean_error_file_name, x_ident_file_name, x_embed_file_name, dataset_size, self.sample_ratio, retrain=1)
 
         else:
             raise ValueError ("[retrain_car2vect_from_total_set] This model is not supported!")
@@ -1781,7 +1781,7 @@ class Tensor_NN (Dataset, Sklearn_model):
             line['pred'] = predicted_test_label.reshape (predicted_test_label.shape[0])
             np.savetxt (y_predict_file_name_ + "_final" + str(i), line, fmt="%.2f\t%.2f")
 
-    def bagging_NN_car2vect (self, train_data, train_label, test_data, test_label, test_car_ident, d_ident, d_remain, y_predict_file_name, mean_error_file_name, x_ident_file_name, x_embed_file_name, dataset_size, ratio, retrain):
+    def bagging_NN_car2vect (self, train_data, train_label, test_data, test_label, total_car_ident, d_ident, d_remain, y_predict_file_name, mean_error_file_name, x_ident_file_name, x_embed_file_name, dataset_size, ratio, retrain):
         """
             - Purpose: Apply bagging (a kind of ensemble method) using car2vect.
         """
@@ -1807,7 +1807,8 @@ class Tensor_NN (Dataset, Sklearn_model):
             # Training
             os.system ("mkdir -p ../checkpoint/bagging_NN/car2vect/regressor" + str (i+1)) # TODO: move this line to Main.py
             
-            best_epoch = self.car2vect (train_data=train_data, train_label=train_label, test_data=test_data, test_label=test_label, test_car_ident=test_car_ident, d_ident=d_ident, d_embed=self.d_embed, d_remain=d_remain, no_neuron=self.no_neuron, no_neuron_embed=self.no_neuron_embed, loss_func="rel_err", model_path=model_path, y_predict_file_name=y_predict_file_name_, mean_error_file_name=mean_error_file_name_, x_ident_file_name=x_ident_file_name_, x_embed_file_name=x_embed_file_name_, retrain=1)#retrain)
+            best_epoch = self.car2vect (train_data=train_data, train_label=train_label, test_data=test_data, test_label=test_label, total_car_ident=total_car_ident, d_ident=d_ident, d_embed=self.d_embed, d_remain=d_remain, no_neuron=self.no_neuron, no_neuron_embed=self.no_neuron_embed, loss_func=self.loss_func, model_path=model_path, y_predict_file_name=y_predict_file_name_, mean_error_file_name=mean_error_file_name_, x_ident_file_name=x_ident_file_name_, x_embed_file_name=x_embed_file_name_, retrain=1) # if use retrain=1 -> initialize weights from the previous model
+            #best_epoch = self.car2vect (train_data=train_data, train_label=train_label, test_data=test_data, test_label=test_label, test_car_ident=test_car_ident, d_ident=d_ident, d_embed=self.d_embed, d_remain=d_remain, no_neuron=self.no_neuron, no_neuron_embed=self.no_neuron_embed, loss_func="rel_err", model_path=model_path, y_predict_file_name=y_predict_file_name_, mean_error_file_name=mean_error_file_name_, x_ident_file_name=x_ident_file_name_, x_embed_file_name=x_embed_file_name_, retrain=1)#retrain)
             bash_cmd = "cd ../checkpoint/bagging_NN/car2vect/regressor" + str (i+1) + "; mkdir temp_save; rm temp_save/*; cp checkpoint *_" + str (best_epoch) + ".*" + " temp_save; cd ../../../../Code"
             print ("bash_cmd:", bash_cmd)
             os.system (bash_cmd)
