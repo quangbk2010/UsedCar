@@ -165,8 +165,8 @@ class Dataset ():
             # Remove the data points with price == 0
             #total_dataset = total_dataset[total_dataset["price"] != 0]
             #print ("4.", total_dataset.shape)
-            total_dataset = total_dataset[total_dataset["price"] >= 50] # 400]
-            print ("3.1", total_dataset.shape)
+            #total_dataset = total_dataset[total_dataset["price"] >= 200] # 400]
+            #print ("3.1", total_dataset.shape)
             #total_dataset = total_dataset[total_dataset["price"] < 9000]
             #print ("3.2", total_dataset.shape)
 
@@ -175,12 +175,12 @@ class Dataset ():
             #print ("4.", total_dataset.shape)
 
             # Just keep hyundai and kia
-            total_dataset = total_dataset[(total_dataset["manufacture_code"] == 101) | (total_dataset["manufacture_code"] == 102)]
-            print ("5.", total_dataset.shape)
+            #total_dataset = total_dataset[(total_dataset["manufacture_code"] == 101) | (total_dataset["manufacture_code"] == 102)]
+            #print ("5.", total_dataset.shape)
 
             # Just keep passenger cars
-            total_dataset = total_dataset[(total_dataset["car_type"] == "Passenger car")]
-            print ("6.", total_dataset.shape)
+            #total_dataset = total_dataset[(total_dataset["car_type"] == "Passenger car")]
+            #print ("6.", total_dataset.shape)
 
             # Replace missing rating_code with 0
             total_dataset["rating_code"] = total_dataset["rating_code"].fillna (0)
