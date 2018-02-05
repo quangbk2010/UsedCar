@@ -110,17 +110,19 @@ class Sklearn_model (Dataset):
         (train_mae, train_rmse, train_rel_err, train_smape) = get_err (predicted_train_label, train_label)
         
         predicted_test_label = self.get_predicted_label (grid_search, test_data) 
-        predicted_test_label = [0 if predicted_test_label[i] < 0 else min (predicted_test_label[i], 400) for i in range (len (predicted_test_label))] 
-        (test_mae, test_rmse, test_rel_err, test_smape) = get_err (predicted_test_label, test_label) 
+        #predicted_test_label = [0 if predicted_test_label[i] < 0 else min (predicted_test_label[i], 400) for i in range (len (predicted_test_label))] 
+        predicted_test_label = np.clip (a=predicted_test_label, a_min=0, a_max=np.max (predicted_train_label))
+
+        (test_rmse, test_mae, test_rel_err, test_smape) = get_err (predicted_test_label, test_label) 
 
         print (np.c_ [test_label, predicted_test_label])
         print (np.c_ [np.min (predicted_train_label), np.max (predicted_train_label)])
         print (np.c_ [np.min (test_label), np.max (test_label)])
         print (np.c_ [np.min (predicted_test_label), np.max (predicted_test_label)])
 
-        print (reg_type + ": (mae, rmse, rel_err, smape)")
-        print (" Train err: (%.3f, %.3f, %.3f %%, %.3f %%)" % (train_mae, train_rmse, train_rel_err, train_smape))
-        print (" Test err : (%.3f, %.3f, %.3f %%, %.3f %%)" % (test_mae, test_rmse, test_rel_err, test_smape) )
+        print (reg_type + ": (rmse, mae, rel_err, smape)")
+        print (" Train err: (%.3f, %.3f, %.3f %%, %.3f %%)" % (train_rmse, train_mae, train_rel_err, train_smape))
+        print (" Test err : (%.3f, %.3f, %.3f %%, %.3f %%)" % (test_rmse, test_mae, test_rel_err, test_smape) )
 
     def __str__(self):
         """
