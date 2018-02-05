@@ -175,12 +175,12 @@ class Dataset ():
             #print ("4.", total_dataset.shape)
 
             # Just keep hyundai and kia
-            #total_dataset = total_dataset[(total_dataset["manufacture_code"] == 101) | (total_dataset["manufacture_code"] == 102)]
-            #print ("5.", total_dataset.shape)
+            total_dataset = total_dataset[(total_dataset["manufacture_code"] == 101) | (total_dataset["manufacture_code"] == 102)]
+            print ("5.", total_dataset.shape)
 
             # Just keep passenger cars
-            #total_dataset = total_dataset[(total_dataset["car_type"] == "Passenger car")]
-            #print ("6.", total_dataset.shape)
+            total_dataset = total_dataset[(total_dataset["car_type"] == "Passenger car")]
+            print ("6.", total_dataset.shape)
 
             # Replace missing rating_code with 0
             total_dataset["rating_code"] = total_dataset["rating_code"].fillna (0)

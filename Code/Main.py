@@ -123,15 +123,16 @@ if __name__ == '__main__':
     dataset = Dataset (args.dataset_size, dataset_excel_file, args.k_fold, args.label, args.car_ident_flag)
     total_data  = dataset.X_total_set
     total_label = dataset.y_total_set
-    total_act_adv_date= dataset.act_adv_date_total_set
-    total_car_ident_code= dataset.car_ident_code_total_set
     
     train_data  = dataset.X_train_set
     train_label = dataset.y_train_set
     test_data   = dataset.X_test_set
     test_label  = dataset.y_test_set
     if args.car_ident_flag == 1:
+        total_act_adv_date= dataset.act_adv_date_total_set
+        total_car_ident_code= dataset.car_ident_code_total_set
         test_car_ident = dataset.car_ident_code_total_set[train_data.shape[0]:]
+
     print ("train_data:", train_data.shape)
     print ("train_label:", train_label.shape)
     print ("test_data:", test_data.shape)
@@ -142,7 +143,7 @@ if __name__ == '__main__':
     ##################################
     if args.model_set == "sklearn":
         model = Sklearn_model (dataset_size)
-        for reg_type in ["Linear", "Ridge", "Lasso", "DecisionTreeRegressor", "GradientBoostingRegressor", "RandomForestRegressor", "AdaBoostRegressor"]:
+        for reg_type in ["Linear", "Ridge", "Lasso"]:#, "DecisionTreeRegressor", "GradientBoostingRegressor", "RandomForestRegressor", "AdaBoostRegressor"]:
             model.sklearn_regression(reg_type, train_data, train_label, test_data, test_label)
 
     elif args.model_set == "DL":
