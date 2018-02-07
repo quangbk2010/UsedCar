@@ -13,11 +13,14 @@ from Header import *
 
 
 def get_mae (predicted_label, actual_label):
-    #return np.mean (np.abs (predicted_label - actual_label))
+    #print ("mae", np.c_ [actual_label[:5], predicted_label[:5]])
     return mean_absolute_error (predicted_label, actual_label)
+    #return np.mean (np.abs (predicted_label - actual_label))
 
 def get_rmse (predicted_label, actual_label):
+    #print ("rmse", np.c_ [actual_label[:5], predicted_label[:5]])
     return np.sqrt (mean_squared_error (predicted_label, actual_label))
+    #return np.sqrt (np.mean ((predicted_label - actual_label) ** 2))
 
 def get_relative_err (predicted_label, actual_label):
     
