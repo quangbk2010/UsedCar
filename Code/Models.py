@@ -1728,7 +1728,7 @@ class Tensor_NN (Dataset, Sklearn_model):
         """
         ########
         ## Test
-        ### Feature importance
+        """### Feature importance
         length = len (l_feature) - 1
         sum_l = 0
         arr_sum_l = []
@@ -1744,14 +1744,14 @@ class Tensor_NN (Dataset, Sklearn_model):
             print (X[i].shape[1])
             print ("--------")
         sys.exit (-1)
-        ########
+        ########"""
         # First train the model on the original dataset
         os.system ("mkdir -p ../checkpoint/rm_outliers_total_set_NN/baseline/regressor1")
         model_path = self.model_dir + "/rm_outliers_total_set_NN/baseline/regressor{0}/{1}_{2}_{3}_car2vect_{4}_{5}_total_set".format (1, dataset_size, self.model_name, self.label, self.no_neuron, self.no_hidden_layer)
 
         print ("\n\n===========Train total set")
         # If comment the below line, you need to check the checkpoint file in regressor1 (it should be compatible with the dataset) 
-        self.train_baseline (total_data, total_label, self.no_neuron, self.no_hidden_layer, self.loss_func, model_path)
+        #self.train_baseline (total_data, total_label, self.no_neuron, self.no_hidden_layer, self.loss_func, model_path)
         print ("After train baseline...")
         
         # Restore the trained model
@@ -1809,7 +1809,7 @@ class Tensor_NN (Dataset, Sklearn_model):
             print ("Best epoch: ", best_epoch)
 
             ########################################
-            ### Feature importance
+            """### Feature importance
             length = len (l_feature) - 1
             sum_l = 0
             arr_sum_l = []
@@ -1818,7 +1818,7 @@ class Tensor_NN (Dataset, Sklearn_model):
                 arr_sum_l.append (sum_l)
 
             X = np.split (new_test_data, indices_or_sections=arr_sum_l, axis=1)
-            ########################################
+            ########################################"""
 
     def retrain_car2vect_from_total_set (self, total_data, total_label, total_car_ident_code, act_adv_date, d_ident, d_remain, y_predict_file_name, mean_error_file_name, x_ident_file_name, x_embed_file_name, dataset_size, removal_percent, ensemble_flag):
         """
