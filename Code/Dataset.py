@@ -245,8 +245,8 @@ class Dataset ():
         if car_ident_flag == 1:
             (self.act_adv_date_total_set, self.car_ident_code_total_set, self.X_total_set, self.y_total_set, self.X_train_set, self.y_train_set, self.X_test_set, self.y_test_set, self.d_ident, self.d_remain, self.car_ident_code_test_set) = self.get_data_label_car_ident (self.features, label)
         else:
-            (self.act_adv_date_total_set, self.X_total_set, self.y_total_set, self.X_train_set, self.y_train_set, self.X_test_set, self.y_test_set, self.l_dict) = self.get_data_label (self.features, label)
-            print (self.l_dict)
+            (self.act_adv_date_total_set, self.X_total_set, self.y_total_set, self.X_train_set, self.y_train_set, self.X_test_set, self.y_test_set, self.l_feature) = self.get_data_label (self.features, label)
+            print (self.l_feature)
     
     
     def get_total_dataset (self):
@@ -390,22 +390,25 @@ class Dataset ():
         print ("X1.shape", X1.shape)
         
         X2 = np.array (dataset[self.features_not_need_encoding])#["year_diff"] + 
-        X = np.concatenate ((X2, X1), axis = 1) 
+        X = np.concatenate ((X1, X2), axis = 1) 
         print ("X2.shape", X2.shape)
 
         ### The below lines used for calculating features importance
         # Save the length of each vector after encoding into a dictionary
-        l_dict = {}
+        #l_dict = {}
+        l_feature = []
         l1 = len (self.features_need_encoding)
         l2 = len (self.features_not_need_encoding)
         n_values = enc.n_values_
 
         for i in range (l1):
-            l_dict[self.features_need_encoding[i]] = n_values[i]
+            #l_dict[self.features_need_encoding[i]] = n_values[i]
+            l_feature.append (n_values[i])
         for i in range (l2):
-            l_dict[self.features_not_need_encoding[i]] = 1
+            #l_dict[self.features_not_need_encoding[i]] = 1
+            l_feature.append (1)
 
-        return (X, l_dict)
+        return (X, l_feature)
 
     def get_onehot_total_set (self):
         X = np.array (self.total_dataset [self.car_ident + self.features_need_encoding])  
