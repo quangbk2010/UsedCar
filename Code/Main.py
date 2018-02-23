@@ -140,9 +140,14 @@ if __name__ == '__main__':
     print ("test_label:", test_label.shape)
 
     ##################################
-    # Test feature impotance
+    # Test feature importance
+    """# Test feature importance when using model: NN_baseline
     if args.get_feature_importance_flag == True:
-        X_train, y_train, list_X_test, y_test = dataset.X_train, dataset.y_train, dataset.list_X_test, dataset.y_test
+        X_train, y_train, list_X_test, y_test = dataset.X_train, dataset.y_train, dataset.list_X_test, dataset.y_test"""
+    if args.get_feature_importance_flag == True:
+        l_feature = dataset.l_feature
+        print (l_feature)
+        sys.exit (-1)
     ##################################
 
     ##################################
