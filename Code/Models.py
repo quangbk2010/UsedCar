@@ -1704,7 +1704,7 @@ class Tensor_NN (Dataset, Sklearn_model):
         df_importance_score = pd.DataFrame (columns=["feature", "rmse", "mae", "rel_err", "smape"])
         for i in range (len_list_test):
             print ("===Test set:", i)
-            predicted_test_label, test_rmse_val, test_mae_val, test_relative_err_val, test_smape_val = self.restore_model_NN_baseline (list_test_data[i], test_label, meta_file, ckpt_file)
+            _, test_rmse_val, test_mae_val, test_relative_err_val, test_smape_val = self.restore_model_NN_baseline (list_test_data[i], test_label, meta_file, ckpt_file)
             print (test_rmse_val, test_mae_val, test_relative_err_val, test_smape_val)
             if i == 0:
                 init_rmse_err = test_rmse_val
@@ -1719,13 +1719,27 @@ class Tensor_NN (Dataset, Sklearn_model):
         #print (importance_score)
         np.savetxt ("./importance_score.txt", df_importance_score, fmt="%s\t%.2f\t%.2f\t%.2f\t%.2f")
 
-    def retrain_baseline_from_total_set (self, total_data, total_label, act_adv_date, y_predict_file_name, mean_error_file_name, dataset_size, removal_percent, ensemble_flag):
+    def retrain_baseline_from_total_set (self, total_data, total_label, act_adv_date, y_predict_file_name, mean_error_file_name, dataset_size, removal_percent, ensemble_flag, l_feature):
         """
             - Purpose: 
                 + Train the model baseline with the whole dataset, and then remove the data points with removal_percent highest relative error.
                 + Sort the remaining dataset by act_adv_date, and divide it into train and test sets
                 + Retrain the model car3vect with the new training data from scratch.
         """
+        ########
+        ## Test
+        ### Feature importance
+        length = len (l_feature) - 1
+        sum_l = 0
+        arr_sum_l = []
+        for i in range (length):
+            sum_l += l_feature[i]
+            arr_sum_l.append (sum_l)
+
+        X = np.split (total_data[:5], indices_or_sections=arr_sum_l, axis=1)
+        print (len (X))
+        sys.exit (-1)
+        ########
         # First train the model on the original dataset
         os.system ("mkdir -p ../checkpoint/rm_outliers_total_set_NN/baseline/regressor1")
         model_path = self.model_dir + "/rm_outliers_total_set_NN/baseline/regressor{0}/{1}_{2}_{3}_car2vect_{4}_{5}_total_set".format (1, dataset_size, self.model_name, self.label, self.no_neuron, self.no_hidden_layer)
@@ -1788,6 +1802,18 @@ class Tensor_NN (Dataset, Sklearn_model):
             print ("\n\n===========Predictor2")
             best_epoch = self.baseline (train_data=new_train_data, train_label=new_train_label, test_data=new_test_data, test_label=new_test_label, no_neuron=self.no_neuron, no_hidden_layer = self.no_hidden_layer, loss_func=self.loss_func, model_path=model_path, y_predict_file_name=y_predict_file_name_, mean_error_file_name=mean_error_file_name_)
             print ("Best epoch: ", best_epoch)
+
+            ########################################
+            ### Feature importance
+            length = len (l_feature) - 1
+            sum_l = 0
+            arr_sum_l = []
+            for i in range (length):
+                sum_l += l_feature[i]
+                arr_sum_l.append (sum_l)
+
+            X = np.split (new_test_data, indices_or_sections=arr_sum_l, axis=1)
+            ########################################
 
     def retrain_car2vect_from_total_set (self, total_data, total_label, total_car_ident_code, act_adv_date, d_ident, d_remain, y_predict_file_name, mean_error_file_name, x_ident_file_name, x_embed_file_name, dataset_size, removal_percent, ensemble_flag):
         """
