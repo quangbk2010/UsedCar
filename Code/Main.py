@@ -130,6 +130,7 @@ if __name__ == '__main__':
     test_data   = dataset.X_test_set
     test_label  = dataset.y_test_set
     total_act_adv_date= dataset.act_adv_date_total_set
+    sorted_features = dataset.sorted_features
     if args.car_ident_flag == 1:
         total_car_ident_code= dataset.car_ident_code_total_set
         test_car_ident = dataset.car_ident_code_total_set[train_data.shape[0]:]
@@ -192,7 +193,7 @@ if __name__ == '__main__':
             nn.car2vect (train_data=train_data, train_label=train_label, test_data=test_data, test_label=test_label, total_car_ident=total_car_ident_code, d_ident=dataset.d_ident, d_embed=nn.d_embed, d_remain=dataset.d_remain, no_neuron=nn.no_neuron, no_neuron_embed=nn.no_neuron_embed, loss_func=nn.loss_func, model_path=model_path, y_predict_file_name=y_predict_file_name, mean_error_file_name=mean_error_file_name, x_ident_file_name=x_ident_file_name, x_embed_file_name=x_embed_file_name, retrain=0) 
 
         elif args.ensemble_NN_flag == 9:
-            nn.retrain_baseline_from_total_set (total_data=total_data, total_label=total_label, act_adv_date=total_act_adv_date, y_predict_file_name=y_predict_file_name, mean_error_file_name=mean_error_file_name, dataset_size=dataset_size, removal_percent=args.outliers_removal_percent, ensemble_flag=0, l_feature=l_feature)
+            nn.retrain_baseline_from_total_set (total_data=total_data, total_label=total_label, act_adv_date=total_act_adv_date, y_predict_file_name=y_predict_file_name, mean_error_file_name=mean_error_file_name, dataset_size=dataset_size, removal_percent=args.outliers_removal_percent, ensemble_flag=-1, l_feature=l_feature, features=sorted_features)
 
         elif nn.car_ident_flag == 1:
             #model_path = nn.model_dir + "/car2vect/" + "[" + dataset_size + "]" + nn.model_name  + "_" + args.label  + "_car2vect_" + str (nn.no_neuron) + "_" + str (nn.no_neuron_embed) + "_" + str (nn.d_embed) + "_" + nn.loss_func

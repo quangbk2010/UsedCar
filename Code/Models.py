@@ -347,8 +347,8 @@ class Tensor_NN (Dataset, Sklearn_model):
                 epoch_train_smape_val = total_smape/len_train
                 print('\n\nEpoch: %03d' % (epoch), "Avg. training rmse:", epoch_train_rmse_val, "mae:", epoch_train_mae_val, 'relative_err:', epoch_train_relative_err_val, "smape:", epoch_train_smape_val)
                 
-                if epoch == 49: #epoch == 19 or epoch == 0 or 
-                    save_path = saver.save (sess, "../checkpoint/baseline/test3")#model_path + "_" + str (epoch)) 
+                if epoch == 29: #epoch == 19 or epoch == 0 or 
+                    save_path = saver.save (sess, "../checkpoint/baseline/test4")#model_path + "_" + str (epoch)) 
                     print('Model saved in file: %s' % save_path)
 
                 # Training data permutation
@@ -1474,8 +1474,8 @@ class Tensor_NN (Dataset, Sklearn_model):
 
             meta_file = model_path + "_" + str (best_epoch) + ".meta"
             ckpt_file = model_path + "_" + str (best_epoch) 
-            (predicted_train_label, train_rmse_val, train_mae_val, train_relative_err_val, train_smape_val) = self.restore_model_NN_baseline (train_data, train_label_copy, meta_file, ckpt_file)
-            (predicted_test_label, test_rmse_val, test_mae_val, test_relative_err_val, test_smape_val) = self.restore_model_NN_baseline (test_data, test_label_copy, meta_file, ckpt_file)
+            (predicted_train_label, train_rmse_val, train_mae_val, train_relative_err_val, train_smape_val) = self.restore_model_NN_baseline (train_data, train_label_copy, meta_file, ckpt_file, train_flag=0)
+            (predicted_test_label, test_rmse_val, test_mae_val, test_relative_err_val, test_smape_val) = self.restore_model_NN_baseline (test_data, test_label_copy, meta_file, ckpt_file, train_flag=0)
             print (predicted_test_label[:10], test_label_copy[:10])
             print ("=================================")
 
@@ -1693,10 +1693,11 @@ class Tensor_NN (Dataset, Sklearn_model):
         # Restore the model
         #meta_file = model_path + "_29.meta"
         #ckpt_file = model_path + "_29" 
-        meta_file = "../checkpoint/baseline/test3.meta" #"../checkpoint/baseline/[full]usedCar_price_baseline_6000_1_rel_err_29.meta"
-        ckpt_file = "../checkpoint/baseline/test3" # "../checkpoint/baseline/[full]usedCar_price_baseline_6000_1_rel_err_29"
+        meta_file = "../checkpoint/baseline/test4.meta" #"../checkpoint/baseline/[full]usedCar_price_baseline_6000_1_rel_err_29.meta"
+        ckpt_file = "../checkpoint/baseline/test4" # "../checkpoint/baseline/[full]usedCar_price_baseline_6000_1_rel_err_29"
         
-        predicted_train_label, train_rmse_val, train_mae_val, train_relative_err_val, train_smape_val = self.restore_model_NN_baseline (train_data, train_label, meta_file, ckpt_file)
+        #predicted_train_label, train_rmse_val, train_mae_val, train_relative_err_val, train_smape_val = self.restore_model_NN_baseline (train_data, train_label, meta_file, ckpt_file, train_flag=0)
+        (predicted_train_label, train_rmse_val, train_mae_val, train_relative_err_val, train_smape_val, train_arr_relative_err) = self.batch_computation_baseline (5, train_data, train_label, meta_file, ckpt_file)
         print ("Train: ", train_rmse_val, train_mae_val, train_relative_err_val, train_smape_val)
 
         len_list_test = len (list_test_data)
@@ -1704,7 +1705,7 @@ class Tensor_NN (Dataset, Sklearn_model):
         df_importance_score = pd.DataFrame (columns=["feature", "rmse", "mae", "rel_err", "smape"])
         for i in range (len_list_test):
             print ("===Test set:", i)
-            _, test_rmse_val, test_mae_val, test_relative_err_val, test_smape_val = self.restore_model_NN_baseline (list_test_data[i], test_label, meta_file, ckpt_file)
+            _, test_rmse_val, test_mae_val, test_relative_err_val, test_smape_val = self.restore_model_NN_baseline (list_test_data[i], test_label, meta_file, ckpt_file, train_flag=0)
             print (test_rmse_val, test_mae_val, test_relative_err_val, test_smape_val)
             if i == 0:
                 init_rmse_err = test_rmse_val
@@ -1719,32 +1720,37 @@ class Tensor_NN (Dataset, Sklearn_model):
         #print (importance_score)
         np.savetxt ("./importance_score.txt", df_importance_score, fmt="%s\t%.2f\t%.2f\t%.2f\t%.2f")
 
-    def retrain_baseline_from_total_set (self, total_data, total_label, act_adv_date, y_predict_file_name, mean_error_file_name, dataset_size, removal_percent, ensemble_flag, l_feature):
+    def retrain_baseline_from_total_set (self, total_data, total_label, act_adv_date, y_predict_file_name, mean_error_file_name, dataset_size, removal_percent, ensemble_flag, l_feature, features):
         """
             - Purpose: 
                 + Train the model baseline with the whole dataset, and then remove the data points with removal_percent highest relative error.
                 + Sort the remaining dataset by act_adv_date, and divide it into train and test sets
                 + Retrain the model car3vect with the new training data from scratch.
         """
-        ########
-        ## Test
-        """### Feature importance
-        length = len (l_feature) - 1
+        ########################################
+        """### Test Feature importance
+        length = len (l_feature)
         sum_l = 0
         arr_sum_l = []
-        for i in range (length):
+        for i in range (length-1):
             sum_l += l_feature[i]
             arr_sum_l.append (sum_l)
 
         print (arr_sum_l)
+        X = np.split (total_data[:5], arr_sum_l, axis=1)
+        #for i in range (length):
+        #    print (X[i])
+        arr_sum_l.insert (0,0)
+        for i in range (length):
+            print ("===i:", i)
+            total_data_copy = total_data[:5].copy ()
+            if i < length-1:
+                total_data_copy [:, arr_sum_l [i]:arr_sum_l [i+1]] = np.random.permutation (X[i]) 
+            else:
+                total_data_copy [:, arr_sum_l [i]:] = np.random.permutation (X[i]) 
+            print (total_data_copy)
         sys.exit (-1)
-
-        X = np.split (total_data[:5], indices_or_sections=arr_sum_l, axis=1)
-        for i in range (len(X)):
-            print (X[i].shape[1])
-            print ("--------")
-        sys.exit (-1)
-        ########"""
+        ########################################"""
         # First train the model on the original dataset
         os.system ("mkdir -p ../checkpoint/rm_outliers_total_set_NN/baseline/regressor1")
         model_path = self.model_dir + "/rm_outliers_total_set_NN/baseline/regressor{0}/{1}_{2}_{3}_car2vect_{4}_{5}_total_set".format (1, dataset_size, self.model_name, self.label, self.no_neuron, self.no_hidden_layer)
@@ -1808,17 +1814,33 @@ class Tensor_NN (Dataset, Sklearn_model):
             best_epoch = self.baseline (train_data=new_train_data, train_label=new_train_label, test_data=new_test_data, test_label=new_test_label, no_neuron=self.no_neuron, no_hidden_layer = self.no_hidden_layer, loss_func=self.loss_func, model_path=model_path, y_predict_file_name=y_predict_file_name_, mean_error_file_name=mean_error_file_name_)
             print ("Best epoch: ", best_epoch)
 
+        elif ensemble_flag == -1:
             ########################################
-            """### Feature importance
-            length = len (l_feature) - 1
+            ### Feature importance
+
+            # Get the list of test_data with each feature column is shuffled (the 1st element is the original new_test_data)
+            length = len (l_feature)
             sum_l = 0
             arr_sum_l = []
-            for i in range (length):
+            list_test_data = [new_test_data]
+            for i in range (length-1):
                 sum_l += l_feature[i]
                 arr_sum_l.append (sum_l)
 
             X = np.split (new_test_data, indices_or_sections=arr_sum_l, axis=1)
-            ########################################"""
+            arr_sum_l.insert (0,0)
+            for i in range (2):#length):
+                print ("====i:", i)
+                test_data_copy = new_test_data.copy ()
+                if i < length-1:
+                    test_data_copy [:, arr_sum_l [i]:arr_sum_l [i+1]] = np.random.permutation (X[i]) 
+                else:
+                    test_data_copy [:, arr_sum_l [i]:] = np.random.permutation (X[i]) 
+                list_test_data.append (test_data_copy)
+            print (len (list_test_data))
+            tf.reset_default_graph ()
+            self.get_features_importance_baseline_NN (new_train_data, new_train_label, list_test_data, new_test_label, model_path, features)
+            ########################################
 
     def retrain_car2vect_from_total_set (self, total_data, total_label, total_car_ident_code, act_adv_date, d_ident, d_remain, y_predict_file_name, mean_error_file_name, x_ident_file_name, x_embed_file_name, dataset_size, removal_percent, ensemble_flag):
         """
@@ -2067,8 +2089,8 @@ class Tensor_NN (Dataset, Sklearn_model):
 
         meta_file = model_path + "_" + str (best_epoch) + ".meta"
         ckpt_file = model_path + "_" + str (best_epoch) 
-        (predicted_train_label, train_rmse_val, train_mae_val, train_relative_err_val, train_smape_val) = self.restore_model_NN_baseline (train_data, train_label_copy, meta_file, ckpt_file)
-        (predicted_test_label, test_rmse_val, test_mae_val, test_relative_err_val, test_smape_val) = self.restore_model_NN_baseline (test_data, test_label_copy, meta_file, ckpt_file)
+        (predicted_train_label, train_rmse_val, train_mae_val, train_relative_err_val, train_smape_val) = self.restore_model_NN_baseline (train_data, train_label_copy, meta_file, ckpt_file, train_flag=0)
+        (predicted_test_label, test_rmse_val, test_mae_val, test_relative_err_val, test_smape_val) = self.restore_model_NN_baseline (test_data, test_label_copy, meta_file, ckpt_file, train_flag=0)
         print (predicted_test_label[:10])
         print (test_label_copy[:10])
         list_predicted_test_label.append (predicted_test_label)
@@ -2129,7 +2151,7 @@ class Tensor_NN (Dataset, Sklearn_model):
             print ("Best epoch: ", best_epoch)
             meta_file = model_path + "_" + str (best_epoch) + ".meta"
             ckpt_file = model_path + "_" + str (best_epoch) 
-            (predicted_test_label, test_rmse_val, test_mae_val, test_relative_err_val, test_smape_val) = self.restore_model_NN_baseline (test_data, test_label, meta_file, ckpt_file)
+            (predicted_test_label, test_rmse_val, test_mae_val, test_relative_err_val, test_smape_val) = self.restore_model_NN_baseline (test_data, test_label, meta_file, ckpt_file, train_flag=0)
             list_predicted_test_label.append (predicted_test_label)
             print ("predicted_test_label (" + str(i) + ")", predicted_test_label[:10])
             print ("=================================")

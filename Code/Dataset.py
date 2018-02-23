@@ -133,6 +133,8 @@ class Dataset ():
         # list of features whether it needs one-hot encode
         self.features_not_need_encoding = [feature for feature in features_remove_car_ident if feature not in self.features_need_encoding] 
 
+        self.sorted_features = self.features_need_encoding + self.features_not_need_encoding
+
         dataframe_file = "./Dataframe/[" + dataset_size + "]total_dataframe_Initial.h5"
         key = "df"
 
@@ -246,7 +248,6 @@ class Dataset ():
             (self.act_adv_date_total_set, self.car_ident_code_total_set, self.X_total_set, self.y_total_set, self.X_train_set, self.y_train_set, self.X_test_set, self.y_test_set, self.d_ident, self.d_remain, self.car_ident_code_test_set) = self.get_data_label_car_ident (self.features, label)
         else:
             (self.act_adv_date_total_set, self.X_total_set, self.y_total_set, self.X_train_set, self.y_train_set, self.X_test_set, self.y_test_set, self.l_feature) = self.get_data_label (self.features, label)
-    
     
     def get_total_dataset (self):
         return self.total_dataset
@@ -382,30 +383,26 @@ class Dataset ():
         => return: a matrix with rows are data points, columns are features values (nD numpy.array object)
         
         """ 
+        # Save the length of each vector after encoding into a dictionary
+        l_feature = []
+        l1 = len (self.features_need_encoding)
+        l2 = len (self.features_not_need_encoding)
         #23/2/2018: X1 = np.array (dataset[self.car_ident + self.features_need_encoding])#["adv_month"] +  
+        print (self.features_need_encoding)
         X1 = np.array (dataset[self.features_need_encoding])#["adv_month"] +  
+        for i in range (l1):
+            l_feature.append (len (np.unique (dataset [self.features_need_encoding [i]])))
         enc = OneHotEncoder(sparse = False)
         X1 = enc.fit_transform (X1)
         print ("X1.shape", X1.shape)
         
+        print (self.features_not_need_encoding)
         X2 = np.array (dataset[self.features_not_need_encoding])#["year_diff"] + 
+        for i in range (l2):
+            l_feature.append (1)
         X = np.concatenate ((X1, X2), axis = 1) 
         print ("X2.shape", X2.shape)
 
-        ### The below lines used for calculating features importance
-        # Save the length of each vector after encoding into a dictionary
-        #l_dict = {}
-        l_feature = []
-        l1 = len (self.features_need_encoding)
-        l2 = len (self.features_not_need_encoding)
-        n_values = enc.n_values_
-
-        for i in range (l1):
-            #l_dict[self.features_need_encoding[i]] = n_values[i]
-            l_feature.append (n_values[i])
-        for i in range (l2):
-            #l_dict[self.features_not_need_encoding[i]] = 1
-            l_feature.append (1)
 
         return (X, l_feature)
 
