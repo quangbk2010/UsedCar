@@ -96,7 +96,7 @@ class MultiColumnOutlierRemove:
         return self.fit(X,y).transform(X)
 
 class Dataset ():
-    def __init__(self, dataset_size, dataset_excel_file, k_fold, label, car_ident_flag):
+    def __init__(self, dataset_size, dataset_excel_file, k_fold, label, car_ident_flag, get_feature_importance_flag):
         """
             Loading data from csv file
         """
@@ -234,11 +234,19 @@ class Dataset ():
         print ("Time for Loading and preprocessing dataset: %.3f" % (time.time() - stime))
         self.total_dataset = total_dataset
         self.k_fold = k_fold
+
+        """#### In case of testing the importance of features when using model: NN_baseline
+        if get_feature_importance_flag == True:
+            len_train  = int (0.5 + len (total_dataset) * self.data_training_percentage)
+            self.X_train, self.y_train, self.list_X_test, self.y_test = self.get_dataset_feature_importance (len_train, label) 
+            print ("===Length of list testset:", len (self.list_X_test))
+        ###"""
         
         if car_ident_flag == 1:
             (self.act_adv_date_total_set, self.car_ident_code_total_set, self.X_total_set, self.y_total_set, self.X_train_set, self.y_train_set, self.X_test_set, self.y_test_set, self.d_ident, self.d_remain, self.car_ident_code_test_set) = self.get_data_label_car_ident (self.features, label)
         else:
-            (self.X_total_set, self.y_total_set, self.X_train_set, self.y_train_set, self.X_test_set, self.y_test_set) = self.get_data_label (self.features, label)
+            (self.act_adv_date_total_set, self.X_total_set, self.y_total_set, self.X_train_set, self.y_train_set, self.X_test_set, self.y_test_set, self.l_dict) = self.get_data_label (self.features, label)
+            print (self.l_dict)
     
     
     def get_total_dataset (self):
@@ -369,22 +377,57 @@ class Dataset ():
         
         return sale_duration_array
 
-    def get_data_matrix (self, dataset, features):
+    def get_data_matrix (self, dataset):
         """
         dataset: training, validation, test, or total dataset
-        features: an array contains name of features 
         => return: a matrix with rows are data points, columns are features values (nD numpy.array object)
         
         """ 
-        X1 = np.array (dataset[self.car_ident + self.features_need_encoding])#["adv_month"] +  
+        #23/2/2018: X1 = np.array (dataset[self.car_ident + self.features_need_encoding])#["adv_month"] +  
+        X1 = np.array (dataset[self.features_need_encoding])#["adv_month"] +  
         enc = OneHotEncoder(sparse = False)
         X1 = enc.fit_transform (X1)
+        print ("X1.shape", X1.shape)
+        
+        X2 = np.array (dataset[self.features_not_need_encoding])#["year_diff"] + 
+        X = np.concatenate ((X2, X1), axis = 1) 
+        print ("X2.shape", X2.shape)
+
+        ### The below lines used for calculating features importance
+        # Save the length of each vector after encoding into a dictionary
+        l_dict = {}
+        l1 = len (self.features_need_encoding)
+        l2 = len (self.features_not_need_encoding)
+        n_values = enc.n_values_
+
+        for i in range (l1):
+            l_dict[self.features_need_encoding[i]] = n_values[i]
+        for i in range (l2):
+            l_dict[self.features_not_need_encoding[i]] = 1
+
+        return (X, l_dict)
+
+    def get_onehot_total_set (self):
+        X = np.array (self.total_dataset [self.car_ident + self.features_need_encoding])  
+        enc = OneHotEncoder (sparse = False)
+        enc.fit (X)
+        return enc
+        
+    def get_data_matrix_2 (self, enc, dataset):
+        """
+        => return: 
+            + a matrix with rows are data points, columns are features values (nD numpy.array object)
+            + the result encoder
+        
+        """ 
+        X1 = np.array (dataset[self.car_ident + self.features_need_encoding])#["adv_month"] +  
+        X1 = enc.transform (X1)
         print ("X1.shape", X1.shape)
 
         X2 = np.array (dataset[self.features_not_need_encoding])#["year_diff"] + 
         X = np.concatenate ((X2, X1), axis = 1) 
         print ("X2.shape", X2.shape)
-        return X 
+        return X
 
     def get_data_matrix_car_ident (self, dataset):
         """
@@ -433,7 +476,8 @@ class Dataset ():
              and "n_splits" test sets (X_test_set, y_test_set)
         """
         
-        X_total_set = self.get_data_matrix (self.total_dataset, features) 
+        X_total_set, l_dict = self.get_data_matrix (self.total_dataset) 
+        act_adv_date = self.get_data_array (self.get_total_dataset (), "actual_advertising_date")
 
         len_total_set = X_total_set.shape[0]    
         train_length     = int (0.5 + len_total_set * self.data_training_percentage)
@@ -468,7 +512,7 @@ class Dataset ():
             y_test_set = y_total_set[train_length:, :]
 
             
-        return (X_total_set, y_total_set, X_train_set, y_train_set, X_test_set, y_test_set) 
+        return (act_adv_date, X_total_set, y_total_set, X_train_set, y_train_set, X_test_set, y_test_set, l_dict) 
     
     
     def get_data_label_car_ident (self, features, label):
@@ -533,6 +577,48 @@ class Dataset ():
             car_ident_code_test_set = car_ident_code_total_set[train_length:, :]
             
         return (act_adv_date, car_ident_code_total_set, X_total_set, y_total_set, X_train_set, y_train_set, X_test_set, y_test_set, d_ident, d_remain, car_ident_code_test_set) 
+
+    def get_dataset_feature_importance (self, len_train, label):
+        """
+            Purpose: Split the total data into: train data and a list of test data.
+                    A list of test data contains:
+                        + The original test data
+                        + The test data with each column is permuted, while the other columns keep the initial orders.
+        """
+        # Separate the total set dataframe into trainset and testset
+        train_set = self.total_dataset [:len_train]
+        test_set = self.total_dataset [len_train:]
+
+        # Return the onehot encoder with total data, and use it for train and test separately
+        enc = self.get_onehot_total_set ()
+
+        # Encode train data and test data
+        X_train = self.get_data_matrix_2 (enc, train_set)
+        X_test = self.get_data_matrix_2 (enc, test_set)
+
+        #print ("Train shape.", X_train.shape)
+        #print ("Test shape.", X_test.shape)
+
+        # Save the incoded data into a list
+        list_X_test = [X_test]
+
+        # Permute the testset by each column
+        for feature in self.features:
+            test_set_copy = test_set.copy ()
+            #print ("1. feature: ", test_set[:1])
+            test_set_copy [feature] = np.random.permutation (test_set_copy[feature])
+            #print ("2. feature: ", test_set[:1])
+            X_test = self.get_data_matrix_2 (enc, test_set_copy)
+            list_X_test.append (X_test)
+
+        # Get the array of labels
+        if label == "price":
+            y_train = self.get_data_array (train_set, label)
+            y_test = self.get_data_array (test_set, label)
+        elif label == "sale_duration":
+            y_train = self.get_sale_duration_array (train_set)
+            y_test = self.get_sale_duration_array (test_set)
+        return (X_train, y_train, list_X_test, y_test)
 
     def __str__(self):
         """
