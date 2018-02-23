@@ -1829,7 +1829,7 @@ class Tensor_NN (Dataset, Sklearn_model):
 
             X = np.split (new_test_data, indices_or_sections=arr_sum_l, axis=1)
             arr_sum_l.insert (0,0)
-            for i in range (2):#length):
+            for i in range (length):
                 print ("====i:", i)
                 test_data_copy = new_test_data.copy ()
                 if i < length-1:
