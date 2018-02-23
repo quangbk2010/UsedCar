@@ -1738,7 +1738,7 @@ class Tensor_NN (Dataset, Sklearn_model):
 
         X = np.split (total_data[:5], indices_or_sections=arr_sum_l, axis=1)
         for i in range (len(X)):
-            print (len (X[i]))
+            print (X[i].shape[1])
             print ("--------")
         sys.exit (-1)
         ########
