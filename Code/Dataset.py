@@ -177,12 +177,16 @@ class Dataset ():
             #print ("4.", total_dataset.shape)
 
             # Just keep hyundai and kia
-            total_dataset = total_dataset[(total_dataset["manufacture_code"] == 101) | (total_dataset["manufacture_code"] == 102)]
+            #total_dataset = total_dataset[(total_dataset["manufacture_code"] == 101) | (total_dataset["manufacture_code"] == 102)]
+            #print ("5.", total_dataset.shape)
+
+            # Just keep10 most popular rep_model_code 
+            total_dataset = total_dataset[total_dataset["rep_model_code"].isin ([1101, 1108, 1109, 1166, 1121, 1153, 1225, 1207, 1124, 1151])]
             print ("5.", total_dataset.shape)
 
             # Just keep passenger cars
-            total_dataset = total_dataset[(total_dataset["car_type"] == "Passenger car")]
-            print ("6.", total_dataset.shape)
+            #total_dataset = total_dataset[(total_dataset["car_type"] == "Passenger car")]
+            #print ("6.", total_dataset.shape)
 
             # Replace missing rating_code with 0
             total_dataset["rating_code"] = total_dataset["rating_code"].fillna (0)
