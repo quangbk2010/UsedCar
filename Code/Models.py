@@ -348,7 +348,8 @@ class Tensor_NN (Dataset, Sklearn_model):
                 print('\n\nEpoch: %03d' % (epoch), "Avg. training rmse:", epoch_train_rmse_val, "mae:", epoch_train_mae_val, 'relative_err:', epoch_train_relative_err_val, "smape:", epoch_train_smape_val)
                 
                 if epoch == 29: #epoch == 19 or epoch == 0 or 
-                    save_path = saver.save (sess, "../checkpoint/baseline/test4")#model_path + "_" + str (epoch)) 
+                    ckpt_file = model_path
+                    save_path = saver.save (sess, ckpt_file) #"../checkpoint/baseline/test4")#model_path + "_" + str (epoch)) 
                     print('Model saved in file: %s' % save_path)
 
                 # Training data permutation
@@ -1687,15 +1688,14 @@ class Tensor_NN (Dataset, Sklearn_model):
         np.savetxt (y_predict_file_name + "_train_after_remove_" + str (removal_percent), line, fmt="%.2f\t%.2f")"""
 
     def get_features_importance_baseline_NN (self, train_data, train_label, list_test_data, test_label, model_path, features):
+        meta_file = model_path + "test4.meta"
+        ckpt_file = model_path + "test4" 
+        #meta_file = "../checkpoint/baseline/test4.meta" 
+        #ckpt_file = "../checkpoint/baseline/test4" 
         # Train the model based on the train set
-        self.train_baseline (train_data, train_label, self.no_neuron, self.no_hidden_layer, self.loss_func, model_path)
+        self.train_baseline (train_data, train_label, self.no_neuron, self.no_hidden_layer, self.loss_func, ckpt_file)
 
         # Restore the model
-        #meta_file = model_path + "_29.meta"
-        #ckpt_file = model_path + "_29" 
-        meta_file = "../checkpoint/baseline/test4.meta" #"../checkpoint/baseline/[full]usedCar_price_baseline_6000_1_rel_err_29.meta"
-        ckpt_file = "../checkpoint/baseline/test4" # "../checkpoint/baseline/[full]usedCar_price_baseline_6000_1_rel_err_29"
-        
         #predicted_train_label, train_rmse_val, train_mae_val, train_relative_err_val, train_smape_val = self.restore_model_NN_baseline (train_data, train_label, meta_file, ckpt_file, train_flag=0)
         (predicted_train_label, train_rmse_val, train_mae_val, train_relative_err_val, train_smape_val, train_arr_relative_err) = self.batch_computation_baseline (5, train_data, train_label, meta_file, ckpt_file)
         print ("Train: ", train_rmse_val, train_mae_val, train_relative_err_val, train_smape_val)
@@ -1729,20 +1729,21 @@ class Tensor_NN (Dataset, Sklearn_model):
         """
         # First train the model on the original dataset
         os.system ("mkdir -p ../checkpoint/rm_outliers_total_set_NN/baseline/regressor1")
-        model_path = self.model_dir + "/rm_outliers_total_set_NN/baseline/regressor{0}/{1}_{2}_{3}_car2vect_{4}_{5}_total_set".format (1, dataset_size, self.model_name, self.label, self.no_neuron, self.no_hidden_layer)
+        #model_path = self.model_dir + "/rm_outliers_total_set_NN/baseline/regressor{0}/{1}_{2}_{3}_car2vect_{4}_{5}_total_set".format (1, dataset_size, self.model_name, self.label, self.no_neuron, self.no_hidden_layer)
+        model_path = "../checkpoint/baseline/"
 
+        meta_file = model_path + "test3.meta" #"../checkpoint/baseline/test3.meta" #model_path + ".meta"
+        ckpt_file = model_path + "test3" #"../checkpoint/baseline/test3" # model_path
         print ("\n\n===========Train total set")
         # If comment the below line, you need to check the checkpoint file in regressor1 (it should be compatible with the dataset) 
-        self.train_baseline (total_data, total_label, self.no_neuron, self.no_hidden_layer, self.loss_func, model_path)
+        #self.train_baseline (total_data, total_label, self.no_neuron, self.no_hidden_layer, self.loss_func, ckpt_file)
         print ("After train baseline...")
         
+
         # Restore the trained model
         # When restore model with the whole dataset, it can cause the error: Resource exhausted 
         # Devide the train set into smaller subsets (Eg. 5 subsets), push them to the model and concatenate the predictions later
         # TODO: change the "model_dir" arg to automatically set the directory
-        meta_file = "../checkpoint/baseline/test3.meta" #model_path + ".meta"
-        ckpt_file = "../checkpoint/baseline/test3" # model_path
-
         (predicted_total_label, total_rmse_val, total_mae_val, total_relative_err_val, total_smape_val, total_arr_relative_err) = self.batch_computation_baseline (5, total_data, total_label, meta_file, ckpt_file)
         print ("After restoring baseline model...")
         total_np_arr = np.concatenate ((act_adv_date, total_label, predicted_total_label), axis=1)
