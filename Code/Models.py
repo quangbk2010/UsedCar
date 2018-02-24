@@ -1727,37 +1727,13 @@ class Tensor_NN (Dataset, Sklearn_model):
                 + Sort the remaining dataset by act_adv_date, and divide it into train and test sets
                 + Retrain the model car3vect with the new training data from scratch.
         """
-        ########################################
-        """### Test Feature importance
-        length = len (l_feature)
-        sum_l = 0
-        arr_sum_l = []
-        for i in range (length-1):
-            sum_l += l_feature[i]
-            arr_sum_l.append (sum_l)
-
-        print (arr_sum_l)
-        X = np.split (total_data[:5], arr_sum_l, axis=1)
-        #for i in range (length):
-        #    print (X[i])
-        arr_sum_l.insert (0,0)
-        for i in range (length):
-            print ("===i:", i)
-            total_data_copy = total_data[:5].copy ()
-            if i < length-1:
-                total_data_copy [:, arr_sum_l [i]:arr_sum_l [i+1]] = np.random.permutation (X[i]) 
-            else:
-                total_data_copy [:, arr_sum_l [i]:] = np.random.permutation (X[i]) 
-            print (total_data_copy)
-        sys.exit (-1)
-        ########################################"""
         # First train the model on the original dataset
         os.system ("mkdir -p ../checkpoint/rm_outliers_total_set_NN/baseline/regressor1")
         model_path = self.model_dir + "/rm_outliers_total_set_NN/baseline/regressor{0}/{1}_{2}_{3}_car2vect_{4}_{5}_total_set".format (1, dataset_size, self.model_name, self.label, self.no_neuron, self.no_hidden_layer)
 
         print ("\n\n===========Train total set")
         # If comment the below line, you need to check the checkpoint file in regressor1 (it should be compatible with the dataset) 
-        #self.train_baseline (total_data, total_label, self.no_neuron, self.no_hidden_layer, self.loss_func, model_path)
+        self.train_baseline (total_data, total_label, self.no_neuron, self.no_hidden_layer, self.loss_func, model_path)
         print ("After train baseline...")
         
         # Restore the trained model
