@@ -1736,7 +1736,7 @@ class Tensor_NN (Dataset, Sklearn_model):
         ckpt_file = model_path + "test3" #"../checkpoint/baseline/test3" # model_path
         print ("\n\n===========Train total set")
         # If comment the below line, you need to check the checkpoint file in regressor1 (it should be compatible with the dataset) 
-        #self.train_baseline (total_data, total_label, self.no_neuron, self.no_hidden_layer, self.loss_func, ckpt_file)
+        self.train_baseline (total_data, total_label, self.no_neuron, self.no_hidden_layer, self.loss_func, ckpt_file)
         print ("After train baseline...")
         
 
