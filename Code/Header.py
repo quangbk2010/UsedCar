@@ -50,7 +50,7 @@ import tensorflow.contrib.slim as slim
 # For plotting figures
 import matplotlib.pyplot as plt
 
-dataset_type = "new" # "old", "new"
+dataset_type = "old" # "old", "new"
 
 ################################
 ### What to change frequently
