@@ -170,8 +170,9 @@ class Dataset ():
             #total_dataset = total_dataset.reindex(np.random.permutation(total_dataset.index))
             
             # Remove the data points with sale_state == "advertising"
-            #total_dataset = total_dataset[total_dataset["sale_state"] == "Sold-out"]
-            #print ("1.", total_dataset.shape)
+            if dataset_type == "old":
+                total_dataset = total_dataset[total_dataset["sale_state"] == "Sold-out"]
+                print ("1.", total_dataset.shape)
 
             # Remove the data points with cylinder_displayment >=10000 
             total_dataset = total_dataset[total_dataset["cylinder_disp"] < 10000]
@@ -215,7 +216,7 @@ class Dataset ():
             # Just keep passenger cars
             #total_dataset = total_dataset[(total_dataset["car_type"] == "Passenger car")]
             #print ("6.", total_dataset.shape)
-
+rep_model_code
             # Replace missing grade_code with 0
             total_dataset["grade_code"] = total_dataset["grade_code"].fillna (0)
 
