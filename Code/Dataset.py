@@ -179,7 +179,7 @@ class Dataset ():
             print ("2.2", total_dataset.shape)
 
             # Remove the data points with revovery_fee < 0
-            total_dataset = total_dataset[total_dataset["vehicle_mile"].between (0, 1000000000, inclusive=True)]
+            total_dataset = total_dataset[total_dataset["recovery_fee"] > 0]
             print ("2.2", total_dataset.shape)
 
             # Remove the data points with maker_year < 2000, > 2018 
@@ -192,10 +192,10 @@ class Dataset ():
             total_dataset = total_dataset[total_dataset[["price"]].applymap (np.isreal).all (1)]
             print ("4.", total_dataset.shape)
 
-            #total_dataset = total_dataset[total_dataset["price"] >= 200] # 400]
-            #print ("3.1", total_dataset.shape)
-            #total_dataset = total_dataset[total_dataset["price"] < 9000]
-            #print ("3.2", total_dataset.shape)
+            total_dataset = total_dataset[total_dataset["price"] >= 200] # 400]
+            print ("3.1", total_dataset.shape)
+            total_dataset = total_dataset[total_dataset["price"] < 9000]
+            print ("3.2", total_dataset.shape)
 
             # Remove outliers
             #total_dataset = total_dataset[np.abs(total_dataset["price"] - total_dataset["price"].mean()) / total_dataset["price"].std() < 1]
