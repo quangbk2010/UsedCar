@@ -118,18 +118,18 @@ class Dataset ():
 
         # Determine some features
         if car_ident_flag == 0:
-            if dataset == "old":
+            if dataset_type == "old":
                 self.features_need_encoding = ["maker_code","class_code","car_code","model_code","grade_code","car_type", "trans_mode", "fuel_type", "city", "district", "dealer_name"]
             else:
                 self.features_need_encoding = ["maker_code","class_code","car_code","model_code","grade_code","car_type","trans_mode","fuel_type","branch","affiliate_code","region","trading_complex","trading_firm_id","seller_id","refund","vain_effort","guarantee","selected_color","input_color","reg_month"]
                 
         else:
-            if dataset == "old":
+            if dataset_type == "old":
                 self.features_need_encoding = ["car_type", "trans_mode", "fuel_type", "city", "district", "dealer_name"]
             else:
                 self.features_need_encoding = ["car_type","trans_mode","fuel_type","branch","affiliate_code","region","trading_complex","trading_firm_id","seller_id","refund","vain_effort","guarantee","selected_color","input_color","reg_month"]
 
-        if dataset == "old":
+        if dataset_type == "old":
             feature_need_label = ["car_type", "trans_mode", "fuel_type", "city", "district", "dealer_name"]
             self.feature_need_scaled = ["vehicle_mile", "no_click", "recovery_fee"]#, "price"] # or = self.features_not_need_encoding
         else:
@@ -147,7 +147,7 @@ class Dataset ():
         self.features_not_need_encoding = [feature for feature in features_remove_car_ident if feature not in self.features_need_encoding] 
         
         # Add 2 more features 
-        if dataset == "new":
+        if dataset_type == "new":
             self.features += ["reg_month", "year_diff"]
             self.features_need_encoding += ["reg_month"]
             self.features_not_need_encoding += ["year_diff"]
@@ -214,7 +214,7 @@ class Dataset ():
             #print ("6.", total_dataset.shape)
 
             # Replace missing grade_code with 0
-            if dataset == "old":
+            if dataset_type == "old":
                 total_dataset["grade_code"] = total_dataset["grade_code"].fillna (0)
             else:
                 total_dataset["grade_code"] = total_dataset["grade_code"].fillna (0)
@@ -229,7 +229,7 @@ class Dataset ():
 
             # Remove the data points with sale duration <= 0
             if label == "sale_duration":
-                if dataset == "old":
+                if dataset_type == "old":
                     diff_date = total_dataset["sale_date"]-total_dataset["actual_advertising_date"]
                 else:
                     diff_date = total_dataset["sale_date"]-total_dataset["first_adv_date"]
@@ -238,7 +238,7 @@ class Dataset ():
 
             # After removing all likely-outliers data points or keep sample items
             # Sort by actual advertising date
-            if dataset == "old":
+            if dataset_type == "old":
                 total_dataset = total_dataset.sort_values ("actual_advertising_date", ascending=True)
             else:
                 total_dataset = total_dataset.sort_values ("first_adv_date", ascending=True)
@@ -251,7 +251,7 @@ class Dataset ():
             total_dataset["year_diff"] = adv_year - manufacture_year"""
 
             # Use the information about the first registration date
-            if dataset == "new":
+            if dataset_type == "new":
                 print ("===Add 2 more features: reg_month, year_diff!!")
                 reg_date = total_dataset ["first_registration"]
                 reg_year = reg_date // 10000
@@ -444,7 +444,7 @@ class Dataset ():
             + dataset: training, validation, test, or total dataset
         - Return: an vector oof sale duration as a numpy.array object
         """
-        if dataset == "old":
+        if dataset_type == "old":
             actual_advertising_date_array = np.array ([dataset ["actual_advertising_date"]]).T 
         else:
             actual_advertising_date_array = np.array ([dataset ["first_adv_date"]]).T 
@@ -549,7 +549,7 @@ class Dataset ():
         """
         
         X_total_set = self.get_data_matrix (self.total_dataset) 
-        if dataset == "old":
+        if dataset_type == "old":
             act_adv_date = self.get_data_array (self.get_total_dataset (), "actual_advertising_date")
         else:
             act_adv_date = self.get_data_array (self.get_total_dataset (), "first_adv_date")
@@ -604,7 +604,7 @@ class Dataset ():
         """
         
         car_ident_code_total_set, X_total_set, d_ident, d_remain = self.get_data_matrix_car_ident (self.get_total_dataset ()) 
-        if dataset == "old":
+        if dataset_type == "old":
             act_adv_date = self.get_data_array (self.get_total_dataset (), "actual_advertising_date")
         else:
             act_adv_date = self.get_data_array (self.get_total_dataset (), "first_adv_date")
