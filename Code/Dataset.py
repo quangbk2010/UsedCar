@@ -192,10 +192,10 @@ class Dataset ():
             total_dataset = total_dataset[total_dataset[["price"]].applymap (np.isreal).all (1)]
             print ("4.", total_dataset.shape)
 
-            total_dataset = total_dataset[total_dataset["price"] >= 200] # 400]
-            print ("3.1", total_dataset.shape)
-            total_dataset = total_dataset[total_dataset["price"] < 9000]
-            print ("3.2", total_dataset.shape)
+            #total_dataset = total_dataset[total_dataset["price"] >= 200] # 400]
+            #print ("3.1", total_dataset.shape)
+            #total_dataset = total_dataset[total_dataset["price"] < 9000]
+            #print ("3.2", total_dataset.shape)
 
             # Remove outliers
             #total_dataset = total_dataset[np.abs(total_dataset["price"] - total_dataset["price"].mean()) / total_dataset["price"].std() < 1]
@@ -214,10 +214,7 @@ class Dataset ():
             #print ("6.", total_dataset.shape)
 
             # Replace missing grade_code with 0
-            if dataset_type == "old":
-                total_dataset["grade_code"] = total_dataset["grade_code"].fillna (0)
-            else:
-                total_dataset["grade_code"] = total_dataset["grade_code"].fillna (0)
+            total_dataset["grade_code"] = total_dataset["grade_code"].fillna (0)
 
             # Drop all the data points with missing values
             total_dataset = total_dataset.dropna ()
