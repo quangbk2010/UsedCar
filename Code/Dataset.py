@@ -162,7 +162,8 @@ class Dataset ():
 
         if os.path.isfile (dataframe_file) == False:
             print ("Load dataset from excel file")
-            total_dataset = pd.read_excel (dataset_excel_file, names = self.headers)#, converters = dtype_dict, header = 0, encoding='utf-8')
+            total_dataset = pd.read_excel (dataset_excel_file)#, names = self.headers)#, converters = dtype_dict, header = 0, encoding='utf-8')
+            sys.exit (-1)
             # Shuffle dataset (dataframe)
             #total_dataset = total_dataset.reindex(np.random.permutation(total_dataset.index))
             
