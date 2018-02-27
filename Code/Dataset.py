@@ -119,19 +119,22 @@ class Dataset ():
         # Determine some features
         if car_ident_flag == 0:
             if dataset_type == "old":
-                self.features_need_encoding = ["maker_code","class_code","car_code","model_code","grade_code","car_type", "trans_mode", "fuel_type", "city", "district", "dealer_name"]
+                #self.features_need_encoding = ["maker_code","class_code","car_code","model_code","grade_code","car_type", "trans_mode", "fuel_type", "city", "district", "dealer_name"]
+                self.features_need_encoding = ["maker_code","class_code","car_code","model_code","grade_code"]
             else:
                 self.features_need_encoding = ["maker_code","class_code","car_code","model_code","grade_code","car_type","trans_mode","fuel_type","branch","affiliate_code","region","trading_complex","trading_firm_id","seller_id","refund","vain_effort","guarantee","selected_color","input_color","reg_month"]
                 
         else:
             if dataset_type == "old":
-                self.features_need_encoding = ["car_type", "trans_mode", "fuel_type", "city", "district", "dealer_name"]
+                #self.features_need_encoding = ["car_type", "trans_mode", "fuel_type", "city", "district", "dealer_name"]
+                self.features_need_encoding = []
             else:
                 self.features_need_encoding = ["car_type","trans_mode","fuel_type","branch","affiliate_code","region","trading_complex","trading_firm_id","seller_id","refund","vain_effort","guarantee","selected_color","input_color","reg_month"]
 
         if dataset_type == "old":
             feature_need_label = ["car_type", "trans_mode", "fuel_type", "city", "district", "dealer_name"]
-            self.feature_need_scaled = ["vehicle_mile", "no_click", "recovery_fee"]#, "price"] # or = self.features_not_need_encoding
+            #self.feature_need_scaled = ["vehicle_mile", "no_click", "recovery_fee"]#, "price"] # or = self.features_not_need_encoding
+            self.feature_need_scaled = ["vehicle_mile", "recovery_fee"]#, "price"] # 
         else:
             feature_need_label = ["car_type", "trans_mode", "fuel_type", "branch", "region","trading_complex","trading_firm_id","seller_id","refund","vain_effort","guarantee","selected_color","input_color"]
             self.feature_need_scaled = ["year","vehicle_mile","cylinder_disp","recovery_fee","min_price","max_price","views","no_message_contact","no_call_contact","no_cover_side_recovery","no_cover_side_exchange","no_corrosive_part","no_structure_exchange","mortgage","tax_unpaid","interest"]
