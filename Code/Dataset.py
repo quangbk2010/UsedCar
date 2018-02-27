@@ -216,7 +216,7 @@ class Dataset ():
             # Just keep passenger cars
             #total_dataset = total_dataset[(total_dataset["car_type"] == "Passenger car")]
             #print ("6.", total_dataset.shape)
-rep_model_code
+
             # Replace missing grade_code with 0
             total_dataset["grade_code"] = total_dataset["grade_code"].fillna (0)
 
