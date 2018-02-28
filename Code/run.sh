@@ -8,6 +8,9 @@
 #baseline NN# python Main.py --model_set DL --dataset_size full --ensemble_NN_flag 0 --loss_func rel_err --car_ident_flag 0 --no_neuron 1000 --no_hidden_layer 1 --epoch 30
 #car2vect NN# python Main.py --model_set DL --dataset_size full --ensemble_NN_flag 0 --loss_func rel_err --car_ident_flag 1 --no_neuron 1000 --no_neuron_embed 6000 --epoch 30
 
+#######################
+# Test feature importance
+#baseline NN# python Main.py --model_set DL --get_feature_importance_flag True --dataset_size full --ensemble_NN_flag 0 --loss_func rel_err --car_ident_flag 0 --no_neuron 6000 --no_hidden_layer 1 --epoch 30
 
 #######################
 #Gradient boosting with baseline NN# python Main.py --model_set DL --dataset_size full --ensemble_NN_flag 1 --loss_func mse --car_ident_flag 0 --no_neuron 1000 --no_hidden_layer 1 --epoch 30 --num_regressor 10

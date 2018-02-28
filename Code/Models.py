@@ -204,7 +204,7 @@ class Tensor_NN (Dataset, Sklearn_model):
 
         return X, Y, prediction
 
-    def restore_model_NN_baseline (self, data, label, meta_file, ckpt_file):
+    def restore_model_NN_baseline (self, data, label, meta_file, ckpt_file, train_flag):
         with tf.Session() as sess:
             # Load meta graph and restore all variable values
             saver = tf.train.import_meta_graph (meta_file)
@@ -218,16 +218,154 @@ class Tensor_NN (Dataset, Sklearn_model):
 
             # Now, access the operators that we want to run
             prediction = graph.get_tensor_by_name ("prediction:0")
-            rmse= graph.get_tensor_by_name ("rmse:0")
-            mae = graph.get_tensor_by_name ("mae:0")
-            relative_err = graph.get_tensor_by_name ("relative_err:0")
-            smape = graph.get_tensor_by_name ("smape:0")
             
-            # Feed data
-            predicted_y, rmse_val, mae_val, relative_err_val, smape_val = sess.run([prediction, rmse, mae, relative_err, smape], feed_dict)
-            return (predicted_y, rmse_val, mae_val, relative_err_val, smape_val)
+            # And feed data
+            if (train_flag == 0):
+                rmse= graph.get_tensor_by_name ("rmse:0")
+                mae = graph.get_tensor_by_name ("mae:0")
+                relative_err = graph.get_tensor_by_name ("relative_err:0")
+                smape = graph.get_tensor_by_name ("smape:0")
+
+                predicted_y, rmse_val, mae_val, relative_err_val, smape_val = sess.run([prediction, rmse, mae, relative_err, smape], feed_dict)
+                return (predicted_y, rmse_val, mae_val, relative_err_val, smape_val)
+            else:
+                sum_se= graph.get_tensor_by_name ("sum_se:0")
+                sum_ae = graph.get_tensor_by_name ("sum_ae:0")
+                sum_rel_err = graph.get_tensor_by_name ("sum_rel_err:0")
+                arr_rel_err = graph.get_tensor_by_name ("arr_rel_err:0")
+                sum_smape = graph.get_tensor_by_name ("sum_smape:0")
+
+                predicted_y, sum_se_val, sum_ae_val, sum_rel_err_val, sum_smape_val, arr_rel_err_val = sess.run([prediction, sum_se, sum_ae, sum_rel_err, sum_smape, arr_rel_err], feed_dict)
+                return (predicted_y, sum_se_val, sum_ae_val, sum_rel_err_val, sum_smape_val, arr_rel_err_val)
+
 
     
+    def train_baseline (self, train_data, train_label, no_neuron, no_hidden_layer, loss_func, model_path): 
+       
+        #building car embedding model
+        X, Y, prediction = self.build_model(train_data.shape[1], no_neuron, no_hidden_layer) 
+
+        # Try to use weights decay
+        num_batches_per_epoch = int(len(train_data) / self.batch_size)
+        decay_steps = int(num_batches_per_epoch * self.decay_step)
+        global_step = tf.Variable(0, trainable = False)
+        learning_rate = tf.train.exponential_decay(self.learning_rate, global_step, decay_steps, self.decay_rate, staircase = True)
+
+        # Used for minimizing relative error
+        if loss_func == "mse":
+            loss = tf.reduce_mean (tf.pow (prediction - Y, 2)) 
+        elif loss_func == "mae":
+            loss = tf.reduce_mean (tf.abs (prediction - Y)) 
+        elif loss_func == "rel_err":
+            loss = tf.reduce_mean (tf.divide (tf.abs (prediction - Y), Y)) #protect when Y = 0
+        elif loss_func == "smape":
+            loss = tf.reduce_mean (tf.divide (tf.abs (prediction - Y), tf.abs (Y) + tf.abs (prediction) ))
+
+        optimizer = tf.train.AdamOptimizer(learning_rate, name="adam_opt").minimize(loss, global_step=global_step)
+    
+        # Use in case of scale label
+        if self.scale_label == 1:
+            train_label_min = train_label.min ()
+            train_label_max = train_label.max ()
+            print ("train_label_min:", train_label_min, "train_label_max", train_label_max)
+            prediction = train_label_min + (prediction - self.min_price) * (train_label_max - train_label_min) / (self.max_price - self.min_price)
+            Y_ = train_label_min + (Y - self.min_price) * (train_label_max - train_label_min) / (self.max_price - self.min_price)
+ 
+        else:
+            Y_ = Y 
+
+        # Declare error functions
+        sum_se = tf.reduce_sum (tf.squared_difference(prediction, Y_), name = "sum_se")
+        sum_ae = tf.reduce_sum (tf.abs (prediction - Y_), name = "sum_ae")
+        sum_relative_err = tf.multiply (tf.reduce_sum (tf.divide (tf.abs (prediction - Y_), Y_)), 100, name = "sum_rel_err")
+        arr_relative_err = tf.multiply (tf.divide (tf.abs (prediction - Y_), Y_), 100, name = "arr_rel_err")
+        sum_smape = tf.multiply (tf.reduce_sum (tf.divide (tf.abs (prediction - Y_), tf.abs (Y_) + tf.abs (prediction) )), 100, name = "sum_smape")
+        rmse = tf.sqrt (tf.reduce_mean(tf.squared_difference(prediction, Y_)), name = "rmse")
+        mae = tf.reduce_mean (tf.abs (prediction - Y_), name = "mae")
+        relative_err = tf.multiply (tf.reduce_mean (tf.divide (tf.abs (prediction - Y_), (Y_))), 100, name = "relative_err") 
+        #median_rel_err = tf.contrib.distributions.percentile (tf.divide (tf.abs (prediction - Y_), (Y_)), 50.0, name = "median_rel_err")
+        smape = tf.multiply (tf.reduce_mean (tf.divide (tf.abs (prediction - Y_), tf.abs (Y_) + tf.abs (prediction) )), 100, name = "smape")
+        
+        init = tf.global_variables_initializer()
+
+        with tf.Session() as sess:
+            saver = tf.train.Saver(max_to_keep=100)
+
+            # Run the initializer
+            sess.run(init)
+
+            """ Start training, using training data"""
+            # record the time when training starts
+            start_time = time.time()
+
+            train_set = np.concatenate ((train_data, train_label), axis = 1)
+            train_set_shuffled = np.random.permutation(train_set)
+            train_data_shuffled = train_set_shuffled [:, 0:train_data.shape[1]]
+            train_label_shuffled = train_set_shuffled [:, train_data.shape[1]:]
+
+            scaler = MinMaxScaler(feature_range=(self.min_price, self.max_price))
+            scaler.fit (train_label_shuffled)
+            if self.scale_label == 1:
+                train_label_shuffled_scaled = scaler.transform (train_label_shuffled)
+            else:
+                train_label_shuffled_scaled = train_label_shuffled
+
+            len_train = len(train_data)
+            train_total_batch = int (np.ceil (float (len_train)/self.batch_size))
+
+            for epoch in range (self.epoch):
+
+                # Train the model.
+                total_se = 0
+                total_ae = 0
+                total_relative_err = 0
+                total_smape = 0
+                start_index = 0
+                end_index = 0
+                for i in range (train_total_batch):
+                    if len_train - end_index < self.batch_size:
+                        end_index = len_train
+                    else:
+                        end_index = (i+1) * self.batch_size
+
+                    batch_x = train_data_shuffled [start_index : end_index]
+                    batch_y = train_label_shuffled_scaled [start_index : end_index]
+
+                    start_index = end_index
+
+                    _, train_sum_se_val, train_sum_ae_val, train_sum_relative_err_val, train_sum_smape_val = sess.run([optimizer, sum_se, sum_ae, sum_relative_err, sum_smape], feed_dict={X: batch_x, Y: batch_y})
+                    total_se += train_sum_se_val
+                    total_ae += train_sum_ae_val
+                    total_relative_err += train_sum_relative_err_val
+                    total_smape += train_sum_smape_val
+                    
+                assert end_index == len_train   
+
+                epoch_train_rmse_val = np.sqrt (total_se/len_train)
+                epoch_train_mae_val = total_ae/len_train
+                epoch_train_relative_err_val = total_relative_err/len_train
+                epoch_train_smape_val = total_smape/len_train
+                print('\n\nEpoch: %03d' % (epoch), "Avg. training rmse:", epoch_train_rmse_val, "mae:", epoch_train_mae_val, 'relative_err:', epoch_train_relative_err_val, "smape:", epoch_train_smape_val)
+                
+                if (epoch + 1)%10 == 0:#epoch == 29: #epoch == 19 or epoch == 0 or 
+                    ckpt_file = model_path
+                    save_path = saver.save (sess, ckpt_file) #"../checkpoint/baseline/test4")#model_path + "_" + str (epoch)) 
+                    print('Model saved in file: %s' % save_path)
+
+                # Training data permutation
+                train_set_shuffled = np.random.permutation(train_set)
+                train_data_shuffled = train_set_shuffled [:, 0:train_data.shape[1]]
+                train_label_shuffled = train_set_shuffled [:, train_data.shape[1]:]
+                if self.scale_label == 1:
+                    train_label_shuffled_scaled = scaler.transform (train_label_shuffled)
+                else:
+                    train_label_shuffled_scaled = train_label_shuffled
+
+            print ("Training finished!")
+            stop_time = time.time()
+            print ("Training time (s):", stop_time - start_time)
+            
+
     def baseline (self, train_data, train_label, test_data, test_label, no_neuron, no_hidden_layer, loss_func, model_path, y_predict_file_name, mean_error_file_name): # Used for 1train-1test
     #def baseline (self, train_data, train_label, test_data, test_label, model_path, X, Y, prediction, weights, fold): # used for Cross-validation 
        
@@ -271,15 +409,16 @@ class Tensor_NN (Dataset, Sklearn_model):
             Y_ = Y 
 
         # Declare error functions
-        sum_se = tf.reduce_sum (tf.squared_difference(prediction, Y_))
-        sum_ae = tf.reduce_sum (tf.abs (prediction - Y_))
-        sum_relative_err = tf.reduce_sum (tf.divide (tf.abs (prediction - Y_), Y_)) * 100 
-        sum_smape = tf.reduce_sum (tf.divide (tf.abs (prediction - Y_), tf.abs (Y_) + tf.abs (prediction) )) * 100
+        sum_se = tf.reduce_sum (tf.squared_difference(prediction, Y_), name = "sum_se")
+        sum_ae = tf.reduce_sum (tf.abs (prediction - Y_), name = "sum_ae")
+        sum_relative_err = tf.multiply (tf.reduce_sum (tf.divide (tf.abs (prediction - Y_), Y_)), 100, name = "sum_rel_err")
+        arr_relative_err = tf.multiply (tf.divide (tf.abs (prediction - Y_), Y_), 100, name = "arr_rel_err")
+        sum_smape = tf.multiply (tf.reduce_sum (tf.divide (tf.abs (prediction - Y_), tf.abs (Y_) + tf.abs (prediction) )), 100, name = "sum_smape")
         rmse = tf.sqrt (tf.reduce_mean(tf.squared_difference(prediction, Y_)), name = "rmse")
         mae = tf.reduce_mean (tf.abs (prediction - Y_), name = "mae")
         relative_err = tf.multiply (tf.reduce_mean (tf.divide (tf.abs (prediction - Y_), (Y_))), 100, name = "relative_err") 
+        #median_rel_err = tf.contrib.distributions.percentile (tf.divide (tf.abs (prediction - Y_), (Y_)), 50.0, name = "median_rel_err")
         smape = tf.multiply (tf.reduce_mean (tf.divide (tf.abs (prediction - Y_), tf.abs (Y_) + tf.abs (prediction) )), 100, name = "smape")
-        
         init = tf.global_variables_initializer()
 
         with tf.Session() as sess:
@@ -465,9 +604,9 @@ class Tensor_NN (Dataset, Sklearn_model):
 
         output3 = slim.fully_connected(input3, no_neuron, scope='hidden_main1', activation_fn=tf.nn.relu, weights_initializer=he_init)
         output3_ = slim.dropout (output3, self.dropout, scope='dropout3')
-        #output4 = slim.fully_connected(output3_, no_neuron, scope='hidden_main_2', activation_fn=tf.nn.relu)
-        #output4_ = slim.dropout (output4, self.dropout, scope='dropout3')
-        prediction = slim.fully_connected(output3_, 1, scope='output_main', activation_fn=None, weights_initializer=he_init) #tf.nn.relu) #None) # 1-dimension of output NOTE: only remove relu activation function in the last layer if using Gradient Boosting, because the differece can be negative (default activation function of fully_connected is relu))
+        output4 = slim.fully_connected(output3_, no_neuron, scope='hidden_main_2', activation_fn=tf.nn.relu)
+        output4_ = slim.dropout (output4, self.dropout, scope='dropout3')
+        prediction = slim.fully_connected(output4_, 1, scope='output_main', activation_fn=None, weights_initializer=he_init) #tf.nn.relu) #None) # 1-dimension of output NOTE: only remove relu activation function in the last layer if using Gradient Boosting, because the differece can be negative (default activation function of fully_connected is relu))
         tf.identity (prediction, name="prediction")
 
         return x_ident, x_remain, Y, x_embed, prediction, phase_train
@@ -852,7 +991,8 @@ class Tensor_NN (Dataset, Sklearn_model):
                 self.learning_rate /= 10
                 print ("=======new learning_rate:", self.learning_rate)
                 #pre_model_path = self.model_dir + "/rm_outliers_total_set_NN/car2vect_regul/regressor1/full_{0}_{1}_car2vect_{2}_{3}_total_set".format (self.model_name, self.label, self.no_neuron_embed, self.no_neuron)
-                pre_model_path = self.model_dir + "/rm_outliers_total_set_NN/car2vect/regressor1/full_{0}_{1}_car2vect_{2}_{3}_total_set".format (self.model_name, self.label, self.no_neuron_embed, self.no_neuron)
+                #pre_model_path = self.model_dir + "/rm_outliers_total_set_NN/car2vect/regressor1/full_{0}_{1}_car2vect_{2}_{3}_total_set".format (self.model_name, self.label, self.no_neuron_embed, self.no_neuron)
+                pre_model_path = self.model_dir + "/rm_outliers_total_set_NN/car2vect/regressor{0}/{1}_{2}_{3}_car2vect_{4}x1_{5}x1_total_set_{6}".format (2, "new", self.model_name, self.label, self.no_neuron_embed, self.no_neuron, 19)
                 meta_file = pre_model_path + ".meta"
                 ckpt_file = pre_model_path 
                 #x_ident, x_remain, Y, x_embed, prediction, phase_train, car_ident, regul1, regul_gather, regul_spread, regul = self.build_car2vect_regul_model_retrained (no_neuron=no_neuron, no_neuron_embed=no_neuron_embed, d_ident=d_ident, d_embed=d_embed, d_remain=d_remain, train_data=train_data, train_label=train_label, train_car_ident=train_car_ident, meta_file=meta_file, ckpt_file=ckpt_file)
@@ -1238,6 +1378,12 @@ class Tensor_NN (Dataset, Sklearn_model):
                 epoch_train_relative_err_val = total_relative_err/len_train
                 epoch_train_smape_val = total_smape/len_train
                 print('\n\nEpoch: %04d' % (epoch), "Avg. training rmse:", epoch_train_rmse_val, "mae:", epoch_train_mae_val, 'relative_err:', epoch_train_relative_err_val, "smape:", epoch_train_smape_val)
+                
+                # Save the model
+                if epoch == 0 or (epoch + 1)%10 == 0: 
+                    ckpt_file = model_path
+                    save_path = saver.save (sess, ckpt_file)  
+                    print('Model saved in file: %s' % save_path)
 
                 # Training data permutation
                 train_set_shuffled = np.random.permutation(train_set)
@@ -1245,10 +1391,6 @@ class Tensor_NN (Dataset, Sklearn_model):
                 train_data_ident_shuffled = train_set_shuffled [:, d_remain:d_data]
                 train_label_shuffled = train_set_shuffled [:, d_data:d_data+1]
                 train_car_ident_shuffled = train_set_shuffled [:, d_data+1:]
-
-            # Save the model
-            save_path = saver.save (sess, model_path)
-            print('Model saved in file: %s' % save_path)
 
 
     def cross_validation (self):
@@ -1336,8 +1478,8 @@ class Tensor_NN (Dataset, Sklearn_model):
 
             meta_file = model_path + "_" + str (best_epoch) + ".meta"
             ckpt_file = model_path + "_" + str (best_epoch) 
-            (predicted_train_label, train_rmse_val, train_mae_val, train_relative_err_val, train_smape_val) = self.restore_model_NN_baseline (train_data, train_label_copy, meta_file, ckpt_file)
-            (predicted_test_label, test_rmse_val, test_mae_val, test_relative_err_val, test_smape_val) = self.restore_model_NN_baseline (test_data, test_label_copy, meta_file, ckpt_file)
+            (predicted_train_label, train_rmse_val, train_mae_val, train_relative_err_val, train_smape_val) = self.restore_model_NN_baseline (train_data, train_label_copy, meta_file, ckpt_file, train_flag=0)
+            (predicted_test_label, test_rmse_val, test_mae_val, test_relative_err_val, test_smape_val) = self.restore_model_NN_baseline (test_data, test_label_copy, meta_file, ckpt_file, train_flag=0)
             print (predicted_test_label[:10], test_label_copy[:10])
             print ("=================================")
 
@@ -1402,7 +1544,7 @@ class Tensor_NN (Dataset, Sklearn_model):
             ckpt_file = model_path + "_" + str (best_epoch) 
             # When restore model with the whole dataset, it can cause the error: Resource exhausted 
             # TODO: devide the train set into smaller subsets, push them to the model and concatenate them later
-            (predicted_train_label, train_rmse_val, train_mae_val, train_relative_err_val, train_smape_val, total_arr_relative_err) = self.batch_computation_car2vect (5, train_data, train_label_copy, d_ident, d_remain, meta_file, ckpt_file)
+            (predicted_train_label, train_rmse_val, train_mae_val, train_relative_err_val, train_smape_val, train_arr_relative_err) = self.batch_computation_car2vect (5, train_data, train_label_copy, d_ident, d_remain, meta_file, ckpt_file)
 
             # TODO: when restore model with train data is imported -> it will return sum_se, sum_ae, ... -> need to get the average or sqrt
             # If the length of train data is small as the number of train data in case of testing only Hyundai, Kia -> can use train_flag=0
@@ -1440,6 +1582,9 @@ class Tensor_NN (Dataset, Sklearn_model):
             Purpose:
             - Remove outliers of the total dataset: the data points in the training set with the corresponding relative error in top (removal_percent)%
             - Then, sort the dataset by actual_advertising_date
+            Note:
+            - If the array total_car_ident_code is empty -> baseline method
+            - Else -> car2vect
         """
         # Save and load file take a lot of times, much more than the common way
         #stored_np_arr_file = "./Dataframe/[{0}]total_numpy_array_after_remove_outliers.h5_{1}".format (dataset_size, removal_percent)
@@ -1545,7 +1690,172 @@ class Tensor_NN (Dataset, Sklearn_model):
         line['pred'] = new_predicted_train_label.reshape (new_predicted_train_label.shape[0])
         np.savetxt (y_predict_file_name + "_train_after_remove_" + str (removal_percent), line, fmt="%.2f\t%.2f")"""
 
-    def retrain_car2vect_from_total_set (self, total_data, total_label, total_car_ident_code, act_adv_date, d_ident, d_remain, y_predict_file_name, mean_error_file_name, x_ident_file_name, x_embed_file_name, dataset_size, removal_percent, ensemble_flag):
+    def get_features_importance_baseline_NN (self, train_data, train_label, list_test_data, test_label, model_path, features):
+        meta_file = model_path + "test4.meta"
+        ckpt_file = model_path + "test4" 
+        #meta_file = "../checkpoint/baseline/test4.meta" 
+        #ckpt_file = "../checkpoint/baseline/test4" 
+        # Train the model based on the train set
+        # TODO: Replace this step by using the best model trained 
+        self.train_baseline (train_data, train_label, self.no_neuron, self.no_hidden_layer, self.loss_func, ckpt_file)
+
+        # Restore the model
+        #predicted_train_label, train_rmse_val, train_mae_val, train_relative_err_val, train_smape_val = self.restore_model_NN_baseline (train_data, train_label, meta_file, ckpt_file, train_flag=0)
+        (predicted_train_label, train_rmse_val, train_mae_val, train_relative_err_val, train_smape_val, train_arr_relative_err) = self.batch_computation_baseline (5, train_data, train_label, meta_file, ckpt_file)
+        print ("Train: ", train_rmse_val, train_mae_val, train_relative_err_val, train_smape_val)
+
+        len_list_test = len (list_test_data)
+        importance_score = {}
+        df_importance_score = pd.DataFrame (columns=["feature", "rmse", "mae", "rel_err", "smape"])
+        for i in range (len_list_test):
+            print ("===Test set:", i)
+            _, test_rmse_val, test_mae_val, test_relative_err_val, test_smape_val = self.restore_model_NN_baseline (list_test_data[i], test_label, meta_file, ckpt_file, train_flag=0)
+            print (test_rmse_val, test_mae_val, test_relative_err_val, test_smape_val)
+            if i == 0:
+                init_rmse_err = test_rmse_val
+                init_mae_err = test_mae_val
+                init_rel_err = test_relative_err_val
+                init_smape_err = test_smape_val
+            else:
+                #importance_score [features[i-1]] = [test_rmse_val - init_rmse_err, test_mae_val - init_mae_err, test_relative_err_val - init_rel_err, test_smape_val - init_smape_err]
+                df_importance_score.loc[len (df_importance_score)] = [features[i-1], test_rmse_val - init_rmse_err, test_mae_val - init_mae_err, test_relative_err_val - init_rel_err, test_smape_val - init_smape_err]
+
+        print ("\n\n ===============")
+        #print (importance_score)
+        np.savetxt ("./importance_score.txt", df_importance_score, fmt="%s\t%.2f\t%.2f\t%.2f\t%.2f")
+
+    def get_features_importance_car2vect (self, train_data, train_label, list_test_data, test_label, total_car_ident, d_ident, d_remain, model_path, features):
+        meta_file = model_path + "test4.meta"
+        ckpt_file = model_path + "test4" 
+        #meta_file = "../checkpoint/baseline/test4.meta" 
+        #ckpt_file = "../checkpoint/baseline/test4" 
+        # Train the model based on the train set
+        # TODO: Replace this step by using the best model trained 
+        self.train_car2vect(train_data, train_label, total_car_ident, d_ident, self.d_embed, d_remain, self.no_neuron, self.no_neuron_embed, self.loss_func, ckpt_file)
+
+        # Restore the model
+        (predicted_train_label, train_rmse_val, train_mae_val, train_relative_err_val, train_smape_val, train_arr_relative_err) = self.batch_computation_car2vect (5, train_data, train_label, d_ident, d_remain, meta_file, ckpt_file)
+        print ("Train: ", train_rmse_val, train_mae_val, train_relative_err_val, train_smape_val)
+
+        len_list_test = len (list_test_data)
+        df_importance_score = pd.DataFrame (columns=["feature", "rmse", "mae", "rel_err", "smape"])
+        for i in range (len_list_test):
+            print ("===Test set:", i)
+            test_data_remain = list_test_data[i][:, 0:d_remain]
+            test_data_ident  = list_test_data[i][:, d_remain:]
+            _, test_rmse_val, test_mae_val, test_relative_err_val, test_smape_val = self.restore_model_car2vect (test_data_ident, test_data_remain, test_label, meta_file, ckpt_file, train_flag=0)
+            print (test_rmse_val, test_mae_val, test_relative_err_val, test_smape_val)
+            if i == 0:
+                init_rmse_err = test_rmse_val
+                init_mae_err = test_mae_val
+                init_rel_err = test_relative_err_val
+                init_smape_err = test_smape_val
+            else:
+                df_importance_score.loc[len (df_importance_score)] = [features[i-1], test_rmse_val - init_rmse_err, test_mae_val - init_mae_err, test_relative_err_val - init_rel_err, test_smape_val - init_smape_err]
+
+        print ("\n\n ===============")
+        np.savetxt ("./importance_score.txt", df_importance_score, fmt="%s\t%.2f\t%.2f\t%.2f\t%.2f")
+
+    def retrain_baseline_from_total_set (self, total_data, total_label, act_adv_date, y_predict_file_name, mean_error_file_name, dataset_size, removal_percent, ensemble_flag, l_feature, features):
+        """
+            - Purpose: 
+                + Train the model baseline with the whole dataset, and then remove the data points with removal_percent highest relative error.
+                + Sort the remaining dataset by act_adv_date, and divide it into train and test sets
+                + Retrain the model car3vect with the new training data from scratch.
+        """
+        # First train the model on the original dataset
+        os.system ("mkdir -p ../checkpoint/rm_outliers_total_set_NN/baseline/regressor1")
+        #model_path = self.model_dir + "/rm_outliers_total_set_NN/baseline/regressor{0}/{1}_{2}_{3}_car2vect_{4}_{5}_total_set".format (1, dataset_size, self.model_name, self.label, self.no_neuron, self.no_hidden_layer)
+        model_path = "../checkpoint/baseline/"
+
+        meta_file = model_path + "test3.meta" #"../checkpoint/baseline/test3.meta" #model_path + ".meta"
+        ckpt_file = model_path + "test3" #"../checkpoint/baseline/test3" # model_path
+        print ("\n\n===========Train total set")
+        # If comment the below line, you need to check the checkpoint file in regressor1 (it should be compatible with the dataset) 
+        self.train_baseline (total_data, total_label, self.no_neuron, self.no_hidden_layer, self.loss_func, ckpt_file)
+        print ("After train baseline...")
+        
+
+        # Restore the trained model
+        # When restore model with the whole dataset, it can cause the error: Resource exhausted 
+        # Devide the train set into smaller subsets (Eg. 5 subsets), push them to the model and concatenate the predictions later
+        # TODO: change the "model_dir" arg to automatically set the directory
+        (predicted_total_label, total_rmse_val, total_mae_val, total_relative_err_val, total_smape_val, total_arr_relative_err) = self.batch_computation_baseline (5, total_data, total_label, meta_file, ckpt_file)
+        print ("After restoring baseline model...")
+        total_np_arr = np.concatenate ((act_adv_date, total_label, predicted_total_label), axis=1)
+        print ("After concatenating...")
+        total_df = pd.DataFrame (total_np_arr)
+        np.savetxt (y_predict_file_name + "_total_before_remove_outliers", total_df, fmt="%.0f\t%d\t%.2f")
+
+        # Remove outliers from the total dataset based on the relative error from the first train, on the other hand sort the dataset by act_adv_date
+        stime = time.time()
+        if removal_percent > 0:
+            new_total_set = self.remove_outliers_total_set (total_data, total_label, np.empty ((total_data.shape[0], 0)), act_adv_date, total_arr_relative_err, dataset_size, removal_percent)
+        else:
+            raise ValueError ("Removal perentage need to be larger than 0!")
+        print ("Time needed to remove outliers from the dataset: %.3f" % (time.time() - stime))
+
+        # Train the car2vect model based on the new dataset
+        # Firstly, create the necessary data for baseline model
+        shape1_data = total_data.shape[1]
+        len_total_set   = new_total_set.shape[0]    
+        data_training_percentage = 0.8
+        len_train   = int (0.5 + len_total_set * data_training_percentage)
+        new_train_set = new_total_set [:len_train, :]
+        new_test_set = new_total_set [len_train:, :]
+
+        # Extract the train set
+        new_train_data  = new_train_set [:, :shape1_data] 
+        new_train_label = new_train_set [:, shape1_data:shape1_data+1]
+
+        # Extract the test set
+        new_test_data  = new_test_set [:, :shape1_data] 
+        new_test_label = new_test_set [:, shape1_data:shape1_data+1]
+
+        print ("Old dataset:", total_data.shape, total_label.shape)
+        print ("New train dataset:", new_train_data.shape, new_train_label.shape)
+        print ("New test dataset:", new_test_data.shape, new_test_label.shape)
+
+        if ensemble_flag == 0:
+            tf.reset_default_graph ()
+            os.system ("mkdir -p ../checkpoint/rm_outliers_total_set_NN/baseline/regressor2")
+            model_path = self.model_dir + "/rm_outliers_total_set_NN/baseline/regressor{0}/{1}_{2}_{3}_baseline_{4}x{5}".format (2, dataset_size, self.model_name, self.label, self.no_neuron, self.no_hidden_layer)
+            y_predict_file_name_ = y_predict_file_name + "_2"
+            mean_error_file_name_ = mean_error_file_name + "_2"
+            
+            print ("\n\n===========Predictor2")
+            best_epoch = self.baseline (train_data=new_train_data, train_label=new_train_label, test_data=new_test_data, test_label=new_test_label, no_neuron=self.no_neuron, no_hidden_layer = self.no_hidden_layer, loss_func=self.loss_func, model_path=model_path, y_predict_file_name=y_predict_file_name_, mean_error_file_name=mean_error_file_name_)
+            print ("Best epoch: ", best_epoch)
+
+        elif ensemble_flag == -1:
+            ########################################
+            ### Feature importance
+
+            # Get the list of test_data with each feature column is shuffled (the 1st element is the original new_test_data)
+            length = len (l_feature)
+            sum_l = 0
+            arr_sum_l = []
+            list_test_data = [new_test_data]
+            for i in range (length-1):
+                sum_l += l_feature[i]
+                arr_sum_l.append (sum_l)
+
+            X = np.split (new_test_data, indices_or_sections=arr_sum_l, axis=1)
+            arr_sum_l.insert (0,0)
+            for i in range (length):
+                print ("====i:", i)
+                test_data_copy = new_test_data.copy ()
+                if i < length-1:
+                    test_data_copy [:, arr_sum_l [i]:arr_sum_l [i+1]] = np.random.permutation (X[i]) 
+                else:
+                    test_data_copy [:, arr_sum_l [i]:] = np.random.permutation (X[i]) 
+                list_test_data.append (test_data_copy)
+            print (len (list_test_data))
+            tf.reset_default_graph ()
+            self.get_features_importance_baseline_NN (new_train_data, new_train_label, list_test_data, new_test_label, model_path, features)
+            ########################################
+
+    def retrain_car2vect_from_total_set (self, total_data, total_label, total_car_ident_code, act_adv_date, d_ident, d_remain, y_predict_file_name, mean_error_file_name, x_ident_file_name, x_embed_file_name, dataset_size, removal_percent, ensemble_flag, l_feature, features):
         """
             - Purpose: 
                 + Train the model car2vect with the whole dataset, and then remove the data points with removal_percent highest relative error.
@@ -1555,8 +1865,8 @@ class Tensor_NN (Dataset, Sklearn_model):
         """
         # First train the model on the original train data (can remove a part of outliers previously)
         os.system ("mkdir -p ../checkpoint/rm_outliers_total_set_NN/car2vect/regressor1")
-        #model_path = self.model_dir + "/rm_outliers_total_set_NN/car2vect/regressor{0}/{1}_{2}_{3}_car2vect_{4}_{5}_total_set".format (1, dataset_size, self.model_name, self.label, self.no_neuron_embed, self.no_neuron)
-        model_path = self.model_dir + "/rm_outliers_total_set_NN/car2vect/regressor{0}/{1}_{2}_{3}_car2vect_{4}_{5}_total_set".format (1, dataset_size, self.model_name, self.label, 6000, 1000)
+        model_path = self.model_dir + "/rm_outliers_total_set_NN/car2vect/regressor{0}/{1}_{2}_{3}_car2vect_{4}_{5}_total_set".format (1, dataset_size, self.model_name, self.label, self.no_neuron_embed, self.no_neuron)
+        #model_path = self.model_dir + "/rm_outliers_total_set_NN/car2vect/regressor{0}/{1}_{2}_{3}_car2vect_{4}_{5}_total_set".format (1, dataset_size, self.model_name, self.label, 6000, 1000)
         #model_path = self.model_dir + "/rm_outliers_total_set_NN/car2vect/regressor{0}/{1}_{2}_{3}_car2vect_{4}x2_{5}x2_total_set".format (1, dataset_size, self.model_name, self.label, self.no_neuron_embed, self.no_neuron)
         #os.system ("mkdir -p ../checkpoint/rm_outliers_total_set_NN/car2vect_regul/regressor1")
         #model_path = self.model_dir + "/rm_outliers_total_set_NN/car2vect_regul/regressor{0}/{1}_{2}_{3}_car2vect_{4}_{5}_total_set".format (1, dataset_size, self.model_name, self.label, self.no_neuron_embed, self.no_neuron)
@@ -1564,7 +1874,7 @@ class Tensor_NN (Dataset, Sklearn_model):
         print ("\n\n===========Train total set")
         # If comment the below line, you need to check the checkpoint file in regressor1 (it should be compatible with the dataset) 
         # Flexible rel_err.
-        #self.train_car2vect(train_data=total_data, train_label=total_label, total_car_ident=total_car_ident_code, d_ident=d_ident, d_embed=self.d_embed, d_remain=d_remain, no_neuron=self.no_neuron, no_neuron_embed=self.no_neuron_embed, loss_func=self.loss_func, model_path=model_path)
+        self.train_car2vect(train_data=total_data, train_label=total_label, total_car_ident=total_car_ident_code, d_ident=d_ident, d_embed=self.d_embed, d_remain=d_remain, no_neuron=self.no_neuron, no_neuron_embed=self.no_neuron_embed, loss_func=self.loss_func, model_path=model_path)
         # Only use the below line for Gradient Boosting 
         #self.train_car2vect(train_data=total_data, train_label=total_label, total_car_ident=total_car_ident_code, d_ident=d_ident, d_embed=self.d_embed, d_remain=d_remain, no_neuron=self.no_neuron, no_neuron_embed=self.no_neuron_embed, loss_func="rel_err", model_path=model_path)
 
@@ -1598,10 +1908,12 @@ class Tensor_NN (Dataset, Sklearn_model):
 
         # Train the car2vect model based on the new dataset
         # Firstly, create the necessary data for car2vect model
-        shape1_train = total_data.shape[1]
-        new_total_data  = new_total_set [:, :shape1_train] 
-        new_total_label = new_total_set [:, shape1_train:shape1_train+1]
-        new_total_car_ident_code = new_total_set [:, shape1_train+1:]
+        ################################################
+        ## Cach 1
+        """shape1_data = total_data.shape[1]
+        new_total_data  = new_total_set [:, :shape1_data] 
+        new_total_label = new_total_set [:, shape1_data:shape1_data+1]
+        new_total_car_ident_code = new_total_set [:, shape1_data+1:]
         
         len_total_set   = new_total_data.shape[0]    
         data_training_percentage = 0.8
@@ -1610,10 +1922,31 @@ class Tensor_NN (Dataset, Sklearn_model):
         new_train_label    = new_total_label[:len_train]
         new_test_data      = new_total_data[len_train:, :]
         new_test_label     = new_total_label[len_train:]
+        new_test_car_ident = new_total_car_ident_code[len_train:, :]"""
+
+        ################################################
+        ## Cach 2
+        shape1_data = total_data.shape[1]
+        new_total_car_ident_code = new_total_set [:, shape1_data+1:]
+        len_total_set   = new_total_set.shape[0]    
+        data_training_percentage = 0.8
+        len_train   = int (0.5 + len_total_set * data_training_percentage)
+        new_train_set = new_total_set [:len_train, :]
+        new_test_set = new_total_set [len_train:, :]
+
+        # Extract train set
+        new_train_data  = new_train_set [:, :shape1_data] 
+        new_train_label = new_train_set [:, shape1_data:shape1_data+1]
+
+        # Extract test set
+        new_test_data  = new_test_set [:, :shape1_data] 
+        new_test_label = new_test_set [:, shape1_data:shape1_data+1]
         new_test_car_ident = new_total_car_ident_code[len_train:, :]
 
+        ################################################
+
         print ("Old dataset:", total_data.shape, total_label.shape)
-        print ("New dataset:", new_total_data.shape, new_total_label.shape)
+        #print ("New dataset:", new_total_data.shape, new_total_label.shape)
         print ("New train dataset:", new_train_data.shape, new_train_label.shape)
         print ("New test dataset:", new_test_data.shape, new_test_label.shape)
         print ("New test_car_ident:", new_test_car_ident.shape)
@@ -1624,7 +1957,7 @@ class Tensor_NN (Dataset, Sklearn_model):
             tf.reset_default_graph ()
             self.label = "sale_duration" ###########
             os.system ("mkdir -p ../checkpoint/rm_outliers_total_set_NN/car2vect/regressor2")
-            model_path = self.model_dir + "/rm_outliers_total_set_NN/car2vect/regressor{0}/{1}_{2}_{3}_car2vect_{4}x2_{5}x2_total_set".format (2, dataset_size, self.model_name, self.label, self.no_neuron_embed, self.no_neuron)
+            model_path = self.model_dir + "/rm_outliers_total_set_NN/car2vect/regressor{0}/{1}_{2}_{3}_car2vect_{4}x1_{5}x1_total_set".format (2, dataset_size, self.model_name, self.label, self.no_neuron_embed, self.no_neuron)
             #os.system ("mkdir -p ../checkpoint/rm_outliers_total_set_NN/car2vect_regul/regressor2")
             #model_path = self.model_dir + "/rm_outliers_total_set_NN/car2vect_regul/regressor{0}/{1}_{2}_{3}_car2vect_{4}_{5}_total_set".format (2, dataset_size, self.model_name, self.label, self.no_neuron_embed, self.no_neuron)
             y_predict_file_name_ = y_predict_file_name + "_2"
@@ -1633,14 +1966,11 @@ class Tensor_NN (Dataset, Sklearn_model):
             x_embed_file_name_ = x_embed_file_name + "_2"
             
             print ("\n\n===========Predictor2")
-            #self.epoch = 50
-
-            best_epoch = self.baseline (train_data=new_train_data, train_label=new_train_label, test_data=new_test_data, test_label=new_test_label, no_neuron=self.no_neuron, no_hidden_layer = self.no_hidden_layer, loss_func=self.loss_func, model_path=model_path, y_predict_file_name=y_predict_file_name_, mean_error_file_name=mean_error_file_name_)
-            #best_epoch = self.car2vect (train_data=new_train_data, train_label=new_train_label, test_data=new_test_data, test_label=new_test_label, total_car_ident=new_total_car_ident_code, d_ident=d_ident, d_embed=self.d_embed, d_remain=d_remain, no_neuron=self.no_neuron, no_neuron_embed=self.no_neuron_embed, loss_func=self.loss_func, model_path=model_path, y_predict_file_name=y_predict_file_name_, mean_error_file_name=mean_error_file_name_, x_ident_file_name=x_ident_file_name_, x_embed_file_name=x_embed_file_name_, retrain=0) # if use retrain=1 -> initialize weights from the previous model
+            best_epoch = self.car2vect (train_data=new_train_data, train_label=new_train_label, test_data=new_test_data, test_label=new_test_label, total_car_ident=new_total_car_ident_code, d_ident=d_ident, d_embed=self.d_embed, d_remain=d_remain, no_neuron=self.no_neuron, no_neuron_embed=self.no_neuron_embed, loss_func=self.loss_func, model_path=model_path, y_predict_file_name=y_predict_file_name_, mean_error_file_name=mean_error_file_name_, x_ident_file_name=x_ident_file_name_, x_embed_file_name=x_embed_file_name_, retrain=0) # if use retrain=1 -> initialize weights from the previous model
             #best_epoch = self.car2vect (train_data=new_train_data, train_label=new_train_label, test_data=new_test_data, test_label=new_test_label, test_car_ident=new_test_car_ident, d_ident=d_ident, d_embed=self.d_embed, d_remain=d_remain, no_neuron=self.no_neuron, no_neuron_embed=self.no_neuron_embed, loss_func=self.loss_func, model_path=model_path, y_predict_file_name=y_predict_file_name_, mean_error_file_name=mean_error_file_name_, x_ident_file_name=x_ident_file_name_, x_embed_file_name=x_embed_file_name_, retrain=1) # if use retrain=1 -> initialize weights from the previous model
             print ("Best epoch: ", best_epoch)
 
-            #####################
+            """#####################
             meta_file = model_path + "_" + str (best_epoch) + ".meta"
             ckpt_file = model_path + "_" + str (best_epoch) 
             test_data_remain = new_test_data [:, 0:d_remain]
@@ -1655,10 +1985,81 @@ class Tensor_NN (Dataset, Sklearn_model):
         elif ensemble_flag == 5:
             self.bagging_NN_car2vect (new_train_data, new_train_label, new_test_data, new_test_label, new_total_car_ident_code, d_ident, d_remain, y_predict_file_name, mean_error_file_name, x_ident_file_name, x_embed_file_name, dataset_size, self.sample_ratio, retrain=1)
 
+        elif ensemble_flag == -1:
+            ########################################
+            ### Feature importance
+
+            # Get the list of test_data with each feature column is shuffled (the 1st element is the original new_test_data)
+            length = len (l_feature)
+            sum_l = 0
+            arr_sum_l = []
+            list_test_data = [new_test_data]
+            for i in range (length-1):
+                sum_l += l_feature[i]
+                arr_sum_l.append (sum_l)
+
+            X = np.split (new_test_data, indices_or_sections=arr_sum_l, axis=1)
+            arr_sum_l.insert (0,0)
+            for i in range (length):
+                print ("====i:", i)
+                test_data_copy = new_test_data.copy ()
+                if i < length-1:
+                    test_data_copy [:, arr_sum_l [i]:arr_sum_l [i+1]] = np.random.permutation (X[i]) 
+                else:
+                    test_data_copy [:, arr_sum_l [i]:] = np.random.permutation (X[i]) 
+                list_test_data.append (test_data_copy)
+            print (len (list_test_data))
+            tf.reset_default_graph ()
+            self.get_features_importance_car2vect (new_train_data, new_train_label, list_test_data, new_test_label, new_total_car_ident_code, d_ident, d_remain, model_path, features)
+            ########################################
+
         else:
             raise ValueError ("[retrain_car2vect_from_total_set] This model is not supported!")
         print ("Time for running: retrain_car2vect_from_total_set: %.3f" % (time.time() - stime))
 
+    def batch_computation_baseline  (self, no_batch, train_data, train_label, meta_file, ckpt_file):
+        # devide the train set into smaller subsets, push them to the model and concatenate them later
+        total_se = 0
+        total_ae = 0
+        total_relative_err = 0
+        total_smape = 0
+        start_index = 0
+        end_index = 0
+        total_predicted_y = np.zeros ((0, 1))
+        total_arr_relative_err = np.zeros ((0, 1))
+        len_train = len(train_data)
+        batch_size = int (len_train / no_batch)
+        train_total_batch = int (np.ceil (float (len_train)/batch_size))
+        for i in range (train_total_batch):
+            if len_train - end_index < batch_size:
+                end_index = len_train
+            else:
+                end_index = (i+1) * batch_size
+
+            batch_x = train_data [start_index : end_index]
+            batch_y = train_label [start_index : end_index]
+
+            start_index = end_index
+
+            # TODO: use restore_model_NN_baseline
+            (predicted_y, train_sum_se_val, train_sum_ae_val, train_sum_relative_err_val, train_sum_smape_val, arr_relative_err_val) = self.restore_model_NN_baseline (batch_x, batch_y, meta_file, ckpt_file, train_flag=1)
+            total_predicted_y = np.concatenate ((total_predicted_y, predicted_y))
+            total_arr_relative_err = np.concatenate ((total_arr_relative_err, arr_relative_err_val))
+            total_se += train_sum_se_val
+            total_ae += train_sum_ae_val
+            total_relative_err += train_sum_relative_err_val
+            total_smape += train_sum_smape_val
+
+        assert end_index == len_train   
+
+        predicted_train_label = total_predicted_y
+        train_rmse_val = np.sqrt (total_se/len_train)
+        train_mae_val = total_ae/len_train
+        train_relative_err_val = total_relative_err/len_train
+        train_smape_val = total_smape/len_train
+        print (total_arr_relative_err.shape, np.max (total_arr_relative_err), np.min (total_arr_relative_err), np.average (total_arr_relative_err), train_relative_err_val)
+        return (predicted_train_label, train_rmse_val, train_mae_val, train_relative_err_val, train_smape_val, total_arr_relative_err)
+    
     def batch_computation_car2vect  (self, no_batch, train_data, train_label, d_ident, d_remain, meta_file, ckpt_file):
         train_data_remain = train_data [:, 0:d_remain]
         train_data_ident = train_data [:, d_remain:]
@@ -1726,8 +2127,8 @@ class Tensor_NN (Dataset, Sklearn_model):
 
         meta_file = model_path + "_" + str (best_epoch) + ".meta"
         ckpt_file = model_path + "_" + str (best_epoch) 
-        (predicted_train_label, train_rmse_val, train_mae_val, train_relative_err_val, train_smape_val) = self.restore_model_NN_baseline (train_data, train_label_copy, meta_file, ckpt_file)
-        (predicted_test_label, test_rmse_val, test_mae_val, test_relative_err_val, test_smape_val) = self.restore_model_NN_baseline (test_data, test_label_copy, meta_file, ckpt_file)
+        (predicted_train_label, train_rmse_val, train_mae_val, train_relative_err_val, train_smape_val) = self.restore_model_NN_baseline (train_data, train_label_copy, meta_file, ckpt_file, train_flag=0)
+        (predicted_test_label, test_rmse_val, test_mae_val, test_relative_err_val, test_smape_val) = self.restore_model_NN_baseline (test_data, test_label_copy, meta_file, ckpt_file, train_flag=0)
         print (predicted_test_label[:10])
         print (test_label_copy[:10])
         list_predicted_test_label.append (predicted_test_label)
@@ -1788,7 +2189,7 @@ class Tensor_NN (Dataset, Sklearn_model):
             print ("Best epoch: ", best_epoch)
             meta_file = model_path + "_" + str (best_epoch) + ".meta"
             ckpt_file = model_path + "_" + str (best_epoch) 
-            (predicted_test_label, test_rmse_val, test_mae_val, test_relative_err_val, test_smape_val) = self.restore_model_NN_baseline (test_data, test_label, meta_file, ckpt_file)
+            (predicted_test_label, test_rmse_val, test_mae_val, test_relative_err_val, test_smape_val) = self.restore_model_NN_baseline (test_data, test_label, meta_file, ckpt_file, train_flag=0)
             list_predicted_test_label.append (predicted_test_label)
             print ("predicted_test_label (" + str(i) + ")", predicted_test_label[:10])
             print ("=================================")
