@@ -846,9 +846,9 @@ class Tensor_NN (Dataset, Sklearn_model):
         with tf.Session() as sess:
             # Load meta graph and restore all variable values
             saver = tf.train.import_meta_graph (meta_file)
-            ptint ("====",  ckpt_file)
+            print ("====",  ckpt_file)
             saver.restore (sess, ckpt_file)
-            ptint ("====",  ckpt_file)
+            print ("====",  ckpt_file)
 
             # Access and create placeholder variables, and create feedict to feed data 
             graph = tf.get_default_graph ()
