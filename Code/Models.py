@@ -1871,8 +1871,8 @@ class Tensor_NN (Dataset, Sklearn_model):
         print ("\n\n===========Train total set")
         # If comment the below line, you need to check the checkpoint file in regressor1 (it should be compatible with the dataset) 
         # Flexible rel_err.
-        self.epoch=20
-        self.train_car2vect(train_data=total_data, train_label=total_label, total_car_ident=total_car_ident_code, d_ident=d_ident, d_embed=self.d_embed, d_remain=d_remain, no_neuron=self.no_neuron, no_neuron_embed=self.no_neuron_embed, loss_func=self.loss_func, model_path=model_path)
+        #self.epoch=20
+        #self.train_car2vect(train_data=total_data, train_label=total_label, total_car_ident=total_car_ident_code, d_ident=d_ident, d_embed=self.d_embed, d_remain=d_remain, no_neuron=self.no_neuron, no_neuron_embed=self.no_neuron_embed, loss_func=self.loss_func, model_path=model_path)
         # Only use the below line for Gradient Boosting 
         #self.train_car2vect(train_data=total_data, train_label=total_label, total_car_ident=total_car_ident_code, d_ident=d_ident, d_embed=self.d_embed, d_remain=d_remain, no_neuron=self.no_neuron, no_neuron_embed=self.no_neuron_embed, loss_func="rel_err", model_path=model_path)
 
@@ -1881,8 +1881,8 @@ class Tensor_NN (Dataset, Sklearn_model):
         # When restore model with the whole dataset, it can cause the error: Resource exhausted 
         # Devide the train set into smaller subsets (Eg. 5 subsets), push them to the model and concatenate the predictions later
         # TODO: change the "model_dir" arg to automatically set the directory
-        meta_file = model_path + "_19.meta"
-        ckpt_file = model_path + "_19"
+        meta_file = model_path + "_9.meta"
+        ckpt_file = model_path + "_9"
 
         (predicted_total_label, total_rmse_val, total_mae_val, total_relative_err_val, total_smape_val, total_arr_relative_err) = self.batch_computation_car2vect (5, total_data, total_label, d_ident, d_remain, meta_file, ckpt_file)
         total_np_arr = np.concatenate ((total_car_ident_code, act_adv_date, total_label, predicted_total_label), axis=1)
