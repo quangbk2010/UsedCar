@@ -119,28 +119,28 @@ class Dataset ():
         # Determine some features
         if car_ident_flag == 0:
             if dataset_type == "old":
-                #self.features_need_encoding = ["maker_code","class_code","car_code","model_code","grade_code","car_type", "trans_mode", "fuel_type", "city", "district", "dealer_name"]
-                self.features_need_encoding = ["maker_code","class_code","car_code","model_code","grade_code"]
+                self.features_need_encoding = ["maker_code","class_code","car_code","model_code","grade_code","car_type", "trans_mode", "fuel_type", "city", "district", "dealer_name"]
             else:
                 self.features_need_encoding = ["maker_code","class_code","car_code","model_code","grade_code","car_type","trans_mode","fuel_type","branch","affiliate_code","region","trading_complex","trading_firm_id","seller_id","refund","vain_effort","guarantee","selected_color","input_color","reg_month"]
                 
         else:
             if dataset_type == "old":
-                #self.features_need_encoding = ["car_type", "trans_mode", "fuel_type", "city", "district", "dealer_name"]
-                self.features_need_encoding = []
+                self.features_need_encoding = ["car_type", "trans_mode", "fuel_type", "city", "district", "dealer_name"]
             else:
-                self.features_need_encoding = ["car_type","trans_mode","fuel_type","branch","affiliate_code","region","trading_complex","trading_firm_id","seller_id","refund","vain_effort","guarantee","selected_color","input_color","reg_month"]
+                #self.features_need_encoding = ["car_type","trans_mode","fuel_type","branch","affiliate_code","region","trading_complex"]# NOTE Try to use the same features as old dataset
+                self.features_need_encoding = ["car_type","trans_mode","fuel_type","branch","region","trading_complex","trading_firm_id","seller_id","refund","vain_effort","guarantee","selected_color","input_color","reg_month"]
 
         if dataset_type == "old":
             feature_need_label = ["car_type", "trans_mode", "fuel_type", "city", "district", "dealer_name"]
-            #self.feature_need_scaled = ["vehicle_mile", "no_click", "recovery_fee"]#, "price"] # or = self.features_not_need_encoding
-            self.feature_need_scaled = ["vehicle_mile", "recovery_fee"]#, "price"] # 
+            #self.feature_need_scaled = ["year","vehicle_mile","cylinder_disp", "views", "recovery_fee"]#, "price"] # or = self.features_not_need_encoding
         else:
+            #feature_need_label = ["car_type", "trans_mode", "fuel_type", "branch", "region","trading_complex"]# NOTE Try to use the same features as old dataset
             feature_need_label = ["car_type", "trans_mode", "fuel_type", "branch", "region","trading_complex","trading_firm_id","seller_id","refund","vain_effort","guarantee","selected_color","input_color"]
-            self.feature_need_scaled = ["year","vehicle_mile","cylinder_disp","recovery_fee","min_price","max_price","views","no_message_contact","no_call_contact","no_cover_side_recovery","no_cover_side_exchange","no_corrosive_part","no_structure_exchange","mortgage","tax_unpaid","interest"]
+            #self.feature_need_scaled = ["year","vehicle_mile","cylinder_disp","recovery_fee","min_price","max_price","views","no_message_contact","no_call_contact","no_cover_side_recovery","no_cover_side_exchange","no_corrosive_part","no_structure_exchange","mortgage","tax_unpaid","interest"]
         
         feature_need_impute = ["grade_code"]
         self.car_ident = ["maker_code","class_code","car_code","model_code","grade_code"]
+        #self.car_ident = ["maker_code","class_code","car_code","grade_code"] # NOTE: Concatenate model_code, grade_code -> grade_code
 
         # list of features whether it needs remove outliers 
         #feature_need_not_remove_outlier = [feature for feature in self.features if feature not in feature_need_remove_outlier] 
@@ -148,14 +148,8 @@ class Dataset ():
 
         # list of features whether it needs one-hot encode
         self.features_not_need_encoding = [feature for feature in features_remove_car_ident if feature not in self.features_need_encoding] 
+        self.feature_need_scaled = self.features_not_need_encoding
         
-        # Add 2 more features 
-        if dataset_type == "new":
-            self.features += ["reg_month", "year_diff"]
-            self.features_need_encoding += ["reg_month"]
-            self.features_not_need_encoding += ["year_diff"]
-
-
         dataframe_file = "./Dataframe/[" + dataset_size + "]total_dataframe_Initial.h5"
         key = "df"
 
@@ -183,8 +177,8 @@ class Dataset ():
             print ("2.2", total_dataset.shape)
 
             # Remove the data points with revovery_fee < 0
-            total_dataset = total_dataset[total_dataset["recovery_fee"] > 0]
-            print ("2.2", total_dataset.shape)
+            total_dataset = total_dataset[total_dataset["recovery_fee"] >= 0]
+            print ("2.3", total_dataset.shape)
 
             # Remove the data points with maker_year < 2000, > 2018 
             total_dataset = total_dataset[total_dataset["year"].between (2000, 2018, inclusive=True)] #(total_dataset["year"] > 2000) & (total_dataset["year"] < 2018)]
@@ -197,9 +191,9 @@ class Dataset ():
             print ("4.", total_dataset.shape)
 
             #total_dataset = total_dataset[total_dataset["price"] >= 200] # 400]
-            #print ("3.1", total_dataset.shape)
+            #print ("4.1", total_dataset.shape)
             #total_dataset = total_dataset[total_dataset["price"] < 9000]
-            #print ("3.2", total_dataset.shape)
+            #print ("4.2", total_dataset.shape)
 
             # Remove outliers
             #total_dataset = total_dataset[np.abs(total_dataset["price"] - total_dataset["price"].mean()) / total_dataset["price"].std() < 1]
@@ -223,6 +217,9 @@ class Dataset ():
             # Drop all the data points with missing values
             total_dataset = total_dataset.dropna ()
             print ("7.", total_dataset.shape)
+
+            # Concatenate model_code with grade_code to create a new grade_code
+            #total_dataset["grade_code"] = total_dataset["model_code"].astype ("int").astype ("str") + total_dataset["grade_code"].astype ("int").astype ("str")
 
             # Remove the items with missing actual_adv_date or missing sale_date 
             #total_dataset = total_dataset[total_dataset["actual_advertising_date"].notnull() & total_dataset["sale_date"].notnull()]
@@ -252,6 +249,7 @@ class Dataset ():
             total_dataset["year_diff"] = adv_year - manufacture_year"""
 
             # Use the information about the first registration date
+            # NOTE Try to use the same features as old dataset
             if dataset_type == "new":
                 print ("===Add 2 more features: reg_month, year_diff!!")
                 reg_date = total_dataset ["first_registration"]
@@ -311,6 +309,7 @@ class Dataset ():
             for i in range (l3):
                 l_feature.append (len (np.unique (total_dataset [self.car_ident [i]])))
         self.l_feature = l_feature
+        print ("l_feature:", len (l_feature))
 
         print ("Time for Loading and preprocessing dataset: %.3f" % (time.time() - stime))
         self.total_dataset = total_dataset
