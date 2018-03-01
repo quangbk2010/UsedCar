@@ -140,6 +140,7 @@ class Dataset ():
         
         feature_need_impute = ["grade_code"]
         self.car_ident = ["maker_code","class_code","car_code","model_code","grade_code"]
+        #self.car_ident = ["maker_code","class_code","car_code","grade_code"] # NOTE: Concatenate model_code, grade_code -> grade_code
 
         # list of features whether it needs remove outliers 
         #feature_need_not_remove_outlier = [feature for feature in self.features if feature not in feature_need_remove_outlier] 
@@ -218,7 +219,7 @@ class Dataset ():
             print ("7.", total_dataset.shape)
 
             # Concatenate model_code with grade_code to create a new grade_code
-            total_dataset["grade_code"] = total_dataset["model_code"].astype ("int").astype ("str") + total_dataset["grade_code"].astype ("int").astype ("str")
+            #total_dataset["grade_code"] = total_dataset["model_code"].astype ("int").astype ("str") + total_dataset["grade_code"].astype ("int").astype ("str")
 
             # Remove the items with missing actual_adv_date or missing sale_date 
             #total_dataset = total_dataset[total_dataset["actual_advertising_date"].notnull() & total_dataset["sale_date"].notnull()]

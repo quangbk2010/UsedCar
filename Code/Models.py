@@ -1087,6 +1087,7 @@ class Tensor_NN (Dataset, Sklearn_model):
 
             print ("test car ident", test_car_ident[0])
             np.savetxt (x_ident_file_name_, test_car_ident, fmt="%d\t%d\t%d\t%d\t%s")  
+            #np.savetxt (x_ident_file_name_, test_car_ident, fmt="%d\t%d\t%d\t%d")  # NOTE: Concatenate model_code, grade_code -> grade_code 
 
             print ("len train_data_ident:", train_data_ident_shuffled.shape)
             print ("len train_data_remain:", train_data_remain_shuffled.shape)
