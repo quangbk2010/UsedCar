@@ -121,21 +121,21 @@ class Dataset ():
             if dataset_type == "old":
                 self.features_need_encoding = ["maker_code","class_code","car_code","model_code","grade_code","car_type", "trans_mode", "fuel_type", "city", "district", "dealer_name"]
             else:
-                self.features_need_encoding = ["maker_code","class_code","car_code","model_code","grade_code","car_type","trans_mode","fuel_type","branch","affiliate_code","region","trading_complex","trading_firm_id","seller_id","refund","vain_effort","guarantee","selected_color","input_color","reg_month"]
+                self.features_need_encoding = ["maker_code","class_code","car_code","model_code","grade_code","car_type","trans_mode","fuel_type","branch","affiliate_code","region","trading_complex","refund","vain_effort","guarantee","selected_color","reg_month","adv_month"]
                 
         else:
             if dataset_type == "old":
                 self.features_need_encoding = ["car_type", "trans_mode", "fuel_type", "city", "district", "dealer_name"]
             else:
                 #self.features_need_encoding = ["car_type","trans_mode","fuel_type","branch","affiliate_code","region","trading_complex"]# NOTE Try to use the same features as old dataset
-                self.features_need_encoding = ["car_type","trans_mode","fuel_type","branch","region","trading_complex","trading_firm_id","seller_id","refund","vain_effort","guarantee","selected_color","input_color","reg_month"]
+                self.features_need_encoding = ["car_type","trans_mode","fuel_type","branch","affiliate_code","region","trading_complex","refund","vain_effort","guarantee","selected_color","reg_month","adv_month"]
 
         if dataset_type == "old":
             feature_need_label = ["car_type", "trans_mode", "fuel_type", "city", "district", "dealer_name"]
             #self.feature_need_scaled = ["year","vehicle_mile","cylinder_disp", "views", "recovery_fee"]#, "price"] # or = self.features_not_need_encoding
         else:
             #feature_need_label = ["car_type", "trans_mode", "fuel_type", "branch", "region","trading_complex"]# NOTE Try to use the same features as old dataset
-            feature_need_label = ["car_type", "trans_mode", "fuel_type", "branch", "region","trading_complex","trading_firm_id","seller_id","refund","vain_effort","guarantee","selected_color","input_color"]
+            feature_need_label = ["car_type", "trans_mode", "fuel_type", "branch", "region","trading_complex","refund","vain_effort","guarantee","selected_color"]
             #self.feature_need_scaled = ["year","vehicle_mile","cylinder_disp","recovery_fee","min_price","max_price","views","no_message_contact","no_call_contact","no_cover_side_recovery","no_cover_side_exchange","no_corrosive_part","no_structure_exchange","mortgage","tax_unpaid","interest"]
         
         feature_need_impute = ["grade_code"]
@@ -251,7 +251,7 @@ class Dataset ():
             # Use the information about the first registration date
             # NOTE Try to use the same features as old dataset
             if dataset_type == "new":
-                print ("===Add 2 more features: reg_month, year_diff!!")
+                print ("===Add 4 more features: reg_year, reg_month, adv_month, year_diff!!")
                 reg_date = total_dataset ["first_registration"]
                 reg_year = reg_date // 10000
 
@@ -259,8 +259,12 @@ class Dataset ():
                 total_dataset = total_dataset[reg_year.between (2000, 2018, inclusive=True)] 
                 print ("9.", total_dataset.shape)
 
-                first_adv_year = total_dataset["first_adv_date"] // 10000
+                total_dataset["reg_year"] = reg_year
                 total_dataset["reg_month"] = reg_date % 10000 // 100
+
+                first_adv_date = total_dataset["first_adv_date"]
+                total_dataset["adv_month"] = first_adv_date % 10000 // 100
+                first_adv_year = first_adv_date // 10000
                 total_dataset["year_diff"] = first_adv_year - reg_year
 
             # Impute missing values from here
@@ -304,12 +308,28 @@ class Dataset ():
             l_feature.append (1)
 
         if car_ident_flag == 1:
+            self.sorted_features = ["maker_code_","class_code_"] + self.sorted_features 
             self.sorted_features += self.car_ident
             l3 = len (self.car_ident)
             for i in range (l3):
                 l_feature.append (len (np.unique (total_dataset [self.car_ident [i]])))
+                if i == 0:
+                    maker_len = l_feature[-1]
+                elif i == 1:
+                    class_len = l_feature[-1]
+            l_feature = [maker_len, class_len] + l_feature
+
         self.l_feature = l_feature
+        print ("======Final length of dataset:", len (total_dataset))
+        print ("l1: {0}, l2: {1}, l3: {2}".format (l1, l2, l3))
+        print ("l1: {0}, l2: {1}, l3: {2}".format (self.features_need_encoding, self.features_not_need_encoding, self.car_ident))
         print ("l_feature:", len (l_feature))
+        print ("l_feature:", l_feature)
+
+        """print ("Features need encoding:")
+        for feature in self.features_need_encoding:
+            print (feature, min (total_dataset[feature]))
+        sys.exit (-1)"""
 
         print ("Time for Loading and preprocessing dataset: %.3f" % (time.time() - stime))
         self.total_dataset = total_dataset
