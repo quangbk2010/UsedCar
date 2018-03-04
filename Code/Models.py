@@ -32,6 +32,21 @@ class Sklearn_model (Dataset):
     def get_predicted_label (self, regr, data):
         return  np.array (regr.predict (data)).reshape (data.shape[0], 1)
 
+    """def kmean_cluster (self, train_data, test_data)
+        kmeans = KMeans(n_clusters=1000, random_state=0).fit(train_data)
+        train_label = kmeans.labels_
+        test_label = kmeans.predict (test_data)"""
+
+    def knn (self, train_data, train_label, test_data, test_label):
+        stime = time.time()
+        nn = KNeighborsRegressor(n_neighbors=50)
+        nn.fit (train_data, train_label)
+        predicted_test_label = nn.predict (test_data)
+        rel_err = get_relative_err (predicted_test_label, test_label)
+        print ("[knn] Rel_err:", rel_err)
+        print ("Time for K-Nearest neighbor: %.3f" % (time.time() - stime))        
+
+
     def sklearn_regression (self, reg_type, train_data, train_label, test_data, test_label):
         """
             Use GridSearch to find the best hyper-parameters for each model
@@ -954,7 +969,8 @@ class Tensor_NN (Dataset, Sklearn_model):
 
     
 
-    def car2vect(self, train_data, train_label, test_data, test_label, total_car_ident, d_ident, d_embed, d_remain, no_neuron, no_neuron_embed, loss_func, model_path, y_predict_file_name, mean_error_file_name, x_ident_file_name, x_embed_file_name, retrain): # Used for 1train-1test
+    def car2vect(self, train_data, train_label, test_data, test_label, total_car_ident, total_act_adv_date, total_year_diff, d_ident, d_embed, d_remain, no_neuron, no_neuron_embed, loss_func, model_path, y_predict_file_name, mean_error_file_name, x_ident_file_name, x_embed_file_name, retrain): # Used for 1train-1test, add total_act_adv_date, year_diff
+    #def car2vect(self, train_data, train_label, test_data, test_label, total_car_ident, d_ident, d_embed, d_remain, no_neuron, no_neuron_embed, loss_func, model_path, y_predict_file_name, mean_error_file_name, x_ident_file_name, x_embed_file_name, retrain): # Used for 1train-1test
     #def car2vect(self, train_data, train_label, test_data, test_label, test_car_ident, d_ident, d_embed, d_remain, no_neuron, no_neuron_embed, loss_func, model_path, y_predict_file_name, mean_error_file_name, x_ident_file_name, x_embed_file_name, retrain): # Used for 1train-1test
     #def car2vect(self, train_data, train_label, test_data, test_label, test_car_ident, model_path, d_ident, d_embed, d_remain, x_ident, x_remain, Y, x_embed, prediction, fold): # used for Cross-validation 
 
@@ -965,6 +981,8 @@ class Tensor_NN (Dataset, Sklearn_model):
 
         train_car_ident = total_car_ident [:len_train, :] 
         test_car_ident = total_car_ident [len_train:, :] 
+        test_act_adv_date = total_act_adv_date [len_train:, :] 
+        test_year_diff = total_year_diff [len_train:, :] 
 
         if using_CV_flag == 0:
             if retrain == 0:
@@ -1086,7 +1104,9 @@ class Tensor_NN (Dataset, Sklearn_model):
             test_data_ident = test_data [:, d_remain:]
 
             print ("test car ident", test_car_ident[0])
-            np.savetxt (x_ident_file_name_, test_car_ident, fmt="%d\t%d\t%d\t%d\t%s")  
+            identification = np.concatenate ((test_car_ident, test_act_adv_date, test_year_diff),axis=1)
+            np.savetxt (x_ident_file_name_, identification, fmt="%d\t%d\t%d\t%d\t%s\t%s\t%d")  
+            #np.savetxt (x_ident_file_name_, test_car_ident, fmt="%d\t%d\t%d\t%d\t%s")  
             #np.savetxt (x_ident_file_name_, test_car_ident, fmt="%d\t%d\t%d\t%d")  # NOTE: Concatenate model_code, grade_code -> grade_code 
 
             print ("len train_data_ident:", train_data_ident_shuffled.shape)
@@ -1578,7 +1598,7 @@ class Tensor_NN (Dataset, Sklearn_model):
         new_dataset = dataset [idx]
         return new_dataset[:, :-1]
 
-    def remove_outliers_total_set (self, total_data, total_label, total_car_ident_code, act_ad_date, total_rel_err, dataset_size, removal_percent):
+    def remove_outliers_total_set (self, total_data, total_label, total_car_ident_code, act_ad_date, year_diff, total_rel_err, dataset_size, removal_percent):
         """
             Purpose:
             - Remove outliers of the total dataset: the data points in the training set with the corresponding relative error in top (removal_percent)%
@@ -1595,7 +1615,7 @@ class Tensor_NN (Dataset, Sklearn_model):
         #if os.path.isfile (stored_np_arr_file + ".npy") == False:# or os.path.isfile (removed_np_arr_file) == False:
 
         print ("Remove outliers from the original array")
-        dataset = np.concatenate ((total_data, total_label, total_car_ident_code, act_ad_date, total_rel_err), axis=1)
+        dataset = np.concatenate ((total_data, total_label, total_car_ident_code, act_ad_date, year_diff, total_rel_err), axis=1)
 
         # Get the dataset after removing removal_percent no. data points with the highest relative error from the total dataset
         len_dataset = total_data.shape[0]
@@ -1609,10 +1629,10 @@ class Tensor_NN (Dataset, Sklearn_model):
         new_dataset = dataset [idx]
 
         # Sort by adv_date
-        new_dataset = new_dataset [new_dataset[:, -2].argsort()]
+        new_dataset = new_dataset [new_dataset[:, -3].argsort()]
 
-        # The new dataset will store car_ident_code at the end of the matrix
-        new_dataset = new_dataset[:, :-2] 
+        # The new dataset will store year_diff at the end of the matrix
+        new_dataset = new_dataset[:, :-1] 
 
         # Save the dataset into a binary file
         #np.save (stored_np_arr_file, new_dataset)
@@ -1726,8 +1746,8 @@ class Tensor_NN (Dataset, Sklearn_model):
         np.savetxt ("./importance_score.txt", df_importance_score, fmt="%s\t%.2f\t%.2f\t%.2f\t%.2f")
 
     def get_features_importance_car2vect (self, train_data, train_label, list_test_data, test_label, total_car_ident, d_ident, d_remain, model_path, features):
-        meta_file = model_path + "_41.meta"
-        ckpt_file = model_path + "_41" 
+        meta_file = model_path + "_29.meta"
+        ckpt_file = model_path + "_29" 
         #meta_file = model_path + "test4.meta"
         #ckpt_file = model_path + "test4" 
         # Train the model based on the train set
@@ -1757,11 +1777,11 @@ class Tensor_NN (Dataset, Sklearn_model):
         print ("\n\n ===============")
         np.savetxt ("./importance_score.txt", df_importance_score, fmt="%s\t%.2f\t%.2f\t%.2f\t%.2f")
 
-    def retrain_baseline_from_total_set (self, total_data, total_label, act_adv_date, y_predict_file_name, mean_error_file_name, dataset_size, removal_percent, ensemble_flag, l_feature, features):
+    def retrain_baseline_from_total_set (self, total_data, total_label, total_act_adv_date, y_predict_file_name, mean_error_file_name, dataset_size, removal_percent, ensemble_flag, l_feature, features):
         """
             - Purpose: 
                 + Train the model baseline with the whole dataset, and then remove the data points with removal_percent highest relative error.
-                + Sort the remaining dataset by act_adv_date, and divide it into train and test sets
+                + Sort the remaining dataset by total_act_adv_date, and divide it into train and test sets
                 + Retrain the model car3vect with the new training data from scratch.
         """
         # First train the model on the original dataset
@@ -1783,15 +1803,15 @@ class Tensor_NN (Dataset, Sklearn_model):
         # TODO: change the "model_dir" arg to automatically set the directory
         (predicted_total_label, total_rmse_val, total_mae_val, total_relative_err_val, total_smape_val, total_arr_relative_err) = self.batch_computation_baseline (5, total_data, total_label, meta_file, ckpt_file)
         print ("After restoring baseline model...")
-        total_np_arr = np.concatenate ((act_adv_date, total_label, predicted_total_label), axis=1)
+        total_np_arr = np.concatenate ((total_act_adv_date, total_label, predicted_total_label), axis=1)
         print ("After concatenating...")
         total_df = pd.DataFrame (total_np_arr)
         np.savetxt (y_predict_file_name + "_total_before_remove_outliers", total_df, fmt="%.0f\t%d\t%.2f")
 
-        # Remove outliers from the total dataset based on the relative error from the first train, on the other hand sort the dataset by act_adv_date
+        # Remove outliers from the total dataset based on the relative error from the first train, on the other hand sort the dataset by total_act_adv_date
         stime = time.time()
         if removal_percent > 0:
-            new_total_set = self.remove_outliers_total_set (total_data, total_label, np.empty ((total_data.shape[0], 0)), act_adv_date, total_arr_relative_err, dataset_size, removal_percent)
+            new_total_set = self.remove_outliers_total_set (total_data, total_label, np.empty ((total_data.shape[0], 0)), total_act_adv_date, total_arr_relative_err, dataset_size, removal_percent)
         else:
             raise ValueError ("Removal perentage need to be larger than 0!")
         print ("Time needed to remove outliers from the dataset: %.3f" % (time.time() - stime))
@@ -1856,11 +1876,12 @@ class Tensor_NN (Dataset, Sklearn_model):
             self.get_features_importance_baseline_NN (new_train_data, new_train_label, list_test_data, new_test_label, model_path, features)
             ########################################
 
-    def retrain_car2vect_from_total_set (self, total_data, total_label, total_car_ident_code, act_adv_date, d_ident, d_remain, y_predict_file_name, mean_error_file_name, x_ident_file_name, x_embed_file_name, dataset_size, removal_percent, ensemble_flag, l_feature, features):
+    def retrain_car2vect_from_total_set (self, total_data, total_label, total_car_ident_code, total_act_adv_date, total_year_diff, d_ident, d_remain, y_predict_file_name, mean_error_file_name, x_ident_file_name, x_embed_file_name, dataset_size, removal_percent, ensemble_flag, l_feature, features):# add first_adv_date, year_diff
+    #def retrain_car2vect_from_total_set (self, total_data, total_label, total_car_ident_code, total_act_adv_date, d_ident, d_remain, y_predict_file_name, mean_error_file_name, x_ident_file_name, x_embed_file_name, dataset_size, removal_percent, ensemble_flag, l_feature, features):
         """
             - Purpose: 
                 + Train the model car2vect with the whole dataset, and then remove the data points with removal_percent highest relative error.
-                + Sort the remaining dataset by act_adv_date, and divide it into train and test sets
+                + Sort the remaining dataset by total_act_adv_date, and divide it into train and test sets
                 + Retrain the model car3vect with the new training data (if the "retrain" flag == 1 -> use the initial weights from the 1st train, 
                 otherwise retrain from scratch.
         """
@@ -1896,8 +1917,8 @@ class Tensor_NN (Dataset, Sklearn_model):
         print ("\n\n===========Train total set")
         # If comment the below line, you need to check the checkpoint file in regressor1 (it should be compatible with the dataset) 
         # Flexible rel_err.
-        self.epoch=20
-        self.train_car2vect(train_data=total_data, train_label=total_label, total_car_ident=total_car_ident_code, d_ident=d_ident, d_embed=self.d_embed, d_remain=d_remain, no_neuron=self.no_neuron, no_neuron_embed=self.no_neuron_embed, loss_func=self.loss_func, model_path=model_path)
+        #self.epoch=20
+        #self.train_car2vect(train_data=total_data, train_label=total_label, total_car_ident=total_car_ident_code, d_ident=d_ident, d_embed=self.d_embed, d_remain=d_remain, no_neuron=self.no_neuron, no_neuron_embed=self.no_neuron_embed, loss_func=self.loss_func, model_path=model_path)
         # Only use the below line for Gradient Boosting 
         #self.train_car2vect(train_data=total_data, train_label=total_label, total_car_ident=total_car_ident_code, d_ident=d_ident, d_embed=self.d_embed, d_remain=d_remain, no_neuron=self.no_neuron, no_neuron_embed=self.no_neuron_embed, loss_func="rel_err", model_path=model_path)
 
@@ -1906,13 +1927,13 @@ class Tensor_NN (Dataset, Sklearn_model):
         # When restore model with the whole dataset, it can cause the error: Resource exhausted 
         # Devide the train set into smaller subsets (Eg. 5 subsets), push them to the model and concatenate the predictions later
         # TODO: change the "model_dir" arg to automatically set the directory
-        meta_file = model_path + "_9.meta"
-        ckpt_file = model_path + "_9"
+        meta_file = model_path + "_19.meta"
+        ckpt_file = model_path + "_19"
 
         (predicted_total_label, total_rmse_val, total_mae_val, total_relative_err_val, total_smape_val, total_arr_relative_err) = self.batch_computation_car2vect (5, total_data, total_label, d_ident, d_remain, meta_file, ckpt_file)
-        total_np_arr = np.concatenate ((total_car_ident_code, act_adv_date, total_label, predicted_total_label), axis=1)
+        total_np_arr = np.concatenate ((total_car_ident_code, total_act_adv_date, total_year_diff, total_label, predicted_total_label), axis=1)
         total_df = pd.DataFrame (total_np_arr)
-        np.savetxt (y_predict_file_name + "_total_before_remove_outliers", total_df, fmt="%d\t%d\t%d\t%d\t%s\t%.0f\t%d\t%.2f")
+        np.savetxt (y_predict_file_name + "_total_before_remove_outliers", total_df, fmt="%d\t%d\t%d\t%d\t%s\t%.0f\t%d\t%d\t%.2f")
 
         ############################################################################
         # TRY TO ADD PRED_PRICE TO THE DATASET TO PREDICT SALE_DURATION AFTER REMOVING OUTLIERS
@@ -1920,10 +1941,10 @@ class Tensor_NN (Dataset, Sklearn_model):
         #total_dataset.to_hdf (dataframe_file, key)       
         ############################################################################
 
-        # Remove outliers from the total dataset based on the relative error from the first train, on the other hand sort the dataset by act_adv_date
+        # Remove outliers from the total dataset based on the relative error from the first train, on the other hand sort the dataset by total_act_adv_date
         stime = time.time()
         if removal_percent > 0:
-            new_total_set = self.remove_outliers_total_set (total_data, total_label, total_car_ident_code, act_adv_date, total_arr_relative_err, dataset_size, removal_percent)
+            new_total_set = self.remove_outliers_total_set (total_data, total_label, total_car_ident_code, total_act_adv_date, total_year_diff, total_arr_relative_err, dataset_size, removal_percent)
         else:
             raise ValueError ("Removal perentage is 0!")
         print ("Time for remove outliers from dataset: %.3f" % (time.time() - stime))
@@ -1949,7 +1970,10 @@ class Tensor_NN (Dataset, Sklearn_model):
         ################################################
         ## Cach 2
         shape1_data = total_data.shape[1]
-        new_total_car_ident_code = new_total_set [:, shape1_data+1:]
+        new_total_car_ident_code = new_total_set [:, shape1_data+1:shape1_data+6]
+        new_total_act_adv_date = new_total_set [:, shape1_data+6:shape1_data+7]
+        new_total_year_diff = new_total_set [:, shape1_data+7:]
+
         len_total_set   = new_total_set.shape[0]    
         data_training_percentage = 0.8
         len_train   = int (0.5 + len_total_set * data_training_percentage)
@@ -1985,7 +2009,7 @@ class Tensor_NN (Dataset, Sklearn_model):
             
             print ("\n\n===========Predictor2")
             self.epoch=50
-            best_epoch = self.car2vect (train_data=new_train_data, train_label=new_train_label, test_data=new_test_data, test_label=new_test_label, total_car_ident=new_total_car_ident_code, d_ident=d_ident, d_embed=self.d_embed, d_remain=d_remain, no_neuron=self.no_neuron, no_neuron_embed=self.no_neuron_embed, loss_func=self.loss_func, model_path=model_path, y_predict_file_name=y_predict_file_name_, mean_error_file_name=mean_error_file_name_, x_ident_file_name=x_ident_file_name_, x_embed_file_name=x_embed_file_name_, retrain=0) # if use retrain=1 -> initialize weights from the previous model
+            best_epoch = self.car2vect (train_data=new_train_data, train_label=new_train_label, test_data=new_test_data, test_label=new_test_label, total_car_ident=new_total_car_ident_code, total_act_adv_date=new_total_act_adv_date, total_year_diff=new_total_year_diff, d_ident=d_ident, d_embed=self.d_embed, d_remain=d_remain, no_neuron=self.no_neuron, no_neuron_embed=self.no_neuron_embed, loss_func=self.loss_func, model_path=model_path, y_predict_file_name=y_predict_file_name_, mean_error_file_name=mean_error_file_name_, x_ident_file_name=x_ident_file_name_, x_embed_file_name=x_embed_file_name_, retrain=0) # if use retrain=1 -> initialize weights from the previous model
             print ("Best epoch: ", best_epoch)
 
             """#####################

@@ -121,7 +121,8 @@ class Dataset ():
             if dataset_type == "old":
                 self.features_need_encoding = ["maker_code","class_code","car_code","model_code","grade_code","car_type", "trans_mode", "fuel_type", "city", "district", "dealer_name"]
             else:
-                self.features_need_encoding = ["maker_code","class_code","car_code","model_code","grade_code","car_type","trans_mode","fuel_type","branch","affiliate_code","region","trading_complex","refund","vain_effort","guarantee","selected_color","reg_month","adv_month"]
+                #self.features_need_encoding = ["maker_code","class_code","car_code","model_code","grade_code","car_type","trans_mode","fuel_type","branch","affiliate_code","region","trading_complex","refund","vain_effort","guarantee","selected_color","reg_month","adv_month"]
+                self.features_need_encoding = ["class_code","car_code","model_code","car_type"]# NOTE Try with KNN
                 
         else:
             if dataset_type == "old":
@@ -200,8 +201,8 @@ class Dataset ():
             #print ("4.", total_dataset.shape)
 
             # Just keep hyundai and kia
-            total_dataset = total_dataset[(total_dataset["maker_code"] == 101) | (total_dataset["maker_code"] == 102)]
-            print ("5.", total_dataset.shape)
+            #total_dataset = total_dataset[(total_dataset["maker_code"] == 101) | (total_dataset["maker_code"] == 102)]
+            #print ("5.", total_dataset.shape)
 
             # Just keep10 most popular class_code 
             #total_dataset = total_dataset[total_dataset["class_code"].isin ([1101, 1108, 1109, 1166, 1121, 1153, 1225, 1207, 1124, 1151])]
@@ -265,7 +266,7 @@ class Dataset ():
                 first_adv_date = total_dataset["first_adv_date"]
                 total_dataset["adv_month"] = first_adv_date % 10000 // 100
                 first_adv_year = first_adv_date // 10000
-                total_dataset["year_diff"] = first_adv_year - reg_year
+                total_dataset["year_diff"] = first_adv_year - reg_year 
 
             # Impute missing values from here
             total_dataset = DataFrameImputer().fit_transform (total_dataset)
@@ -318,6 +319,11 @@ class Dataset ():
                 elif i == 1:
                     class_len = l_feature[-1]
             l_feature = [maker_len, class_len] + l_feature
+
+        if car_ident_flag == 1 and dataset_type == "new":
+            self.act_adv_date = np.array (total_dataset ["first_adv_date"] ).reshape ((-1,1))
+            self.year_diff = np.array (total_dataset ["first_registration"]).reshape ((-1,1))# // 10000 - self.act_adv_date // 10000).reshape ((-1,1))#NOTE: temporary
+
 
         self.l_feature = l_feature
         print ("======Final length of dataset:", len (total_dataset))
