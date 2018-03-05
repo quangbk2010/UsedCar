@@ -39,12 +39,15 @@ class Sklearn_model (Dataset):
 
     def knn (self, train_data, train_label, test_data, test_label):
         stime = time.time()
-        nn = KNeighborsRegressor(n_neighbors=50)
-        nn.fit (train_data, train_label)
-        predicted_test_label = nn.predict (test_data)
-        rel_err = get_relative_err (predicted_test_label, test_label)
-        print ("[knn] Rel_err:", rel_err)
-        print ("Time for K-Nearest neighbor: %.3f" % (time.time() - stime))        
+        print ("Start KNN...")
+        for n in [10, 20, 100, 200]:
+            print ("====n_neighbors:", n)
+            nn = KNeighborsRegressor(n_neighbors=n)
+            nn.fit (train_data, train_label)
+            predicted_test_label = nn.predict (test_data)
+            rel_err = get_relative_err (predicted_test_label, test_label)
+            print ("[knn] Rel_err:", rel_err)
+            print ("Time for K-Nearest neighbor: %.3f" % (time.time() - stime))        
 
 
     def sklearn_regression (self, reg_type, train_data, train_label, test_data, test_label):

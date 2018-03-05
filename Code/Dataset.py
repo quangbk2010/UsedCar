@@ -201,8 +201,8 @@ class Dataset ():
             #print ("4.", total_dataset.shape)
 
             # Just keep hyundai and kia
-            #total_dataset = total_dataset[(total_dataset["maker_code"] == 101) | (total_dataset["maker_code"] == 102)]
-            #print ("5.", total_dataset.shape)
+            total_dataset = total_dataset[(total_dataset["maker_code"] == 101) | (total_dataset["maker_code"] == 102)]
+            print ("5.", total_dataset.shape)
 
             # Just keep10 most popular class_code 
             #total_dataset = total_dataset[total_dataset["class_code"].isin ([1101, 1108, 1109, 1166, 1121, 1153, 1225, 1207, 1124, 1151])]
@@ -326,11 +326,11 @@ class Dataset ():
 
 
         self.l_feature = l_feature
-        print ("======Final length of dataset:", len (total_dataset))
+        """print ("======Final length of dataset:", len (total_dataset))
         print ("l1: {0}, l2: {1}, l3: {2}".format (l1, l2, l3))
         print ("l1: {0}, l2: {1}, l3: {2}".format (self.features_need_encoding, self.features_not_need_encoding, self.car_ident))
         print ("l_feature:", len (l_feature))
-        print ("l_feature:", l_feature)
+        print ("l_feature:", l_feature)"""
 
         """print ("Features need encoding:")
         for feature in self.features_need_encoding:
