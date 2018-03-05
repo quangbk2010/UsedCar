@@ -122,6 +122,7 @@ class Dataset ():
                 self.features_need_encoding = ["maker_code","class_code","car_code","model_code","grade_code","car_type", "trans_mode", "fuel_type", "city", "district", "dealer_name"]
             else:
                 self.features_need_encoding = ["maker_code","class_code","car_code","model_code","grade_code","car_type","trans_mode","fuel_type","branch","affiliate_code","region","trading_complex","refund","vain_effort","guarantee","selected_color","reg_month","adv_month"]
+                #self.features_need_encoding = ["class_code","car_code","model_code","car_type"]# NOTE Try with KNN
                 
         else:
             if dataset_type == "old":
@@ -148,7 +149,11 @@ class Dataset ():
 
         # list of features whether it needs one-hot encode
         self.features_not_need_encoding = [feature for feature in features_remove_car_ident if feature not in self.features_need_encoding] 
-        self.feature_need_scaled = self.features_not_need_encoding
+        self.feature_need_scaled = self.features_not_need_encoding[:]
+        #if label == "sale_duration":
+        #    self.feature_need_scaled.remove ("price") 
+
+        print (self.features_need_encoding, self.features_not_need_encoding, self.feature_need_scaled)
         
         dataframe_file = "./Dataframe/[" + dataset_size + "]total_dataframe_Initial.h5"
         key = "df"
@@ -265,7 +270,7 @@ class Dataset ():
                 first_adv_date = total_dataset["first_adv_date"]
                 total_dataset["adv_month"] = first_adv_date % 10000 // 100
                 first_adv_year = first_adv_date // 10000
-                total_dataset["year_diff"] = first_adv_year - reg_year
+                total_dataset["year_diff"] = first_adv_year - reg_year 
 
             # Impute missing values from here
             total_dataset = DataFrameImputer().fit_transform (total_dataset)
@@ -273,6 +278,19 @@ class Dataset ():
 
             # There are some columns with string values (E.g. Car type) -> need to label it as numerical labels
             total_dataset = MultiColumnLabelEncoder(columns = feature_need_label).fit_transform(total_dataset)
+
+            ############################
+            if label == "sale_duration":
+                #Test increase price by p%
+                p = 0# 10.0
+                self.data_training_percentage = 0.5 # NOTE: Remove this line
+                len_total_set = len (total_dataset)    
+                len_train  = int (0.5 + len_total_set * self.data_training_percentage)
+                print (len_total_set, len_train)
+                print ("1", total_dataset ["price"])
+                total_dataset ["price"][len_train:] *= (1 + p/100.0)
+                print ("2", total_dataset ["price"])
+            ############################
 
             # Standard scale dataset
             #scaler = StandardScaler()  
@@ -293,7 +311,7 @@ class Dataset ():
    
         #for feature in features:
         #    print (total_dataset[feature][:3])
-        
+
         print ("====Final length of features:", len (self.features))
         #print ("Before scale: min price:", self.min_price, "max price:", self.max_price)
         # Save the length of each vector after encoding into a dictionary
@@ -319,12 +337,17 @@ class Dataset ():
                     class_len = l_feature[-1]
             l_feature = [maker_len, class_len] + l_feature
 
+        if car_ident_flag == 1 and dataset_type == "new":
+            self.act_adv_date = np.array (total_dataset ["first_adv_date"] ).reshape ((-1,1))
+            self.year_diff = np.array (total_dataset ["first_registration"]).reshape ((-1,1))# // 10000 - self.act_adv_date // 10000).reshape ((-1,1))#NOTE: temporary
+
+
         self.l_feature = l_feature
-        print ("======Final length of dataset:", len (total_dataset))
+        """print ("======Final length of dataset:", len (total_dataset))
         print ("l1: {0}, l2: {1}, l3: {2}".format (l1, l2, l3))
         print ("l1: {0}, l2: {1}, l3: {2}".format (self.features_need_encoding, self.features_not_need_encoding, self.car_ident))
         print ("l_feature:", len (l_feature))
-        print ("l_feature:", l_feature)
+        print ("l_feature:", l_feature)"""
 
         """print ("Features need encoding:")
         for feature in self.features_need_encoding:
@@ -346,6 +369,12 @@ class Dataset ():
         else:
             (self.act_adv_date_total_set, self.X_total_set, self.y_total_set, self.X_train_set, self.y_train_set, self.X_test_set, self.y_test_set) = self.get_data_label (self.features, label)
 
+        #print ("Dataframe: ", total_dataset ["price"])
+        #print ("X[-1]: ", self.X_total_set[:, -1])
+        #print (min (self.y_total_set)) 
+        #print (max (self.y_total_set)) 
+        #sys.exit (-1)
+        
     
     def get_total_dataset (self):
         return self.total_dataset
