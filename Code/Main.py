@@ -210,6 +210,10 @@ if __name__ == '__main__':
         elif args.ensemble_NN_flag == 91:
             nn.retrain_baseline_from_total_set (total_data=total_data, total_label=total_label, total_act_adv_date=total_act_adv_date, y_predict_file_name=y_predict_file_name, mean_error_file_name=mean_error_file_name, dataset_size=dataset_size, removal_percent=args.outliers_removal_percent, ensemble_flag=-1, l_feature=l_feature, features=sorted_features)
 
+        elif args.ensemble_NN_flag == 100:
+            model_path = nn.model_dir + "/car2vect/test" # + "/car2vect/[{0}]{1}_{2}_car2vect_{3}_{4}_{5}_{6}".format (dataset_size, nn.model_name, args.label, nn.no_neuron, nn.no_neuron_embed, nn.d_embed, nn.loss_func)
+            nn.test_affect_price_sales_duration (train_data, train_label, test_data, test_label, dataset.d_ident, dataset.d_remain, model_path, y_predict_file_name)
+
         elif nn.car_ident_flag == 1:
             model_path = nn.model_dir + "/car2vect/[{0}]{1}_{2}_car2vect_{3}_{4}_{5}_{6}".format (dataset_size, nn.model_name, args.label, nn.no_neuron, nn.no_neuron_embed, nn.d_embed, nn.loss_func)
             best_epoch = nn.car2vect (train_data=train_data, train_label=train_label, test_data=test_data, test_label=test_label, total_car_ident=total_car_ident_code, total_act_adv_date=total_act_adv_date, total_year_diff=total_year_diff, d_ident=dataset.d_ident, d_embed=nn.d_embed, d_remain=dataset.d_remain, no_neuron=nn.no_neuron, no_neuron_embed=nn.no_neuron_embed, loss_func=nn.loss_func, model_path=model_path, y_predict_file_name=y_predict_file_name, mean_error_file_name=mean_error_file_name, x_ident_file_name=x_ident_file_name, x_embed_file_name=x_embed_file_name, retrain=0) 

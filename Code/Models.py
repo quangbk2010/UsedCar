@@ -1748,6 +1748,21 @@ class Tensor_NN (Dataset, Sklearn_model):
         #print (importance_score)
         np.savetxt ("./importance_score.txt", df_importance_score, fmt="%s\t%.2f\t%.2f\t%.2f\t%.2f")
 
+    def test_affect_price_sales_duration (self, train_data, train_label, test_data, test_label, d_ident, d_remain, model_path, y_predict_file_name):
+        meta_file = model_path + ".meta"# + "_49.meta"
+        ckpt_file = model_path# + "_49" 
+        # Train the model based on the train set
+        # TODO: Replace this step by using the best model trained 
+        #self.train_car2vect(train_data, train_label, total_car_ident, d_ident, self.d_embed, d_remain, self.no_neuron, self.no_neuron_embed, self.loss_func, ckpt_file)
+
+        (predicted_test_label, _, _, _, _, train_arr_relative_err) = self.batch_computation_car2vect (5, test_data, test_label, d_ident, d_remain, meta_file, ckpt_file)
+
+        line = np.zeros(len (test_label), dtype=[('truth', float), ('pred', float)])
+        line['truth'] = test_label.reshape (test_label.shape[0])
+        line['pred'] = predicted_test_label.reshape (predicted_test_label.shape[0])
+        
+        np.savetxt (y_predict_file_name, line, fmt="%.2f\t%.2f")
+
     def get_features_importance_car2vect (self, train_data, train_label, list_test_data, test_label, total_car_ident, d_ident, d_remain, model_path, features):
         meta_file = model_path + "_29.meta"
         ckpt_file = model_path + "_29" 
