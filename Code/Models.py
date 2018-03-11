@@ -45,8 +45,8 @@ class Sklearn_model (Dataset):
             nn = KNeighborsRegressor(n_neighbors=n)
             nn.fit (train_data, train_label)
             predicted_test_label = nn.predict (test_data)
-            rel_err = get_relative_err (predicted_test_label, test_label)
-            print ("[knn] Rel_err:", rel_err)
+            rmse, mae, rel_err, smape = get_err (predicted_test_label, test_label)
+            print ("[knn] (rmse,mae,rel_err,smape):", rmse, mae, rel_err, smape)
             print ("Time for K-Nearest neighbor: %.3f" % (time.time() - stime))        
 
 
