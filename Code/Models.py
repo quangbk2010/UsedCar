@@ -40,7 +40,7 @@ class Sklearn_model (Dataset):
     def knn (self, train_data, train_label, test_data, test_label):
         stime = time.time()
         print ("Start KNN...")
-        for n in [10, 20, 100, 200]:
+        for n in [2, 5, 10, 20, 50, 100]:
             print ("====n_neighbors:", n)
             nn = KNeighborsRegressor(n_neighbors=n)
             nn.fit (train_data, train_label)
