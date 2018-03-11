@@ -117,7 +117,7 @@ class Dataset ():
 
         # Decide to test the affects of price on SD prediction or not
         test_price_SD = False
-        test_knn      = False
+        test_knn      = True 
 
 
         # Determine some features
@@ -127,7 +127,8 @@ class Dataset ():
             else:
                 self.features_need_encoding = ["maker_code","class_code","car_code","model_code","grade_code","car_type","trans_mode","fuel_type","branch","affiliate_code","region","trading_complex","refund","vain_effort","guarantee","selected_color","reg_month","adv_month"]
                 if test_knn == True:
-                    self.features_need_encoding = ["class_code","car_code","model_code","car_type"]# NOTE Try with KNN
+                    #self.features_need_encoding = ["class_code","car_code","model_code","car_type"]# NOTE Try with KNN for price prediction
+                    self.features_need_encoding = ["class_code","car_type","trading_complex","model_code"]# NOTE Try with KNN for sales duration prediction
                 
         else:
             if dataset_type == "old":
