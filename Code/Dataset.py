@@ -115,6 +115,10 @@ class Dataset ():
         self.data_validation_percentage = 0.0
         self.data_test_percentage = 0.2
 
+        # Decide to test the affects of price on SD prediction or not
+        test_price_SD = False
+        test_knn      = True 
+
 
         # Determine some features
         if car_ident_flag == 0:
@@ -122,11 +126,13 @@ class Dataset ():
                 self.features_need_encoding = ["maker_code","class_code","car_code","model_code","grade_code","car_type", "trans_mode", "fuel_type", "city", "district", "dealer_name"]
             else:
                 self.features_need_encoding = ["maker_code","class_code","car_code","model_code","grade_code","car_type","trans_mode","fuel_type","branch","affiliate_code","region","trading_complex","refund","vain_effort","guarantee","selected_color","reg_month","adv_month"]
-                #self.features_need_encoding = ["class_code","car_code","model_code","car_type"]# NOTE Try with KNN
+                if test_knn == True:
+                    #self.features_need_encoding = ["class_code","car_code","model_code","car_type"]# NOTE Try with KNN for price prediction
+                    self.features_need_encoding = ["class_code","car_type","trading_complex","model_code"]# NOTE Try with KNN for sales duration prediction
                 
         else:
             if dataset_type == "old":
-                self.features_need_encoding = ["car_type", "trans_mode", "fuel_type", "city", "district", "dealer_name"]
+                self.features_need_encoding = ["car_type", "trans_mode", "fuel_type", "city", "district", "dealer_name","adv_month"]
             else:
                 #self.features_need_encoding = ["car_type","trans_mode","fuel_type","branch","affiliate_code","region","trading_complex"]# NOTE Try to use the same features as old dataset
                 self.features_need_encoding = ["car_type","trans_mode","fuel_type","branch","affiliate_code","region","trading_complex","refund","vain_effort","guarantee","selected_color","reg_month","adv_month"]
@@ -150,10 +156,11 @@ class Dataset ():
         # list of features whether it needs one-hot encode
         self.features_not_need_encoding = [feature for feature in features_remove_car_ident if feature not in self.features_need_encoding] 
         self.feature_need_scaled = self.features_not_need_encoding[:]
-        #if label == "sale_duration":
-        #    self.feature_need_scaled.remove ("price") 
 
-        print (self.features_need_encoding, self.features_not_need_encoding, self.feature_need_scaled)
+        if test_price_SD == True:
+            self.feature_need_scaled.remove ("price") # NOTE: Test the affects of price on sales duration
+
+        print ("Length of features need encoding, no need, need scale coresponding are:", len (self.features_need_encoding), len (self.features_not_need_encoding), len (self.feature_need_scaled))
         
         dataframe_file = "./Dataframe/[" + dataset_size + "]total_dataframe_Initial.h5"
         key = "df"
@@ -202,7 +209,12 @@ class Dataset ():
 
             # Remove outliers
             #total_dataset = total_dataset[np.abs(total_dataset["price"] - total_dataset["price"].mean()) / total_dataset["price"].std() < 1]
-            #print ("4.", total_dataset.shape)
+            #print ("4.3", total_dataset.shape)
+            if label == "sale_duration":
+                sales_duration = self.get_sale_duration_array (total_dataset)
+                total_dataset ["sale_duration"] = sales_duration
+                total_dataset = total_dataset[np.abs(total_dataset["sale_duration"] - total_dataset["sale_duration"].mean()) / total_dataset["sale_duration"].std() < 1]
+                print ("4.4", total_dataset.shape)
 
             # Just keep hyundai and kia
             total_dataset = total_dataset[(total_dataset["maker_code"] == 101) | (total_dataset["maker_code"] == 102)]
@@ -247,15 +259,16 @@ class Dataset ():
                 total_dataset = total_dataset.sort_values ("first_adv_date", ascending=True)
             
             # use the information about advertising date: use year and month separately
-            """adv_date = total_dataset ["actual_advertising_date"]
-            manufacture_year = total_dataset ["year"]
-            adv_year = adv_date // 10000
-            total_dataset["adv_month"] = adv_date % 10000 // 100
-            total_dataset["year_diff"] = adv_year - manufacture_year"""
+            if dataset_type == "old":
+                adv_date = total_dataset ["actual_advertising_date"]
+                manufacture_year = total_dataset ["year"]
+                adv_year = adv_date // 10000
+                total_dataset["adv_month"] = adv_date % 10000 // 100
+                total_dataset["year_diff"] = adv_year - manufacture_year
 
             # Use the information about the first registration date
-            # NOTE Try to use the same features as old dataset
-            if dataset_type == "new":
+            #if dataset_type == "new":
+            else:
                 print ("===Add 4 more features: reg_year, reg_month, adv_month, year_diff!!")
                 reg_date = total_dataset ["first_registration"]
                 reg_year = reg_date // 10000
@@ -271,26 +284,13 @@ class Dataset ():
                 total_dataset["adv_month"] = first_adv_date % 10000 // 100
                 first_adv_year = first_adv_date // 10000
                 total_dataset["year_diff"] = first_adv_year - reg_year 
+                total_dataset["day_diff"]  = self.get_array_days_between (total_dataset, "first_registration", "first_adv_date")
 
             # Impute missing values from here
             total_dataset = DataFrameImputer().fit_transform (total_dataset)
 
-
             # There are some columns with string values (E.g. Car type) -> need to label it as numerical labels
             total_dataset = MultiColumnLabelEncoder(columns = feature_need_label).fit_transform(total_dataset)
-
-            ############################
-            if label == "sale_duration":
-                #Test increase price by p%
-                p = 0# 10.0
-                self.data_training_percentage = 0.5 # NOTE: Remove this line
-                len_total_set = len (total_dataset)    
-                len_train  = int (0.5 + len_total_set * self.data_training_percentage)
-                print (len_total_set, len_train)
-                print ("1", total_dataset ["price"])
-                total_dataset ["price"][len_train:] *= (1 + p/100.0)
-                print ("2", total_dataset ["price"])
-            ############################
 
             # Standard scale dataset
             #scaler = StandardScaler()  
@@ -309,6 +309,9 @@ class Dataset ():
             print ("Reload dataset using HDF5 (Pytables)")
             total_dataset = pd.read_hdf (dataframe_file, key)
    
+        # Shuffle dataset (dataframe)
+        #total_dataset = total_dataset.reindex(np.random.permutation(total_dataset.index))
+
         #for feature in features:
         #    print (total_dataset[feature][:3])
 
@@ -337,33 +340,41 @@ class Dataset ():
                     class_len = l_feature[-1]
             l_feature = [maker_len, class_len] + l_feature
 
-        if car_ident_flag == 1 and dataset_type == "new":
-            self.act_adv_date = np.array (total_dataset ["first_adv_date"] ).reshape ((-1,1))
-            self.year_diff = np.array (total_dataset ["first_registration"]).reshape ((-1,1))# // 10000 - self.act_adv_date // 10000).reshape ((-1,1))#NOTE: temporary
+        if car_ident_flag == 1: 
+            if dataset_type == "new":
+                self.act_adv_date = np.array (total_dataset ["first_adv_date"] ).reshape ((-1,1))
+            else:
+                self.act_adv_date = np.array (total_dataset ["actual_advertising_date"] ).reshape ((-1,1))
+            self.sale_date = np.array (total_dataset ["sale_date"]).reshape ((-1,1))
 
 
         self.l_feature = l_feature
-        """print ("======Final length of dataset:", len (total_dataset))
-        print ("l1: {0}, l2: {1}, l3: {2}".format (l1, l2, l3))
-        print ("l1: {0}, l2: {1}, l3: {2}".format (self.features_need_encoding, self.features_not_need_encoding, self.car_ident))
-        print ("l_feature:", len (l_feature))
-        print ("l_feature:", l_feature)"""
+        print ("======Final length of dataset:", len (total_dataset))
+        if car_ident_flag == 1:
+            print ("l1: {0}, l2: {1}, l3: {2}".format (l1, l2, l3))
+            print ("l1: {0}, l2: {1}, l3: {2}".format (self.features_need_encoding, self.features_not_need_encoding, self.car_ident))
+        else:
+            print ("l1: {0}, l2: {1}".format (l1, l2))
+            print ("l1: {0}, l2: {1}".format (self.features_need_encoding, self.features_not_need_encoding))
+        print ("l_feature: len:", len (l_feature))
+        print ("l_feature:", l_feature)
 
-        """print ("Features need encoding:")
-        for feature in self.features_need_encoding:
-            print (feature, min (total_dataset[feature]))
-        sys.exit (-1)"""
+        ############################
+        ###NOTE: Test the affects of price on sales duration
+        if test_price_SD == True:
+            #Test change price by p%
+            p = -5.0
+            len_total_set = len (total_dataset)    
+            len_train  = int (0.5 + len_total_set * self.data_training_percentage)
+            total_dataset ["price"][len_train:] *= (1 + p/100.0)
+            scaler = RobustScaler()
+            total_dataset["price"] = scaler.fit_transform (total_dataset["price"])
+        ############################
 
         print ("Time for Loading and preprocessing dataset: %.3f" % (time.time() - stime))
         self.total_dataset = total_dataset
         self.k_fold = k_fold
-
-        """#### In case of testing the importance of features when using model: NN_baseline
-        if get_feature_importance_flag == True:
-            len_train  = int (0.5 + len (total_dataset) * self.data_training_percentage)
-            self.X_train, self.y_train, self.list_X_test, self.y_test = self.get_dataset_feature_importance (len_train, label) 
-            print ("===Length of list testset:", len (self.list_X_test))
-        ###"""
+       
         if car_ident_flag == 1:
             (self.act_adv_date_total_set, self.car_ident_code_total_set, self.X_total_set, self.y_total_set, self.X_train_set, self.y_train_set, self.X_test_set, self.y_test_set, self.d_ident, self.d_remain, self.car_ident_code_test_set) = self.get_data_label_car_ident (self.features, label)
         else:
@@ -486,12 +497,28 @@ class Dataset ():
             return (-1)
             #print (str_d1, str_d2)
     
+    def get_array_days_between (self, dataset, name1, name2):
+        """
+        - Purpose: as Return
+        - Input: 
+            + dataset: training, validation, test, or total dataset
+        - Return: an vector of #days between 2 arrays as a numpy.array object
+        """
+        array1 = np.array ([dataset [name1]]).T 
+        array2 = np.array ([dataset [name2]]).T 
+        
+        len_data = len (array1)     
+        delta_list = [self.get_days_between(array1[i], array2[i]) for i in range (len_data)]
+        
+        return delta_list
+
     def get_sale_duration_array (self, dataset):
         """
         - Purpose: as Return
         - Input: 
             + dataset: training, validation, test, or total dataset
         - Return: an vector oof sale duration as a numpy.array object
+        - TODO: can use get_array_days_between() function for this function
         """
         if dataset_type == "old":
             actual_advertising_date_array = np.array ([dataset ["actual_advertising_date"]]).T 
@@ -606,10 +633,12 @@ class Dataset ():
         len_total_set = X_total_set.shape[0]    
         train_length     = int (0.5 + len_total_set * self.data_training_percentage)
 
-        if label == "price":
+        """if label == "price":
             y_total_set = self.get_data_array (self.total_dataset, label)
         elif label == "sale_duration":
-            y_total_set = self.get_sale_duration_array (self.total_dataset)
+            y_total_set = self.get_sale_duration_array (self.total_dataset)"""
+        y_total_set = self.get_data_array (self.total_dataset, label)
+
         X_train_set = []
         y_train_set = []
         X_test_set = []
@@ -665,6 +694,9 @@ class Dataset ():
             y_total_set = self.get_data_array (self.total_dataset, label)
         elif label == "sale_duration":
             y_total_set = self.get_sale_duration_array (self.total_dataset)
+
+            # NOTE: Try to use other units: week, month instead of day
+            #y_total_set /= 7
             # Save price, sale_duration
             """price = self.get_data_array (self.get_total_dataset (), "price")
             actual_advertising_date = self.get_data_array (self.get_total_dataset (), "actual_advertising_date")
