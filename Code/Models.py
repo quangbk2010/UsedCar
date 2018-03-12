@@ -85,7 +85,7 @@ class Sklearn_model (Dataset):
 
         elif reg_type == "DecisionTreeRegressor":
             regr = tree.DecisionTreeRegressor() 
-            param_grid = [ {"criterion":["mae"], "min_samples_split":[5, 10, 20], "max_depth":[10, 20, 30]}]
+            param_grid = [ {"criterion":["mse"], "min_samples_split":[5, 10, 20], "max_depth":[10, 20, 30]}]
 
         elif reg_type == "GradientBoostingRegressor":
             regr = ensemble.GradientBoostingRegressor()
