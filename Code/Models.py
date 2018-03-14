@@ -125,7 +125,7 @@ class Sklearn_model (Dataset):
         predicted_train_label = self.get_predicted_label (grid_search, train_data) 
         #predicted_train_label = [0 if predicted_train_label[i] < 0 else min (predicted_train_label[i], 400) for i in range (len (predicted_train_label))] 
 
-        (train_mae, train_rmse, train_rel_err, train_smape) = get_err (predicted_train_label, train_label)
+        (train_rmse, train_mae, train_rel_err, train_smape) = get_err (predicted_train_label, train_label)
         
         predicted_test_label = self.get_predicted_label (grid_search, test_data) 
         #predicted_test_label = [0 if predicted_test_label[i] < 0 else min (predicted_test_label[i], 400) for i in range (len (predicted_test_label))] 
@@ -214,10 +214,10 @@ class Tensor_NN (Dataset, Sklearn_model):
         net = slim.fully_connected (X, no_unit, scope='hidden_layer1', activation_fn=tf.nn.relu) #None) # None) #
         net = slim.dropout (net, self.dropout, scope='dropout1')
         for i in range (1, no_hidden_layer):
-            net = slim.fully_connected (net, no_unit, scope='hidden_layer'+str(i+1), activation_fn=tf.nn.relu) #None) # None) #
+            net = slim.fully_connected (net, no_unit, scope='hidden_layer'+str(i+1), activation_fn=tf.nn.relu)  
             net = slim.dropout (net, self.dropout, scope='dropout'+str(i+1))
 
-        prediction = slim.fully_connected (net, 1, scope='output_layer', activation_fn=None) #, reuse=tf.AUTO_REUSE)
+        prediction = slim.fully_connected (net, 1, scope='output_layer', activation_fn=tf.nn.relu) #None) #, reuse=tf.AUTO_REUSE)
         tf.identity (prediction, name="prediction")
 
         return X, Y, prediction
@@ -469,7 +469,10 @@ class Tensor_NN (Dataset, Sklearn_model):
             best_epoch = 0
 
             epoch_list = [] 
+            train_rmse_list = [] 
+            train_mae_list = [] 
             train_rel_err_list = [] 
+            train_smape_list = [] 
             rmse_list = []
             mae_list = []
             rel_err_list = []
@@ -526,7 +529,10 @@ class Tensor_NN (Dataset, Sklearn_model):
                 print ("(truth, prediction):", np.c_[test_label[:10], predicted_y[:10]])
 
                 epoch_list.append (epoch)
+                train_rmse_list.append (epoch_train_rmse_val)
+                train_mae_list.append (epoch_train_mae_val)
                 train_rel_err_list.append (epoch_train_relative_err_val)
+                train_smape_list.append (epoch_train_smape_val)
                 rmse_list.append (epoch_test_rmse_val)
                 mae_list.append (epoch_test_mae_val)
                 rel_err_list.append (epoch_test_relative_err_val)
@@ -575,14 +581,17 @@ class Tensor_NN (Dataset, Sklearn_model):
             
             print('test last epoch rel_err: {:.3f}'.format(epoch_test_relative_err_val))
 
-            line = np.zeros(len (epoch_list), dtype=[('epoch', int), ('rmse', float), ('mae', float), ('rel_err', float), ('smape', float), ('train_rel_err', float)])
+            line = np.zeros(len (epoch_list), dtype=[('epoch', int), ('rmse', float), ('mae', float), ('rel_err', float), ('smape', float), ('train_rmse', float), ('train_mae', float), ('train_rel_err', float), ('train_smape', float)])
             line['epoch'] = epoch_list
             line['rmse'] = rmse_list
             line['mae'] = mae_list
             line['rel_err'] = rel_err_list
             line['smape'] = smape_list
+            line['train_rmse'] = train_rmse_list
+            line['train_mae'] = train_mae_list
             line['train_rel_err'] = train_rel_err_list
-            np.savetxt(mean_error_file_name_ + "_" + str (epoch), line, fmt="%d\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f")
+            line['train_smape'] = train_smape_list
+            np.savetxt(mean_error_file_name_ + "_" + str (epoch), line, fmt="%d\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f")
 
             return best_epoch
 
@@ -606,9 +615,9 @@ class Tensor_NN (Dataset, Sklearn_model):
         he_init = tf.contrib.layers.variance_scaling_initializer ()
         output1 = slim.fully_connected (x_ident, no_neuron_embed, scope='hidden_embed1', activation_fn=tf.nn.relu, weights_initializer=he_init) #None) #
         output1_ = slim.dropout (output1, self.dropout, scope='dropout1')
-        output2 = slim.fully_connected (output1_, no_neuron_embed, scope='hidden_embed2', activation_fn=tf.nn.relu)
-        output2_ = slim.dropout (output2, self.dropout, scope='dropout2')
-        x_embed = slim.fully_connected (output2_, d_embed, scope='output_embed', activation_fn=None, weights_initializer=he_init) #, activation_fn=tf.nn.relu)#, activation_fn=None) # 3-dimension of embeding NN
+        #output2 = slim.fully_connected (output1_, no_neuron_embed, scope='hidden_embed2', activation_fn=tf.nn.relu)
+        #output2_ = slim.dropout (output2, self.dropout, scope='dropout2')
+        x_embed = slim.fully_connected (output1_, d_embed, scope='output_embed', activation_fn=None, weights_initializer=he_init) #, activation_fn=tf.nn.relu)#, activation_fn=None) # 3-dimension of embeding NN
         #x_embed = slim.fully_connected (output1, d_embed, scope='output_embed', activation_fn=tf.nn.relu) # 3-dimension of embeding NN
         #x_embed = slim.fully_connected (output1, d_embed, scope='output_embed') # seperate the activation function to another step to use batch normalization.
         #x_embed = self.batch_norm (x_embed, phase_train) # batch normalization
@@ -622,9 +631,9 @@ class Tensor_NN (Dataset, Sklearn_model):
 
         output3 = slim.fully_connected(input3, no_neuron, scope='hidden_main1', activation_fn=tf.nn.relu, weights_initializer=he_init)
         output3_ = slim.dropout (output3, self.dropout, scope='dropout3')
-        output4 = slim.fully_connected(output3_, no_neuron, scope='hidden_main_2', activation_fn=tf.nn.relu)
-        output4_ = slim.dropout (output4, self.dropout, scope='dropout3')
-        prediction = slim.fully_connected(output4_, 1, scope='output_main', activation_fn=tf.nn.relu, weights_initializer=he_init) #tf.nn.relu) #None) # 1-dimension of output NOTE: only remove relu activation function in the last layer if using Gradient Boosting, because the differece can be negative (default activation function of fully_connected is relu))
+        #output4 = slim.fully_connected(output3_, no_neuron, scope='hidden_main_2', activation_fn=tf.nn.relu)
+        #output4_ = slim.dropout (output4, self.dropout, scope='dropout3')
+        prediction = slim.fully_connected(output3_, 1, scope='output_main', activation_fn=tf.nn.relu, weights_initializer=he_init) #tf.nn.relu) #None) # 1-dimension of output NOTE: only remove relu activation function in the last layer if using Gradient Boosting, because the differece can be negative (default activation function of fully_connected is relu))
         tf.identity (prediction, name="prediction")
 
         return x_ident, x_remain, Y, x_embed, prediction, phase_train
