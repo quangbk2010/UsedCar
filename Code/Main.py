@@ -139,9 +139,9 @@ if __name__ == '__main__':
     total_act_adv_date= dataset.act_adv_date_total_set
     sorted_features = dataset.sorted_features
 
-    list_test_data = dataset.list_test_X
+    """list_test_data = dataset.list_test_X
     if list_test_data[0].shape[1] != list_test_data[1].shape[1]:
-        raise ValueError ("Oops! #columns of X_test_set != of X_test_set_1") 
+        raise ValueError ("Oops! #columns of X_test_set != of X_test_set_1")"""
 
     if args.car_ident_flag == 1:
         total_car_ident_code= dataset.car_ident_code_total_set
