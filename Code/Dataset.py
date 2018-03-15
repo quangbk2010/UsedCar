@@ -449,12 +449,12 @@ class Dataset ():
             if self.test_sales_month_effect == True:
                 (self.act_adv_date_total_set, self.car_ident_code_total_set, self.X_total_set, self.y_total_set, self.X_train_set, self.y_train_set, self.X_test_set, self.y_test_set, self.d_ident, self.d_remain, self.car_ident_code_test_set, self.list_test_X) = self.get_data_label_car_ident_2 (label)
             else:
-                (self.act_adv_date_total_set, self.car_ident_code_total_set, self.X_total_set, self.y_total_set, self.X_train_set, self.y_train_set, self.X_test_set, self.y_test_set, self.d_ident, self.d_remain, self.car_ident_code_test_set) = self.get_data_label_car_ident (label)
+                (self.act_adv_date_total_set, self.car_ident_code_total_set, self.X_total_set, self.y_total_set, self.X_train_set, self.y_train_set, self.X_test_set, self.y_test_set, self.d_ident, self.d_remain, self.car_ident_code_test_set) = self.get_data_label_car_ident (label, self.features_need_encoding)
         else:
             if self.test_sales_month_effect == True:
                 (self.act_adv_date_total_set, self.X_total_set, self.y_total_set, self.X_train_set, self.y_train_set, self.X_test_set, self.y_test_set, self.X_test_set_1, self.X_test_set_2, self.X_test_set_3, self.X_test_set_4, self.X_test_set_5, self.X_test_set_6) = self.get_data_label_2 (label)
             else:
-                (self.act_adv_date_total_set, self.X_total_set, self.y_total_set, self.X_train_set, self.y_train_set, self.X_test_set, self.y_test_set) = self.get_data_label (label)
+                (self.act_adv_date_total_set, self.X_total_set, self.y_total_set, self.X_train_set, self.y_train_set, self.X_test_set, self.y_test_set) = self.get_data_label (label, self.features_need_encoding)
 
         #print ("Dataframe: ", total_dataset ["price"])
         #print ("X[-1]: ", self.X_total_set[:, -1])
