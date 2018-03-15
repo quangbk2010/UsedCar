@@ -117,7 +117,7 @@ class Dataset ():
 
         # Decide to test the affects of price on SD prediction or not
         test_price_SD = False
-        st_knn      = True #Only need to set this flag to decide whether use KNN or not 
+        test_knn      = True #Only need to set this flag to decide whether use KNN or not 
         self.test_sales_month_effect = False #Only need to set this flag to predict which month to sell a car
 
 
