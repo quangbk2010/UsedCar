@@ -40,7 +40,7 @@ class Sklearn_model (Dataset):
     def knn (self, train_data, train_label, test_data, test_label):
         stime = time.time()
         print ("Start KNN...")
-        for n in [2, 5, 10, 20, 30, 40, 50, 100]:
+        for n in [10]:#2, 5, 10, 20, 30, 40, 50, 100]:
             print ("====n_neighbors:", n)
             nn = KNeighborsRegressor(n_neighbors=n)
             nn.fit (train_data, train_label)
@@ -89,16 +89,21 @@ class Sklearn_model (Dataset):
 
         elif reg_type == "GradientBoostingRegressor":
             regr = ensemble.GradientBoostingRegressor()
-            param_grid = [ {"n_estimators": [10, 100, 500, 1000],"learning_rate": [0.001, 0.01, 0.1, 0.2], "max_depth":[10,20,30]}]
+            #param_grid = [ {"n_estimators": [10, 100, 500, 1000],"learning_rate": [0.001, 0.01, 0.1, 0.2], "max_depth":[10,20,30]}]
+            param_grid = [ {"n_estimators": [10],"learning_rate": [0.001, 0.01], "max_depth":[10, 20]}]
 
         elif reg_type == "AdaBoostRegressor":
             regr = ensemble.AdaBoostRegressor()
-            param_grid = [ {"n_estimators": [10, 100, 500, 1000], "min_samples_split": [5, 10, 20], "max_depth": [10, 20, 30]}]
+            #param_grid = [ {"n_estimators": [10, 100, 500, 1000], "min_samples_split": [5, 10, 20], "max_depth": [10, 20, 30]}]
+            param_grid = [ {"n_estimators": [10]}]
 
         elif reg_type == "RandomForestRegressor":
             regr = ensemble.RandomForestRegressor()
-            param_grid = [ {"n_estimators": [10, 100, 500, 1000], "min_samples_split": [5, 10, 20], "max_depth": [10, 20, 30]},
-                           {"bootstrap": [False], "n_estimators": [10, 100, 500, 1000], "min_samples_split": [5, 10, 20], "max_depth": [10, 20, 30]} 
+            #param_grid = [ {"n_estimators": [10, 100, 500, 1000], "min_samples_split": [5, 10, 20], "max_depth": [10, 20, 30]},
+            #               {"bootstrap": [False], "n_estimators": [10, 100, 500, 1000], "min_samples_split": [5, 10, 20], "max_depth": [10, 20, 30]} 
+            #]
+            param_grid = [ {"n_estimators": [10], "min_samples_split": [10], "max_depth": [10, 20]},
+                           {"bootstrap": [False], "n_estimators": [10], "min_samples_split": [10], "max_depth": [10, 20]} 
             ]
         else:
             raise ValueError ("This model is not supported!")

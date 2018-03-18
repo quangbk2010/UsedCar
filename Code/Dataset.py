@@ -117,7 +117,7 @@ class Dataset ():
 
         # Decide to test the affects of price on SD prediction or not
         test_price_SD = False
-        test_knn      = True #Only need to set this flag to decide whether use KNN or not 
+        test_knn      = False #Only need to set this flag to decide whether use KNN or not 
         self.test_sales_month_effect = False #Only need to set this flag to predict which month to sell a car
 
 
@@ -153,6 +153,7 @@ class Dataset ():
                 self.new_feature_year_diff += ["year_diff_" + str (i + 1)]
             self.features_need_encoding += self.new_feature_adv_month
 
+        self.features_need_encoding = [] 
 
         if dataset_type == "old":
             feature_need_label = ["car_type", "trans_mode", "fuel_type", "city", "district", "dealer_name"]
@@ -172,7 +173,12 @@ class Dataset ():
         features_remove_car_ident = [feature for feature in self.features if feature not in self.car_ident] 
 
         # list of features whether it needs one-hot encode
-        self.features_not_need_encoding = [feature for feature in features_remove_car_ident if feature not in self.features_need_encoding] 
+        
+        if car_ident_flag == 0:
+            self.features_not_need_encoding = [feature for feature in self.features if feature not in self.features_need_encoding] 
+        else:
+            self.features_not_need_encoding = [feature for feature in features_remove_car_ident if feature not in self.features_need_encoding] 
+
         self.feature_need_scaled = self.features_not_need_encoding[:]
 
         if test_price_SD == True:
@@ -449,7 +455,7 @@ class Dataset ():
             if self.test_sales_month_effect == True:
                 (self.act_adv_date_total_set, self.car_ident_code_total_set, self.X_total_set, self.y_total_set, self.X_train_set, self.y_train_set, self.X_test_set, self.y_test_set, self.d_ident, self.d_remain, self.car_ident_code_test_set, self.list_test_X) = self.get_data_label_car_ident_2 (label)
             else:
-                (self.act_adv_date_total_set, self.car_ident_code_total_set, self.X_total_set, self.y_total_set, self.X_train_set, self.y_train_set, self.X_test_set, self.y_test_set, self.d_ident, self.d_remain, self.car_ident_code_test_set) = self.get_data_label_car_ident (label, self.features_need_encoding)
+                (self.act_adv_date_total_set, self.car_ident_code_total_set, self.X_total_set, self.y_total_set, self.X_train_set, self.y_train_set, self.X_test_set, self.y_test_set, self.d_ident, self.d_remain, self.car_ident_code_test_set) = self.get_data_label_car_ident (label, self.features_need_encoding, [])
         else:
             if self.test_sales_month_effect == True:
                 (self.act_adv_date_total_set, self.X_total_set, self.y_total_set, self.X_train_set, self.y_train_set, self.X_test_set, self.y_test_set, self.X_test_set_1, self.X_test_set_2, self.X_test_set_3, self.X_test_set_4, self.X_test_set_5, self.X_test_set_6) = self.get_data_label_2 (label)
@@ -619,15 +625,15 @@ class Dataset ():
         => return: a matrix with rows are data points, columns are features values (nD numpy.array object)
         
         """ 
-        print (features1)
+        """print (features1)
         X1 = np.array (dataset[features1])  
         enc = OneHotEncoder(sparse = False)
         X1 = enc.fit_transform (X1)
-        print ("X1.shape", X1.shape)
+        print ("X1.shape", X1.shape)""" ##NOTE to remove the comments
         
         print (self.features_not_need_encoding)
         X2 = np.array (dataset[self.features_not_need_encoding]) 
-        X = np.concatenate ((X1, X2), axis = 1) 
+        X = X2 #np.concatenate ((X1, X2), axis = 1) 
         print ("X2.shape", X2.shape)
 
 
