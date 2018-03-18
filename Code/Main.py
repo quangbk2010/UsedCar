@@ -167,9 +167,9 @@ if __name__ == '__main__':
     ##################################
     if args.model_set == "sklearn":
         model = Sklearn_model (dataset_size)
-        for reg_type in ["Linear", "Ridge", "Lasso", "DecisionTreeRegressor", "RandomForestRegressor", "AdaBoostRegressor", "GradientBoostingRegressor"]:
-            model.sklearn_regression(reg_type, train_data, train_label, test_data, test_label)
-        #model.knn (train_data, train_label, test_data, test_label)
+        #for reg_type in ["Linear", "Ridge", "Lasso", "DecisionTreeRegressor", "RandomForestRegressor", "AdaBoostRegressor", "GradientBoostingRegressor"]:
+        #    model.sklearn_regression(reg_type, train_data, train_label, test_data, test_label)
+        model.knn (train_data, train_label, test_data, test_label)
 
     elif args.model_set == "DL":
         nn = Tensor_NN (args)
