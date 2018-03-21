@@ -117,7 +117,7 @@ class Dataset ():
 
         # Decide to test the affects of price on SD prediction or not
         test_price_SD = False
-        test_knn      = False #Only need to set this flag to decide whether use KNN or not 
+        test_knn      = True #Only need to set this flag to decide whether use KNN or not 
         self.test_sales_month_effect = False #Only need to set this flag to predict which month to sell a car
 
 
@@ -127,11 +127,6 @@ class Dataset ():
                 self.features_need_encoding = ["maker_code","class_code","car_code","model_code","grade_code","car_type", "trans_mode", "fuel_type", "city", "district", "dealer_name"]
             else:
                 self.features_need_encoding = ["maker_code","class_code","car_code","model_code","grade_code","car_type","trans_mode","fuel_type","branch","affiliate_code","region","trading_complex","refund","vain_effort","guarantee","selected_color","reg_month","adv_month"]
-                if self.test_sales_month_effect == True:
-                    self.n_month = 6
-                    self.new_feature_adv_month = ["adv_month_1", "adv_month_2", "adv_month_3", "adv_month_4", "adv_month_5", "adv_month_6"]
-                    self.new_feature_year_diff = ["year_diff_1", "year_diff_2", "year_diff_3", "year_diff_4", "year_diff_5", "year_diff_6"]
-                    self.features_need_encoding += new_feature_adv_month
                 if test_knn == True:
                     #self.features_need_encoding = ["class_code","car_code","model_code","car_type"]# NOTE Try with KNN for price prediction
                     self.features_need_encoding = ["class_code","car_type","trading_complex","model_code"]# NOTE Try with KNN for sales duration prediction
@@ -141,8 +136,24 @@ class Dataset ():
                 self.features_need_encoding = ["car_type", "trans_mode", "fuel_type", "city", "district", "dealer_name","adv_month"]
             else:
                 #self.features_need_encoding = ["car_type","trans_mode","fuel_type","branch","affiliate_code","region","trading_complex"]# NOTE Try to use the same features as old dataset
-                #self.features_need_encoding = ["car_type","trans_mode","fuel_type","branch","affiliate_code","region","trading_complex","refund","vain_effort","guarantee","selected_color","reg_month","adv_month"] # Price prediction
-                self.features_need_encoding = ["car_type","trans_mode","fuel_type","branch","affiliate_code","region","trading_complex","refund","vain_effort","guarantee","selected_color","reg_month","adv_month","seller_id","trading_firm_id"] # Sales prediction
+                if label == "price":
+                    self.features_need_encoding = ["car_type","trans_mode","fuel_type","branch","affiliate_code","region","trading_complex","refund","vain_effort","guarantee","selected_color","reg_month","adv_month"] # Price prediction
+                else:
+                    self.features_need_encoding = ["car_type","trans_mode","fuel_type","branch","affiliate_code","region","trading_complex","refund","vain_effort","guarantee","selected_color","reg_month","adv_month","seller_id","trading_firm_id"] # Sales prediction
+
+        # Add more features to the dataset (before encoding it) to validate the effects of adv_month
+        if self.test_sales_month_effect == True:
+            self.n_month = 12
+            self.new_feature_adv_month = []
+            self.new_feature_year_diff = []
+            #self.new_feature_adv_month = ["adv_month_1", "adv_month_2", "adv_month_3", "adv_month_4", "adv_month_5", "adv_month_6"]
+            #self.new_feature_year_diff = ["year_diff_1", "year_diff_2", "year_diff_3", "year_diff_4", "year_diff_5", "year_diff_6"]
+            for i in range (self.n_month):
+                self.new_feature_adv_month += ["adv_month_" + str (i + 1)]
+                self.new_feature_year_diff += ["year_diff_" + str (i + 1)]
+            self.features_need_encoding += self.new_feature_adv_month
+
+        self.features_need_encoding = [] 
 
         if dataset_type == "old":
             feature_need_label = ["car_type", "trans_mode", "fuel_type", "city", "district", "dealer_name"]
@@ -162,7 +173,12 @@ class Dataset ():
         features_remove_car_ident = [feature for feature in self.features if feature not in self.car_ident] 
 
         # list of features whether it needs one-hot encode
-        self.features_not_need_encoding = [feature for feature in features_remove_car_ident if feature not in self.features_need_encoding] 
+        
+        if car_ident_flag == 0:
+            self.features_not_need_encoding = [feature for feature in self.features if feature not in self.features_need_encoding] 
+        else:
+            self.features_not_need_encoding = [feature for feature in features_remove_car_ident if feature not in self.features_need_encoding] 
+
         self.feature_need_scaled = self.features_not_need_encoding[:]
 
         if test_price_SD == True:
@@ -171,6 +187,7 @@ class Dataset ():
         print ("Length of features need encoding, no need, need scale coresponding are:", len (self.features_need_encoding), len (self.features_not_need_encoding), len (self.feature_need_scaled))
         
         dataframe_file = "./Dataframe/[" + dataset_size + "]total_dataframe_Initial.h5"
+        dataframe_file_2 = "./Dataframe/[" + dataset_size + "]total_dataframe_2.h5"
         key = "df"
 
         # These below vars are used in minmax scaler for price
@@ -295,26 +312,6 @@ class Dataset ():
                 total_dataset["year_diff"] = first_adv_year - reg_year 
                 total_dataset["day_diff"]  = self.get_array_days_between (total_dataset, "first_registration", "first_adv_date")
 
-            if self.test_sales_month_effect == True:
-                total_dataset["adv_month"] += 7
-                for i in range (n_month):
-                    total_dataset[new_feature_adv_month [i]] = total_dataset["adv_month"] + i + 1 
-
-                for i in range (n_month):
-                    total_dataset[new_feature_year_diff [i]] = total_dataset["year_diff"] 
-
-                    total_dataset[new_feature_year_diff [i]] = total_dataset.apply (
-                        lambda row: row[new_feature_year_diff [i]]+1 if row[new_feature_adv_month [i]]>12 else row[new_feature_year_diff [i]],
-                        axis=1
-                    )
-                    total_dataset[new_feature_adv_month [i]] = total_dataset.apply (
-                        lambda row: row[new_feature_adv_month [i]]%12 if row[new_feature_adv_month [i]]>12 else row[new_feature_adv_month [i]],
-                        axis=1
-                    )
-
-
-            test_df = total_dataset [["adv_month"] + new_feature_adv_month + ["year_diff"] + new_feature_year_diff]
-            print (test_df)
 
             # Impute missing values from here
             total_dataset = DataFrameImputer().fit_transform (total_dataset)
@@ -324,8 +321,8 @@ class Dataset ():
 
             # Standard scale dataset
             #scaler = StandardScaler()  
-            scaler = RobustScaler()
-            total_dataset[self.feature_need_scaled] = scaler.fit_transform (total_dataset[self.feature_need_scaled])
+            #scaler = RobustScaler()
+            #total_dataset[self.feature_need_scaled] = scaler.fit_transform (total_dataset[self.feature_need_scaled])
 
             # MinMax scale the price
             # TODO: here we scale on the total dataset, but we need to scale separately on the train set and the test set
@@ -345,6 +342,37 @@ class Dataset ():
         #for feature in features:
         #    print (total_dataset[feature][:3])
 
+        if os.path.isfile (dataframe_file_2) == False:
+            print ("Load dataframe_inital from HDF5 file to create dataframe_2")
+            if self.test_sales_month_effect == True:
+                for i in range (self.n_month):
+                    total_dataset[self.new_feature_adv_month [i]] = total_dataset["adv_month"] + i + 1 
+
+                for i in range (self.n_month):
+                    total_dataset[self.new_feature_year_diff [i]] = total_dataset["year_diff"] 
+
+                    total_dataset[self.new_feature_year_diff [i]] = total_dataset.apply (
+                        lambda row: row[self.new_feature_year_diff [i]]+1 if row[self.new_feature_adv_month [i]]>12 else row[self.new_feature_year_diff [i]],
+                        axis=1
+                    )
+                    total_dataset[self.new_feature_adv_month [i]] = total_dataset.apply (
+                        lambda row: row[self.new_feature_adv_month [i]]%12 if row[self.new_feature_adv_month [i]]>12 else row[self.new_feature_adv_month [i]],
+                        axis=1
+                    )
+                self.feature_need_scaled += self.new_feature_year_diff
+
+            # Try to normalize after add more features like year_diff_i due to the effect of year_diff
+            scaler = RobustScaler()
+            total_dataset[self.feature_need_scaled] = scaler.fit_transform (total_dataset[self.feature_need_scaled])
+            print ("Store the dataframe_2 into a hdf file")
+            total_dataset.to_hdf (dataframe_file_2, key)       
+        else:
+            print ("Reload dataframe_file_2 using HDF5 (Pytables)")
+            total_dataset = pd.read_hdf (dataframe_file_2, key)
+
+        """test_df = total_dataset [["adv_month"] + self.new_feature_adv_month + ["year_diff"] + self.new_feature_year_diff][:5]
+        print (test_df)
+        sys.exit (-1)"""
 
         print ("====Final length of features:", len (self.features))
         #print ("Before scale: min price:", self.min_price, "max price:", self.max_price)
@@ -371,16 +399,8 @@ class Dataset ():
                     class_len = l_feature[-1]
             l_feature = [maker_len, class_len] + l_feature
 
-        if car_ident_flag == 1: 
-            if dataset_type == "new":
-                self.act_adv_date = np.array (total_dataset ["first_adv_date"] ).reshape ((-1,1))
-            else:
-                self.act_adv_date = np.array (total_dataset ["actual_advertising_date"] ).reshape ((-1,1))
-            self.sale_date = np.array (total_dataset ["sale_date"]).reshape ((-1,1))
-
 
         self.l_feature = l_feature
-        print ("======Final length of dataset:", len (total_dataset))
         if car_ident_flag == 1:
             print ("l1: {0}, l2: {1}, l3: {2}".format (l1, l2, l3))
             print ("l1: {0}, l2: {1}, l3: {2}".format (self.features_need_encoding, self.features_not_need_encoding, self.car_ident))
@@ -402,17 +422,45 @@ class Dataset ():
             total_dataset["price"] = scaler.fit_transform (total_dataset["price"])
         ############################
 
+        rm_idx_file  = "./test_rm_idx.txt"
+        outlier_file = "./test_outlier_items.xlsx"
+        if os.path.isfile (rm_idx_file) == True:
+            # Remove outliers that the coresponding indexes are saved in a file
+            with open (rm_idx_file) as f:
+                rm_idx = f.readlines()
+
+            rm_idx = [x.strip() for x in rm_idx]
+            rm_idx = list (map (int, rm_idx))
+
+            # Save the outliers into a file through a dataframe
+            outlier_df = total_dataset.iloc [rm_idx]
+            outlier_df[["plate_num", "first_adv_date"]].to_excel (outlier_file, index=False)#, encoding='utf-8-sig')
+
+            print ("######## Length of dataset before removing outlier:", len (total_dataset))
+            total_dataset = total_dataset.drop (total_dataset.index [rm_idx])
+            print ("######## Length of dataset after removing outlier:", len (total_dataset))
+
+        if car_ident_flag == 1: 
+            if dataset_type == "new":
+                self.act_adv_date = np.array (total_dataset ["first_adv_date"] ).reshape ((-1,1))
+            else:
+                self.act_adv_date = np.array (total_dataset ["actual_advertising_date"] ).reshape ((-1,1))
+            self.sale_date = np.array (total_dataset ["sale_date"]).reshape ((-1,1))
+
         print ("Time for Loading and preprocessing dataset: %.3f" % (time.time() - stime))
         self.total_dataset = total_dataset
         self.k_fold = k_fold
        
         if car_ident_flag == 1:
-            (self.act_adv_date_total_set, self.car_ident_code_total_set, self.X_total_set, self.y_total_set, self.X_train_set, self.y_train_set, self.X_test_set, self.y_test_set, self.d_ident, self.d_remain, self.car_ident_code_test_set) = self.get_data_label_car_ident (self.features, label)
+            if self.test_sales_month_effect == True:
+                (self.act_adv_date_total_set, self.car_ident_code_total_set, self.X_total_set, self.y_total_set, self.X_train_set, self.y_train_set, self.X_test_set, self.y_test_set, self.d_ident, self.d_remain, self.car_ident_code_test_set, self.list_test_X) = self.get_data_label_car_ident_2 (label)
+            else:
+                (self.act_adv_date_total_set, self.car_ident_code_total_set, self.X_total_set, self.y_total_set, self.X_train_set, self.y_train_set, self.X_test_set, self.y_test_set, self.d_ident, self.d_remain, self.car_ident_code_test_set) = self.get_data_label_car_ident (label, self.features_need_encoding, [])
         else:
             if self.test_sales_month_effect == True:
                 (self.act_adv_date_total_set, self.X_total_set, self.y_total_set, self.X_train_set, self.y_train_set, self.X_test_set, self.y_test_set, self.X_test_set_1, self.X_test_set_2, self.X_test_set_3, self.X_test_set_4, self.X_test_set_5, self.X_test_set_6) = self.get_data_label_2 (label)
             else:
-                (self.act_adv_date_total_set, self.X_total_set, self.y_total_set, self.X_train_set, self.y_train_set, self.X_test_set, self.y_test_set) = self.get_data_label (label)
+                (self.act_adv_date_total_set, self.X_total_set, self.y_total_set, self.X_train_set, self.y_train_set, self.X_test_set, self.y_test_set) = self.get_data_label (label, self.features_need_encoding)
 
         #print ("Dataframe: ", total_dataset ["price"])
         #print ("X[-1]: ", self.X_total_set[:, -1])
@@ -577,15 +625,15 @@ class Dataset ():
         => return: a matrix with rows are data points, columns are features values (nD numpy.array object)
         
         """ 
-        print (features1)
+        """print (features1)
         X1 = np.array (dataset[features1])  
         enc = OneHotEncoder(sparse = False)
         X1 = enc.fit_transform (X1)
-        print ("X1.shape", X1.shape)
+        print ("X1.shape", X1.shape)""" ##NOTE to remove the comments
         
         print (self.features_not_need_encoding)
         X2 = np.array (dataset[self.features_not_need_encoding]) 
-        X = np.concatenate ((X1, X2), axis = 1) 
+        X = X2 #np.concatenate ((X1, X2), axis = 1) 
         print ("X2.shape", X2.shape)
 
 
@@ -613,12 +661,13 @@ class Dataset ():
         print ("X2.shape", X2.shape)
         return X
 
-    def get_data_matrix_car_ident (self, dataset):
+    def get_data_matrix_car_ident (self, dataset, features1):
         """
         dataset: training, validation, test, or total dataset
         => return: a matrix with rows are data points, columns are features values (nD numpy.array object)
         
         """
+        print ("get_data_matrix_car_ident", features1)
         # Encode onehot for car identification
         car_ident_codes = np.array (dataset[self.car_ident]) 
         print ("car_ident_codes", car_ident_codes.shape)
@@ -626,7 +675,7 @@ class Dataset ():
         d_ident = X1.shape[1]
 
         # Encode onehot for the remaining categorical features + maker, rep_model codes
-        X3 = np.array (dataset[["maker_code","class_code"] + self.features_need_encoding]) 
+        X3 = np.array (dataset[["maker_code","class_code"] + features1]) 
         enc = OneHotEncoder(sparse = False)
         X3 = enc.fit_transform (X3)
 
@@ -649,7 +698,7 @@ class Dataset ():
         data_bar = np.concatenate ((one, data), axis = 1)
         return data_bar
     
-    def get_data_label (self, label):
+    def get_data_label (self, label, features1):
         """
             - Purpose: Devide total dataset into n_splits set.
                 Using (n_splits - 1) sets for training, the remaining for testing
@@ -659,10 +708,10 @@ class Dataset ():
             - Return: a tuple with each element contains a list of "n_splits" training sets (X_train_set, y_train_set) 
              and "n_splits" test sets (X_test_set, y_test_set)
         """
-        if self.test_sales_month_effect == True:
+        """if self.test_sales_month_effect == True:
             features1 = list (set (self.features_need_encoding) - set (self.new_feature_adv_month))
         else:
-            features1 = self.features_need_encoding
+            features1 = self.features_need_encoding"""
         X_total_set = self.get_data_matrix (self.total_dataset, features1) 
         if dataset_type == "old":
             act_adv_date = self.get_data_array (self.get_total_dataset (), "actual_advertising_date")
@@ -714,27 +763,33 @@ class Dataset ():
              + label: name of the label (label)
             - Return: Beyond the purpose of get_data_label, this function returns n_month X_test_set_i that the adv_month and adv_year was changed for see the affect of month on price 
         """
+        if self.test_sales_month_effect == True:
+            features1 = list (set (self.features_need_encoding) - set (self.new_feature_adv_month))
+        else:
+            features1 = self.features_need_encoding
+
         (act_adv_date, X_total_set, y_total_set, X_train_set, y_train_set, X_test_set, y_test_set) = self.get_data_label (label)
         len_total_set = X_total_set.shape[0]    
         train_length     = int (0.5 + len_total_set * self.data_training_percentage)
 
         return_tuple = (act_adv_date, X_total_set, y_total_set, X_train_set, y_train_set, X_test_set, y_test_set)
 
-        for i in range (self.month)
-            features1 = [x if (x != "adv_month") else self.new_feature_adv_month[i] for x in self.features_need_encoding]
-            X_total_set_i = self.get_data_matrix (self.total_dataset, features1) 
-            X_test_set_i = X_total_set_i[train_length:, :]
-            return_tuple.append (X_test_set_i)
+        if self.test_sales_month_effect == True:
+            for i in range (self.n_month):
+                print ("=====", i)
+                features1[2] = self.new_feature_adv_month[i]
+                X_total_set_i = self.get_data_matrix (self.total_dataset, features1) 
+                X_test_set_i = X_total_set_i[train_length:, :]
+                return_tuple.append (X_test_set_i)
 
         return return_tuple
     
     
-    def get_data_label_car_ident (self, features, label):
+    def get_data_label_car_ident (self, label, features1):
         """
             - Purpose: Devide total dataset into train and test dataset, or K-fold set.
                 Using (n_splits - 1) sets for training, the remaining for testing
             - Input:
-             + features: an array of feature names
              + label: name of the label (label)
             - Return: 
                 + If use CV: a tuple with each element contains a list of "n_splits" training sets (X_train_set, y_train_set) 
@@ -742,7 +797,12 @@ class Dataset ():
                 + else: return numpy arrays: train, test, ...
         """
         
-        car_ident_code_total_set, X_total_set, d_ident, d_remain = self.get_data_matrix_car_ident (self.get_total_dataset ()) 
+        """if self.test_sales_month_effect == True:
+            features1 = list (set (self.features_need_encoding) - set (self.new_feature_adv_month))
+        else:
+            features1 = self.features_need_encoding"""
+        car_ident_code_total_set, X_total_set, d_ident, d_remain = self.get_data_matrix_car_ident (self.get_total_dataset (), features1)
+
         if dataset_type == "old":
             act_adv_date = self.get_data_array (self.get_total_dataset (), "actual_advertising_date")
         else:
@@ -795,9 +855,47 @@ class Dataset ():
             X_test_set = X_total_set[train_length:, :]
             y_test_set = y_total_set[train_length:, :]
             car_ident_code_test_set = car_ident_code_total_set[train_length:, :]
+        """print ("######## ", len (car_ident_code_total_set))
+        print ("######## ", len (act_adv_date))
+        print ("######## ", len (X_total_set))
+        sys.exit (-1)"""
             
         return (act_adv_date, car_ident_code_total_set, X_total_set, y_total_set, X_train_set, y_train_set, X_test_set, y_test_set, d_ident, d_remain, car_ident_code_test_set) 
 
+    def get_data_label_car_ident_2 (self, label):
+        """
+            - Purpose: Devide total dataset into n_splits set.
+                Using (n_splits - 1) sets for training, the remaining for testing
+            - Input:
+             + label: name of the label (label)
+            - Return: Beyond the purpose of get_data_label, this function returns n_month X_test_set_i that the adv_month and adv_year was changed for see the affect of month on price 
+        """
+        if self.test_sales_month_effect == True:
+            features1 = list (set (self.features_need_encoding) - set (self.new_feature_adv_month))
+        else:
+            features1 = self.features_need_encoding
+        len_features= len (features1)
+        features1_copy = features1[:]
+
+        (act_adv_date, car_ident_code_total_set, X_total_set, y_total_set, X_train_set, y_train_set, X_test_set, y_test_set, d_ident, d_remain, car_ident_code_test_set) = self.get_data_label_car_ident (label, features1)
+        len_total_set = X_total_set.shape[0]    
+        train_length     = int (0.5 + len_total_set * self.data_training_percentage)
+
+        return_tuple = (act_adv_date, car_ident_code_total_set, X_total_set, y_total_set, X_train_set, y_train_set, X_test_set, y_test_set, d_ident, d_remain, car_ident_code_test_set)
+
+        if self.test_sales_month_effect == True:
+            list_test_X = [X_test_set]
+            for i in range (self.n_month):
+                print ("=====", i)
+                for j in range (len_features):
+                    if features1_copy[j] == "adv_month":
+                        features1[j] = self.new_feature_adv_month[i]
+                _, X_total_set_i, _, _  = self.get_data_matrix_car_ident (self.total_dataset, features1) 
+                X_test_set_i = X_total_set_i[train_length:, :]
+                list_test_X += [X_test_set_i]
+            return_tuple += (list_test_X,)
+
+        return return_tuple
     def get_dataset_feature_importance (self, len_train, label):
         """
             Purpose: Split the total data into: train data and a list of test data.

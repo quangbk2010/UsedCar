@@ -138,6 +138,11 @@ if __name__ == '__main__':
     test_label  = dataset.y_test_set
     total_act_adv_date= dataset.act_adv_date_total_set
     sorted_features = dataset.sorted_features
+
+    """list_test_data = dataset.list_test_X
+    if list_test_data[0].shape[1] != list_test_data[1].shape[1]:
+        raise ValueError ("Oops! #columns of X_test_set != of X_test_set_1")"""
+
     if args.car_ident_flag == 1:
         total_car_ident_code= dataset.car_ident_code_total_set
         total_act_adv_date = dataset.act_adv_date
@@ -162,9 +167,9 @@ if __name__ == '__main__':
     ##################################
     if args.model_set == "sklearn":
         model = Sklearn_model (dataset_size)
-        for reg_type in ["Linear", "Ridge", "Lasso", "DecisionTreeRegressor", "GradientBoostingRegressor", "RandomForestRegressor", "AdaBoostRegressor"]:
-            model.sklearn_regression(reg_type, train_data, train_label, test_data, test_label)
-        i#model.knn (train_data, train_label, test_data, test_label)
+        #for reg_type in ["Linear", "Ridge", "Lasso", "DecisionTreeRegressor", "RandomForestRegressor", "AdaBoostRegressor", "GradientBoostingRegressor"]:
+        #    model.sklearn_regression(reg_type, train_data, train_label, test_data, test_label)
+        model.knn (train_data, train_label, test_data, test_label)
 
     elif args.model_set == "DL":
         nn = Tensor_NN (args)
@@ -213,6 +218,10 @@ if __name__ == '__main__':
         elif args.ensemble_NN_flag == 100:
             model_path = nn.model_dir + "/car2vect/test" # + "/car2vect/[{0}]{1}_{2}_car2vect_{3}_{4}_{5}_{6}".format (dataset_size, nn.model_name, args.label, nn.no_neuron, nn.no_neuron_embed, nn.d_embed, nn.loss_func)
             nn.test_affect_price_sales_duration (train_data, train_label, test_data, test_label, dataset.d_ident, dataset.d_remain, model_path, y_predict_file_name)
+
+        elif args.ensemble_NN_flag == 101:
+            model_path = nn.model_dir + "/car2vect/test"
+            nn.decide_when_sell_car (list_test_data, test_label, dataset.d_ident, dataset.d_remain, model_path)
 
         elif args.ensemble_NN_flag == 10:
             model_path = ""

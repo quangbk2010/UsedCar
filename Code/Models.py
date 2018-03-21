@@ -40,7 +40,7 @@ class Sklearn_model (Dataset):
     def knn (self, train_data, train_label, test_data, test_label):
         stime = time.time()
         print ("Start KNN...")
-        for n in [2, 5, 10, 20, 30, 40, 50, 100]:
+        for n in [10]:#2, 5, 10, 20, 30, 40, 50, 100]:
             print ("====n_neighbors:", n)
             nn = KNeighborsRegressor(n_neighbors=n)
             nn.fit (train_data, train_label)
@@ -89,16 +89,21 @@ class Sklearn_model (Dataset):
 
         elif reg_type == "GradientBoostingRegressor":
             regr = ensemble.GradientBoostingRegressor()
-            param_grid = [ {"n_estimators": [10, 100, 500, 1000],"learning_rate": [0.001, 0.01, 0.1, 0.2], "max_depth":[10,20,30]}]
+            #param_grid = [ {"n_estimators": [10, 100, 500, 1000],"learning_rate": [0.001, 0.01, 0.1, 0.2], "max_depth":[10,20,30]}]
+            param_grid = [ {"n_estimators": [10],"learning_rate": [0.001, 0.01], "max_depth":[10, 20]}]
 
         elif reg_type == "AdaBoostRegressor":
             regr = ensemble.AdaBoostRegressor()
-            param_grid = [ {"n_estimators": [10, 100, 500, 1000], "min_samples_split": [5, 10, 20], "max_depth": [10, 20, 30]}]
+            #param_grid = [ {"n_estimators": [10, 100, 500, 1000], "min_samples_split": [5, 10, 20], "max_depth": [10, 20, 30]}]
+            param_grid = [ {"n_estimators": [10]}]
 
         elif reg_type == "RandomForestRegressor":
             regr = ensemble.RandomForestRegressor()
-            param_grid = [ {"n_estimators": [10, 100, 500, 1000], "min_samples_split": [5, 10, 20], "max_depth": [10, 20, 30]},
-                           {"bootstrap": [False], "n_estimators": [10, 100, 500, 1000], "min_samples_split": [5, 10, 20], "max_depth": [10, 20, 30]} 
+            #param_grid = [ {"n_estimators": [10, 100, 500, 1000], "min_samples_split": [5, 10, 20], "max_depth": [10, 20, 30]},
+            #               {"bootstrap": [False], "n_estimators": [10, 100, 500, 1000], "min_samples_split": [5, 10, 20], "max_depth": [10, 20, 30]} 
+            #]
+            param_grid = [ {"n_estimators": [10], "min_samples_split": [10], "max_depth": [10, 20]},
+                           {"bootstrap": [False], "n_estimators": [10], "min_samples_split": [10], "max_depth": [10, 20]} 
             ]
         else:
             raise ValueError ("This model is not supported!")
@@ -1055,7 +1060,9 @@ class Tensor_NN (Dataset, Sklearn_model):
             mean_error_file_name_ = mean_error_file_name + "_" + "fold" + str (fold+1)
             y_predict_file_name_ = y_predict_file_name + "_" + "fold" + str (fold+1)
 
-        print ("test car ident", test_car_ident[0])
+        print ("==test car ident", test_car_ident.shape)
+        print ("==test act_adv_date", test_act_adv_date.shape)
+        print ("==test test_sale_date", test_sale_date.shape)
         identification = np.concatenate ((test_car_ident, test_act_adv_date, test_sale_date),axis=1)
         np.savetxt (x_ident_file_name_, identification, fmt="%d\t%d\t%d\t%d\t%s\t%s\t%d")  
 
@@ -1266,7 +1273,7 @@ class Tensor_NN (Dataset, Sklearn_model):
 
                 # Save predicted label and determine the best epoch
                 if loss_func == "rel_err":
-                    threshold_err = 100 #6 #7 #6.5 #9.3 #8.5 #
+                    threshold_err = 6 #7 #6.5 #9.3 #8.5 #
                     epoch_test_err_val = epoch_test_relative_err_val
                 elif loss_func == "mae":
                     threshold_err = 15
@@ -1433,7 +1440,7 @@ class Tensor_NN (Dataset, Sklearn_model):
                 print('\n\nEpoch: %04d' % (epoch), "Avg. training rmse:", epoch_train_rmse_val, "mae:", epoch_train_mae_val, 'relative_err:', epoch_train_relative_err_val, "smape:", epoch_train_smape_val)
                 
                 # Save the model
-                if epoch == self.epoch or (epoch + 1)%10 == 0: 
+                if epoch == self.epoch-1 or (epoch + 1)%10 == 0: 
                     ckpt_file = model_path + "_" + str (epoch)
                     save_path = saver.save (sess, ckpt_file)  
                     print('Model saved in file: %s' % save_path)
@@ -1658,6 +1665,8 @@ class Tensor_NN (Dataset, Sklearn_model):
 
         # The indexes of (remain_len) data points with the smallest rel_err.
         idx = new_idx [:remain_len]
+        rm_idx = new_idx [remain_len:]
+        print ("rm_idx:", rm_idx[:5])
         new_dataset = dataset [idx]
 
         # Sort by adv_date
@@ -1672,7 +1681,7 @@ class Tensor_NN (Dataset, Sklearn_model):
         #df_dataset = pd.DataFrame (new_dataset)
         #df_dataset.to_hdf (stored_np_arr_file, key)       
 
-        return new_dataset 
+        return (new_dataset, rm_idx)
 
         #else:
         #    print ("Remove ouliers by reloading the preprocessed data:", stored_np_arr_file)
@@ -1792,6 +1801,20 @@ class Tensor_NN (Dataset, Sklearn_model):
         
         np.savetxt (y_predict_file_name, line, fmt="%.2f\t%.2f")
 
+    def decide_when_sell_car (self, list_test_data, test_label, d_ident, d_remain, model_path):
+        meta_file = model_path + "_49.meta"
+        ckpt_file = model_path + "_49" 
+
+        len_list_test = len (list_test_data)
+        df = pd.DataFrame (columns=list (range (len_list_test)))
+        for i in range (len_list_test):
+            print ("=== Funtion: decide_when_sell_car", "test:", i)
+            (predicted_test_label, _, _, _, _, train_arr_relative_err) = self.batch_computation_car2vect (5, list_test_data[i], test_label, d_ident, d_remain, meta_file, ckpt_file)
+            df[i] = predicted_test_label.reshape (len (predicted_test_label)).tolist ()
+
+        df.to_excel ("./result_decide_when_sell_car.xlsx", index=False)
+        
+
     def get_features_importance_car2vect (self, train_data, train_label, test_data, test_label, total_car_ident, d_ident, d_remain, model_path, features, l_feature):
         meta_file = model_path + "_9.meta"# + "_2.meta"
         ckpt_file = model_path + "_9" 
@@ -1862,7 +1885,8 @@ class Tensor_NN (Dataset, Sklearn_model):
         # Remove outliers from the total dataset based on the relative error from the first train, on the other hand sort the dataset by total_act_adv_date
         stime = time.time()
         if removal_percent > 0:
-            new_total_set = self.remove_outliers_total_set (total_data, total_label, np.empty ((total_data.shape[0], 0)), total_act_adv_date, total_arr_relative_err, dataset_size, removal_percent)
+            new_total_set, rm_idx = self.remove_outliers_total_set (total_data, total_label, np.empty ((total_data.shape[0], 0)), total_act_adv_date, total_arr_relative_err, dataset_size, removal_percent)
+            np.savetxt (model_path + "test_rm_idx.txt", rm_idx)
         else:
             raise ValueError ("Removal perentage need to be larger than 0!")
         print ("Time needed to remove outliers from the dataset: %.3f" % (time.time() - stime))
@@ -1966,8 +1990,8 @@ class Tensor_NN (Dataset, Sklearn_model):
         print ("\n\n===========Train total set")
         # If comment the below line, you need to check the checkpoint file in regressor1 (it should be compatible with the dataset) 
         # Flexible rel_err.
-        self.epoch=20
-        self.train_car2vect(train_data=total_data, train_label=total_label, total_car_ident=total_car_ident_code, d_ident=d_ident, d_embed=self.d_embed, d_remain=d_remain, no_neuron=self.no_neuron, no_neuron_embed=self.no_neuron_embed, loss_func=self.loss_func, model_path=model_path)
+        #self.epoch=20
+        #self.train_car2vect(train_data=total_data, train_label=total_label, total_car_ident=total_car_ident_code, d_ident=d_ident, d_embed=self.d_embed, d_remain=d_remain, no_neuron=self.no_neuron, no_neuron_embed=self.no_neuron_embed, loss_func=self.loss_func, model_path=model_path)
         # Only use the below line for Gradient Boosting 
         #self.train_car2vect(train_data=total_data, train_label=total_label, total_car_ident=total_car_ident_code, d_ident=d_ident, d_embed=self.d_embed, d_remain=d_remain, no_neuron=self.no_neuron, no_neuron_embed=self.no_neuron_embed, loss_func="rel_err", model_path=model_path)
 
@@ -1976,8 +2000,8 @@ class Tensor_NN (Dataset, Sklearn_model):
         # When restore model with the whole dataset, it can cause the error: Resource exhausted 
         # Devide the train set into smaller subsets (Eg. 5 subsets), push them to the model and concatenate the predictions later
         # TODO: change the "model_dir" arg to automatically set the directory
-        meta_file = model_path + "_19.meta"
-        ckpt_file = model_path + "_19"
+        meta_file = model_path + "_0.meta"
+        ckpt_file = model_path + "_0"
 
         (predicted_total_label, total_rmse_val, total_mae_val, total_relative_err_val, total_smape_val, total_arr_relative_err) = self.batch_computation_car2vect (5, total_data, total_label, d_ident, d_remain, meta_file, ckpt_file)
         total_np_arr = np.concatenate ((total_car_ident_code, total_act_adv_date, total_sale_date, total_label, predicted_total_label), axis=1)
@@ -1993,7 +2017,9 @@ class Tensor_NN (Dataset, Sklearn_model):
         # Remove outliers from the total dataset based on the relative error from the first train, on the other hand sort the dataset by total_act_adv_date
         stime = time.time()
         if removal_percent > 0:
-            new_total_set = self.remove_outliers_total_set (total_data, total_label, total_car_ident_code, total_act_adv_date, total_sale_date, total_arr_relative_err, dataset_size, removal_percent)
+            new_total_set, rm_idx = self.remove_outliers_total_set (total_data, total_label, total_car_ident_code, total_act_adv_date, total_sale_date, total_arr_relative_err, dataset_size, removal_percent)
+            np.savetxt ("./test_rm_idx.txt", rm_idx, fmt="%d")
+            sys.exit (-1)
         else:
             raise ValueError ("Removal perentage is 0!")
         print ("Time for remove outliers from dataset: %.3f" % (time.time() - stime))
@@ -2057,7 +2083,7 @@ class Tensor_NN (Dataset, Sklearn_model):
             x_embed_file_name_ = x_embed_file_name + "_2"
             
             print ("\n\n===========Predictor2")
-            self.epoch=50
+            #self.epoch=50
             best_epoch = self.car2vect (train_data=new_train_data, train_label=new_train_label, test_data=new_test_data, test_label=new_test_label, total_car_ident=new_total_car_ident_code, total_act_adv_date=new_total_act_adv_date, total_sale_date=new_total_sale_date, d_ident=d_ident, d_embed=self.d_embed, d_remain=d_remain, no_neuron=self.no_neuron, no_neuron_embed=self.no_neuron_embed, loss_func=self.loss_func, model_path=model_path, y_predict_file_name=y_predict_file_name_, mean_error_file_name=mean_error_file_name_, x_ident_file_name=x_ident_file_name_, x_embed_file_name=x_embed_file_name_, retrain=0) # if use retrain=1 -> initialize weights from the previous model
             print ("Best epoch: ", best_epoch)
 
