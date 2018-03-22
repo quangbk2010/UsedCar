@@ -143,11 +143,10 @@ if __name__ == '__main__':
     if list_test_data[0].shape[1] != list_test_data[1].shape[1]:
         raise ValueError ("Oops! #columns of X_test_set != of X_test_set_1")"""
 
-    if args.car_ident_flag == 1:
-        total_car_ident_code= dataset.car_ident_code_total_set
-        total_act_adv_date = dataset.act_adv_date
-        total_sale_date = dataset.sale_date
-        test_car_ident = dataset.car_ident_code_total_set[train_data.shape[0]:]
+    total_car_ident_code= dataset.car_ident_code_total_set
+    total_act_adv_date = dataset.act_adv_date
+    total_sale_date = dataset.sale_date
+    test_car_ident = dataset.car_ident_code_total_set[train_data.shape[0]:]
 
     print ("train_data:", train_data.shape)
     print ("train_label:", train_label.shape)
@@ -240,7 +239,9 @@ if __name__ == '__main__':
             if args.get_feature_importance_flag == True:
                 nn.get_features_importance_baseline_NN (train_data=X_train, train_label=y_train, list_test_data=list_X_test, test_label=y_test, model_path=model_path, features=sorted_features) 
             else:
-                nn.baseline (train_data=train_data, train_label=train_label, test_data=test_data, test_label=test_label, no_neuron=nn.no_neuron, no_hidden_layer = nn.no_hidden_layer, loss_func=nn.loss_func, model_path=model_path, y_predict_file_name=y_predict_file_name, mean_error_file_name=mean_error_file_name)
+                best_epoch = nn.baseline (train_data=train_data, train_label=train_label, test_data=test_data, test_label=test_label, total_car_ident=total_car_ident_code, total_act_adv_date=total_act_adv_date, total_sale_date=total_sale_date, no_neuron=nn.no_neuron, no_hidden_layer = nn.no_hidden_layer, loss_func=nn.loss_func, model_path=model_path, y_predict_file_name=y_predict_file_name, x_ident_file_name=x_ident_file_name, mean_error_file_name=mean_error_file_name)
+
+                print ("Best epoch: ", best_epoch)
 
     else:
         raise ValueError ("This model is not supported!")

@@ -389,10 +389,15 @@ class Tensor_NN (Dataset, Sklearn_model):
             print ("Training time (s):", stop_time - start_time)
             
 
-    def baseline (self, train_data, train_label, test_data, test_label, no_neuron, no_hidden_layer, loss_func, model_path, y_predict_file_name, mean_error_file_name): # Used for 1train-1test
+    def baseline (self, train_data, train_label, test_data, test_label, total_car_ident, total_act_adv_date, total_sale_date, no_neuron, no_hidden_layer, loss_func, model_path, y_predict_file_name, x_ident_file_name, mean_error_file_name): # Used for 1train-1test
     #def baseline (self, train_data, train_label, test_data, test_label, model_path, X, Y, prediction, weights, fold): # used for Cross-validation 
        
-        #building car embedding model
+        len_train = len(train_data)
+        len_test  = len(test_data)
+        test_car_ident = total_car_ident [len_train:, :] 
+        test_act_adv_date = total_act_adv_date [len_train:, :] 
+        test_sale_date = total_sale_date [len_train:, :] 
+
         if using_CV_flag == 0:
             X, Y, prediction = self.build_model(train_data.shape[1], no_neuron, no_hidden_layer) 
             mean_error_file_name_ = mean_error_file_name
@@ -401,6 +406,8 @@ class Tensor_NN (Dataset, Sklearn_model):
             mean_error_file_name_ = mean_error_file_name + "_" + "fold" + str (fold+1)
             y_predict_file_name_ = y_predict_file_name + "_" + "fold" + str (fold+1)
 
+        identification = np.concatenate ((test_car_ident, test_act_adv_date, test_sale_date),axis=1)
+        np.savetxt (x_ident_file_name, identification, fmt="%d\t%d\t%d\t%d\t%s\t%s\t%d")  
 
         # Try to use weights decay
         num_batches_per_epoch = int(len(train_data) / self.batch_size)
@@ -466,8 +473,6 @@ class Tensor_NN (Dataset, Sklearn_model):
             else:
                 train_label_shuffled_scaled = train_label_shuffled
 
-            len_train = len(train_data)
-            len_test  = len(test_data)
             train_total_batch = int (np.ceil (float (len_train)/self.batch_size))
             test_total_batch = int (np.ceil (float (len_test)/self.batch_size))
             smallest_epoch_test_err_val = 10e6
@@ -555,17 +560,18 @@ class Tensor_NN (Dataset, Sklearn_model):
                     threshold_err = 7 #9.5# 
                     epoch_test_err_val = epoch_test_relative_err_val
                 elif loss_func == "mae":
-                    threshold_err = 96
+                    threshold_err = 20
                     epoch_test_err_val = epoch_test_mae_val
                 elif loss_func == "mse":
-                    threshold_err = 146
+                    threshold_err = 13.8
                     epoch_test_err_val = epoch_test_rmse_val
 
                 #if (epoch + 1) % 1 == 0:
-                if epoch_test_err_val < threshold_err:
+                if (epoch_test_err_val < threshold_err) or (epoch == self.epoch - 1):
                     np.savetxt (y_predict_file_name_ + "_" + str (epoch), line, fmt="%.2f\t%.2f")
-                    #save_path = saver.save (sess, model_path + "_" + str (epoch)) #, global_step=global_step)
-                    #print('Model saved in file: %s' % save_path)
+                    print ("Pred_label saved in file:", y_predict_file_name_ + "_" + str (epoch))
+                    save_path = saver.save (sess, model_path + "_" + str (epoch)) #, global_step=global_step)
+                    print("Model saved in file:", save_path)
 
                 if epoch_test_err_val < smallest_epoch_test_err_val:
                     smallest_epoch_test_err_val = epoch_test_err_val 
@@ -1008,7 +1014,7 @@ class Tensor_NN (Dataset, Sklearn_model):
             if retrain == -1:
                 print ("=====Restore the trained model...")
                 # Apply the trained model onto the test data
-                pre_model_path = self.model_dir + "/rm_outliers_total_set_NN/car2vect/regressor{0}/{1}_{2}_{3}_car2vect_{4}x1_{5}x1_total_set_{6}".format (2, "new", self.model_name, self.label, self.no_neuron_embed, self.no_neuron, 34)
+                pre_model_path = self.model_dir + "/rm_outliers_total_set_NN/car2vect/regressor{0}/{1}_{2}_{3}_car2vect_{4}x1_{5}x1_total_set_{6}".format (2, "new", self.model_name, self.label, self.no_neuron_embed, self.no_neuron, 29)
                 meta_file = pre_model_path + ".meta"
                 ckpt_file = pre_model_path 
                 (predicted_test_label, test_rmse_val, test_mae_val, test_relative_err_val, test_smape_val, test_arr_relative_err) = self.batch_computation_car2vect (5, test_data, test_label, d_ident, d_remain, meta_file, ckpt_file)
@@ -1081,11 +1087,6 @@ class Tensor_NN (Dataset, Sklearn_model):
             loss = tf.reduce_mean (tf.divide (tf.abs (prediction - Y), Y)) #protect when Y = 0
         elif loss_func == "smape":
             loss = tf.reduce_mean (tf.divide (tf.abs (prediction - Y), tf.abs (Y) + tf.abs (prediction) ))
-
-        #lamb = 1e-6
-        #loss = tf.reduce_mean (tf.divide (tf.abs (prediction - Y), Y)) #+ lamb * tf.reduce_mean (tf.norm (x_embed, axis=0, keep_dims=True))
-        #loss = tf.reduce_mean (tf.abs (prediction - Y)) #+ lamb * tf.reduce_mean (tf.norm (x_embed, axis=0, keep_dims=True))
-        #loss = tf.reduce_mean (tf.divide (tf.abs (prediction - Y), tf.abs (Y) + tf.abs (prediction) ))
 
         optimizer = tf.train.AdamOptimizer(learning_rate).minimize(loss, global_step=global_step) # + regul
     
@@ -1860,11 +1861,10 @@ class Tensor_NN (Dataset, Sklearn_model):
         """
         # First train the model on the original dataset
         os.system ("mkdir -p ../checkpoint/rm_outliers_total_set_NN/baseline/regressor1")
-        #model_path = self.model_dir + "/rm_outliers_total_set_NN/baseline/regressor{0}/{1}_{2}_{3}_car2vect_{4}_{5}_total_set".format (1, dataset_size, self.model_name, self.label, self.no_neuron, self.no_hidden_layer)
         model_path = "../checkpoint/baseline/"
 
-        meta_file = model_path + "test3.meta" #"../checkpoint/baseline/test3.meta" #model_path + ".meta"
-        ckpt_file = model_path + "test3" #"../checkpoint/baseline/test3" # model_path
+        meta_file = model_path + "test3.meta" 
+        ckpt_file = model_path + "test3" 
         print ("\n\n===========Train total set")
         # If comment the below line, you need to check the checkpoint file in regressor1 (it should be compatible with the dataset) 
         self.train_baseline (total_data, total_label, self.no_neuron, self.no_hidden_layer, self.loss_func, ckpt_file)
@@ -1990,8 +1990,8 @@ class Tensor_NN (Dataset, Sklearn_model):
         print ("\n\n===========Train total set")
         # If comment the below line, you need to check the checkpoint file in regressor1 (it should be compatible with the dataset) 
         # Flexible rel_err.
-        #self.epoch=20
-        #self.train_car2vect(train_data=total_data, train_label=total_label, total_car_ident=total_car_ident_code, d_ident=d_ident, d_embed=self.d_embed, d_remain=d_remain, no_neuron=self.no_neuron, no_neuron_embed=self.no_neuron_embed, loss_func=self.loss_func, model_path=model_path)
+        self.epoch=20
+        self.train_car2vect(train_data=total_data, train_label=total_label, total_car_ident=total_car_ident_code, d_ident=d_ident, d_embed=self.d_embed, d_remain=d_remain, no_neuron=self.no_neuron, no_neuron_embed=self.no_neuron_embed, loss_func=self.loss_func, model_path=model_path)
         # Only use the below line for Gradient Boosting 
         #self.train_car2vect(train_data=total_data, train_label=total_label, total_car_ident=total_car_ident_code, d_ident=d_ident, d_embed=self.d_embed, d_remain=d_remain, no_neuron=self.no_neuron, no_neuron_embed=self.no_neuron_embed, loss_func="rel_err", model_path=model_path)
 
@@ -2000,8 +2000,8 @@ class Tensor_NN (Dataset, Sklearn_model):
         # When restore model with the whole dataset, it can cause the error: Resource exhausted 
         # Devide the train set into smaller subsets (Eg. 5 subsets), push them to the model and concatenate the predictions later
         # TODO: change the "model_dir" arg to automatically set the directory
-        meta_file = model_path + "_0.meta"
-        ckpt_file = model_path + "_0"
+        meta_file = model_path + "_19.meta"
+        ckpt_file = model_path + "_19"
 
         (predicted_total_label, total_rmse_val, total_mae_val, total_relative_err_val, total_smape_val, total_arr_relative_err) = self.batch_computation_car2vect (5, total_data, total_label, d_ident, d_remain, meta_file, ckpt_file)
         total_np_arr = np.concatenate ((total_car_ident_code, total_act_adv_date, total_sale_date, total_label, predicted_total_label), axis=1)
@@ -2083,8 +2083,8 @@ class Tensor_NN (Dataset, Sklearn_model):
             x_embed_file_name_ = x_embed_file_name + "_2"
             
             print ("\n\n===========Predictor2")
-            #self.epoch=50
-            best_epoch = self.car2vect (train_data=new_train_data, train_label=new_train_label, test_data=new_test_data, test_label=new_test_label, total_car_ident=new_total_car_ident_code, total_act_adv_date=new_total_act_adv_date, total_sale_date=new_total_sale_date, d_ident=d_ident, d_embed=self.d_embed, d_remain=d_remain, no_neuron=self.no_neuron, no_neuron_embed=self.no_neuron_embed, loss_func=self.loss_func, model_path=model_path, y_predict_file_name=y_predict_file_name_, mean_error_file_name=mean_error_file_name_, x_ident_file_name=x_ident_file_name_, x_embed_file_name=x_embed_file_name_, retrain=0) # if use retrain=1 -> initialize weights from the previous model
+            self.epoch=30
+            best_epoch = self.car2vect (train_data=new_train_data, train_label=new_train_label, test_data=new_test_data, test_label=new_test_label, total_car_ident=new_total_car_ident_code, total_act_adv_date=new_total_act_adv_date, total_sale_date=new_total_sale_date, d_ident=d_ident, d_embed=self.d_embed, d_remain=d_remain, no_neuron=self.no_neuron, no_neuron_embed=self.no_neuron_embed, loss_func=self.loss_func, model_path=model_path, y_predict_file_name=y_predict_file_name_, mean_error_file_name=mean_error_file_name_, x_ident_file_name=x_ident_file_name_, x_embed_file_name=x_embed_file_name_, retrain=0) # if use retrain=1 -> initialize weights from the previous model, -1 if already have the trained model
             print ("Best epoch: ", best_epoch)
 
             """#####################
@@ -2115,6 +2115,20 @@ class Tensor_NN (Dataset, Sklearn_model):
         else:
             raise ValueError ("[retrain_car2vect_from_total_set] This model is not supported!")
         print ("Time for running: retrain_car2vect_from_total_set: %.3f" % (time.time() - stime))
+
+    def predict_sd_with_pred_price (self, train_data_1, train_label_1, train_data_2, test_data_2, test_data, test_label):
+        # Problems:
+        # - The features used for predicting price and SD are different: price, seller_id, affiliate_id
+        # -> Solution: save 2 distinct datasets
+        #
+
+        # Train the 1st part to predict price
+
+        # Get the predicted price for the 2nd part
+
+        # Train the 2nd part with joined pred_price to predict sales duration
+
+        pass 
 
     def batch_computation_baseline  (self, no_batch, train_data, train_label, meta_file, ckpt_file):
         # devide the train set into smaller subsets, push them to the model and concatenate them later
