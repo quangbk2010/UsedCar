@@ -222,7 +222,7 @@ class Dataset ():
                 sales_duration = self.get_sale_duration_array (total_dataset)
                 total_dataset ["sale_duration"] = sales_duration
 
-                total_dataset = total_dataset[np.abs(total_dataset["sale_duration"] - total_dataset["sale_duration"].mean()) / total_dataset["sale_duration"].std() < 1]
+                total_dataset = total_dataset[np.abs(total_dataset["sale_duration"] - total_dataset["sale_duration"].mean()) / total_dataset["sale_duration"].std() < 2]
                 print ("4.4", total_dataset.shape)
 
             # Just keep hyundai and kia
