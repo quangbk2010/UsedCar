@@ -325,6 +325,12 @@ class Dataset ():
         #for feature in features:
         #    print (total_dataset[feature][:3])
 
+        # Only keep the cars with car's age <= 10 years
+        total_dataset = total_dataset [total_dataset ["year_diff"] <= 10]
+
+        if label == "sale_duration":
+            total_dataset["price_raw"] = total_dataset ["price"]
+
         if os.path.isfile (dataframe_file_2) == False:
             print ("Load dataframe_inital from HDF5 file to create dataframe_2")
             if self.test_sales_month_effect == True:
@@ -344,9 +350,6 @@ class Dataset ():
                     )
                 self.feature_need_scaled += self.new_feature_year_diff
 
-            if label == "sale_duration":
-                total_dataset["price_raw"] = total_dataset ["price"]
-
             # Try to normalize after add more features like year_diff_i due to the effect of year_diff
             print ("====", self.feature_need_scaled)
             print ("====", [x for x in self.feature_need_scaled if x not in ["seller_id","trading_firm_id", "price"]])
@@ -358,12 +361,7 @@ class Dataset ():
             print ("Reload dataframe_file_2 using HDF5 (Pytables)")
             total_dataset = pd.read_hdf (dataframe_file_2, key)
 
-        """test_df = total_dataset [["adv_month"] + self.new_feature_adv_month + ["year_diff"] + self.new_feature_year_diff][:5]
-        print (test_df)
-        sys.exit (-1)"""
-
         print ("====Final length of features:", len (self.features))
-        #print ("Before scale: min price:", self.min_price, "max price:", self.max_price)
         # Save the length of each vector after encoding into a dictionary
         l_feature = []
         l1 = len (self.features_need_encoding)
