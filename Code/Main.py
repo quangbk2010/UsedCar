@@ -128,7 +128,7 @@ if __name__ == '__main__':
     ##################################
     # Get the dataset
     ##################################
-    dataset = Dataset (args.dataset_size, dataset_excel_file, args.k_fold, args.label, args.car_ident_flag, args.get_feature_importance_flag)
+    dataset = Dataset (args.dataset_size, dataset_excel_file, args.k_fold, args.label, args.car_ident_flag, args.get_feature_importance_flag, args.ensemble_NN_flag)
     total_data  = dataset.X_total_set
     total_label = dataset.y_total_set
     

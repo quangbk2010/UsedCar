@@ -96,7 +96,7 @@ class MultiColumnOutlierRemove:
         return self.fit(X,y).transform(X)
 
 class Dataset ():
-    def __init__(self, dataset_size, dataset_excel_file, k_fold, label, car_ident_flag, get_feature_importance_flag):
+    def __init__(self, dataset_size, dataset_excel_file, k_fold, label, car_ident_flag, get_feature_importance_flag, ensemble_NN_flag):
         """
             Loading data from csv file
         """
@@ -327,6 +327,7 @@ class Dataset ():
 
         # Only keep the cars with car's age <= 10 years
         total_dataset = total_dataset [total_dataset ["year_diff"] <= 10]
+        print ("10.", total_dataset.shape)
 
         if label == "sale_duration":
             total_dataset["price_raw"] = total_dataset ["price"]
@@ -410,7 +411,7 @@ class Dataset ():
 
         rm_idx_file  = "./test_rm_idx.txt"
         outlier_file = "./test_outlier_items.xlsx"
-        if os.path.isfile (rm_idx_file) == True:
+        if os.path.isfile (rm_idx_file) == True and ensemble_NN_flag == 0:
             # Remove outliers that the coresponding indexes are saved in a file
             with open (rm_idx_file) as f:
                 rm_idx = f.readlines()
@@ -454,7 +455,7 @@ class Dataset ():
 
         #print (min (self.y_total_set)) 
         #print (max (self.y_total_set)) 
-        #sys.exit (-1)
+        print (self.d_ident)
         
     
     def get_total_dataset (self):
