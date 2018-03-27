@@ -1965,7 +1965,9 @@ class Tensor_NN (Dataset, Sklearn_model):
         ## Only concern the feature importance of specific cars
         print (test_data.shape)
         print (test_data[:5,:])
-        idx = np.where (test_data[:, 2] == 1) # (0+2=)2-> 1101, (24+2=)26 -> 1132, (45+2=)47 -> 1166 (car class)
+        idx = np.where (test_data[:, 47] == 1) 
+        #NOTE:[maping for Price] (0+2=)2-> 1101, (24+2=)26 -> 1132, (45+2=)47 -> 1166 (car class)
+        #NOTE:[maping for SD]    0-> 1101, 18 -> 1132, 31 -> 1166 (car class)
         test_data = test_data[idx]
         print (test_data.shape)
         #######################################################

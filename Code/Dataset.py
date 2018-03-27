@@ -377,16 +377,18 @@ class Dataset ():
         #print (len (l_feature))
         #sys.exit (-1)
 
-        if car_ident_flag == 1:
+        if car_ident_flag == 1: # phai bang 1, bang 0 de check a specific car
             self.sorted_features = ["maker_code_","class_code_"] + self.sorted_features 
             self.sorted_features += self.car_ident
             l3 = len (self.car_ident)
             for i in range (l3):
-                l_feature.append (len (np.unique (total_dataset [self.car_ident [i]]))) # NOTE: We can see the list of maker_code, class_code here
+                l_feature.append (len (np.unique (total_dataset [self.car_ident [i]]))) 
                 if i == 0:
                     maker_len = l_feature[-1]
                 elif i == 1:
                     class_len = l_feature[-1]
+                    #print (np.unique (total_dataset [self.car_ident [i]]))# NOTE: We can see the list of maker_code, class_code here
+                    #sys.exit (-1)
             l_feature = [maker_len, class_len] + l_feature
 
 
