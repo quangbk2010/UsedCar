@@ -85,7 +85,7 @@ class Sklearn_model (Dataset):
 
         elif reg_type == "DecisionTreeRegressor":
             regr = tree.DecisionTreeRegressor() 
-            param_grid = [ {"criterion":["mse"], "min_samples_split":[5, 10, 20], "max_depth":[10, 20, 30]}]
+            param_grid = [ {"criterion":["mse"], "min_samples_split":[10], "max_depth":[20]}]
 
         elif reg_type == "GradientBoostingRegressor":
             regr = ensemble.GradientBoostingRegressor()
@@ -370,7 +370,7 @@ class Tensor_NN (Dataset, Sklearn_model):
                 epoch_train_smape_val = total_smape/len_train
                 print('\n\nEpoch: %03d' % (epoch), "Avg. training rmse:", epoch_train_rmse_val, "mae:", epoch_train_mae_val, 'relative_err:', epoch_train_relative_err_val, "smape:", epoch_train_smape_val)
                 
-                if epoch == self.epoch or (epoch + 1)%10 == 0: 
+                if epoch == self.epoch-1 or (epoch + 1)%10 == 0: 
                     ckpt_file = model_path
                     save_path = saver.save (sess, ckpt_file) #"../checkpoint/baseline/test4")#model_path + "_" + str (epoch)) 
                     print('Model saved in file: %s' % save_path)
@@ -1753,22 +1753,27 @@ class Tensor_NN (Dataset, Sklearn_model):
         line['pred'] = new_predicted_train_label.reshape (new_predicted_train_label.shape[0])
         np.savetxt (y_predict_file_name + "_train_after_remove_" + str (removal_percent), line, fmt="%.2f\t%.2f")"""
 
-    def get_features_importance_baseline_NN (self, train_data, train_label, list_test_data, test_label, model_path, features):
-        meta_file = model_path + "test4.meta"
-        ckpt_file = model_path + "test4" 
-        #meta_file = "../checkpoint/baseline/test4.meta" 
-        #ckpt_file = "../checkpoint/baseline/test4" 
+    def get_features_importance_baseline_NN (self, train_data, train_label, test_data, test_label, model_path, features, l_feature):
+        #meta_file = model_path + "_4.meta"
+        #ckpt_file = model_path + "_4" 
+        meta_file = "../checkpoint/baseline/test4.meta" 
+        ckpt_file = "../checkpoint/baseline/test4" 
         # Train the model based on the train set
         # TODO: Replace this step by using the best model trained 
-        self.train_baseline (train_data, train_label, self.no_neuron, self.no_hidden_layer, self.loss_func, ckpt_file)
+        #self.train_baseline (train_data, train_label, self.no_neuron, self.no_hidden_layer, self.loss_func, ckpt_file)
+
+        #sys.exit (-1)
 
         # Restore the model
         #predicted_train_label, train_rmse_val, train_mae_val, train_relative_err_val, train_smape_val = self.restore_model_NN_baseline (train_data, train_label, meta_file, ckpt_file, train_flag=0)
         (predicted_train_label, train_rmse_val, train_mae_val, train_relative_err_val, train_smape_val, train_arr_relative_err) = self.batch_computation_baseline (5, train_data, train_label, meta_file, ckpt_file)
         print ("Train: ", train_rmse_val, train_mae_val, train_relative_err_val, train_smape_val)
 
+        # Create the list of permutation data
+        list_test_data, idx = self.get_permutation_dataset_list (l_feature, test_data)
+        test_label = test_label [idx]
+
         len_list_test = len (list_test_data)
-        importance_score = {}
         df_importance_score = pd.DataFrame (columns=["feature", "rmse", "mae", "rel_err", "smape"])
         for i in range (len_list_test):
             print ("===Test set:", i)
@@ -1780,12 +1785,10 @@ class Tensor_NN (Dataset, Sklearn_model):
                 init_rel_err = test_relative_err_val
                 init_smape_err = test_smape_val
             else:
-                #importance_score [features[i-1]] = [test_rmse_val - init_rmse_err, test_mae_val - init_mae_err, test_relative_err_val - init_rel_err, test_smape_val - init_smape_err]
                 df_importance_score.loc[len (df_importance_score)] = [features[i-1], test_rmse_val - init_rmse_err, test_mae_val - init_mae_err, test_relative_err_val - init_rel_err, test_smape_val - init_smape_err]
 
         print ("\n\n ===============")
-        #print (importance_score)
-        np.savetxt ("./importance_score.txt", df_importance_score, fmt="%s\t%.2f\t%.2f\t%.2f\t%.2f")
+        np.savetxt ("./importance_score_baseline.txt", df_importance_score, fmt="%s\t%.2f\t%.2f\t%.2f\t%.2f")
 
     def test_affect_price_sales_duration (self, train_data, train_label, test_data, test_label, d_ident, d_remain, model_path, y_predict_file_name):
         meta_file = model_path + ".meta"# + "_49.meta"
@@ -1817,21 +1820,22 @@ class Tensor_NN (Dataset, Sklearn_model):
         
 
     def get_features_importance_car2vect (self, train_data, train_label, test_data, test_label, total_car_ident, d_ident, d_remain, model_path, features, l_feature):
-        meta_file = model_path + "_9.meta"# + "_2.meta"
-        ckpt_file = model_path + "_9" 
-        #meta_file = model_path + "test4.meta"
-        #ckpt_file = model_path + "test4" 
+        meta_file = model_path + "_43.meta"# 
+        ckpt_file = model_path + "_43" 
         # Train the model based on the train set
         # TODO: Replace this step by using the best model trained 
-        #self.train_car2vect(train_data, train_label, total_car_ident, d_ident, self.d_embed, d_remain, self.no_neuron, self.no_neuron_embed, self.loss_func, ckpt_file)
+        self.train_car2vect(train_data, train_label, total_car_ident, d_ident, self.d_embed, d_remain, self.no_neuron, self.no_neuron_embed, self.loss_func, ckpt_file)
         print (len (features), len (l_feature))
+
+        sys.exit (-1)
 
         # Restore the model
         (predicted_train_label, train_rmse_val, train_mae_val, train_relative_err_val, train_smape_val, train_arr_relative_err) = self.batch_computation_car2vect (5, train_data, train_label, d_ident, d_remain, meta_file, ckpt_file)
         print ("Train: ", train_rmse_val, train_mae_val, train_relative_err_val, train_smape_val)
 
         # Create the list of permutation data
-        list_test_data = self.get_permutation_dataset_list (l_feature, test_data)
+        list_test_data, idx = self.get_permutation_dataset_list (l_feature, test_data)
+        test_label = test_label [idx]
 
         len_list_test = len (list_test_data)
         df_importance_score = pd.DataFrame (columns=["feature", "rmse", "mae", "rel_err", "smape"])
@@ -1839,6 +1843,7 @@ class Tensor_NN (Dataset, Sklearn_model):
             print ("===Test set:", i)
             test_data_remain = list_test_data[i][:, 0:d_remain]
             test_data_ident  = list_test_data[i][:, d_remain:]
+
             _, test_rmse_val, test_mae_val, test_relative_err_val, test_smape_val = self.restore_model_car2vect (test_data_ident, test_data_remain, test_label, meta_file, ckpt_file, train_flag=0)
             print (test_rmse_val, test_mae_val, test_relative_err_val, test_smape_val)
             if i == 0:
@@ -1956,6 +1961,14 @@ class Tensor_NN (Dataset, Sklearn_model):
         length = len (l_feature)
         sum_l = 0
         arr_sum_l = []
+        ########################################################
+        ## Only concern the feature importance of specific cars
+        print (test_data.shape)
+        print (test_data[:5,:])
+        idx = np.where (test_data[:, 2] == 1) # (0+2=)2-> 1101, (24+2=)26 -> 1132, (45+2=)47 -> 1166 (car class)
+        test_data = test_data[idx]
+        print (test_data.shape)
+        #######################################################
         list_test_data = [test_data]
         for i in range (length-1):
             sum_l += l_feature[i]
@@ -1971,7 +1984,7 @@ class Tensor_NN (Dataset, Sklearn_model):
             else:
                 test_data_copy [:, arr_sum_l [i]:] = np.random.permutation (X[i]) 
             list_test_data.append (test_data_copy)
-        return list_test_data
+        return (list_test_data, idx)
 
     def retrain_car2vect_from_total_set (self, total_data, total_label, total_car_ident_code, total_act_adv_date, total_sale_date, d_ident, d_remain, y_predict_file_name, mean_error_file_name, x_ident_file_name, x_embed_file_name, dataset_size, removal_percent, ensemble_flag, l_feature, features):# add first_adv_date, sale_date
     #def retrain_car2vect_from_total_set (self, total_data, total_label, total_car_ident_code, total_act_adv_date, d_ident, d_remain, y_predict_file_name, mean_error_file_name, x_ident_file_name, x_embed_file_name, dataset_size, removal_percent, ensemble_flag, l_feature, features):
@@ -1990,8 +2003,8 @@ class Tensor_NN (Dataset, Sklearn_model):
         print ("\n\n===========Train total set")
         # If comment the below line, you need to check the checkpoint file in regressor1 (it should be compatible with the dataset) 
         # Flexible rel_err.
-        #self.epoch=20
-        #self.train_car2vect(train_data=total_data, train_label=total_label, total_car_ident=total_car_ident_code, d_ident=d_ident, d_embed=self.d_embed, d_remain=d_remain, no_neuron=self.no_neuron, no_neuron_embed=self.no_neuron_embed, loss_func=self.loss_func, model_path=model_path)
+        self.epoch=20
+        self.train_car2vect(train_data=total_data, train_label=total_label, total_car_ident=total_car_ident_code, d_ident=d_ident, d_embed=self.d_embed, d_remain=d_remain, no_neuron=self.no_neuron, no_neuron_embed=self.no_neuron_embed, loss_func=self.loss_func, model_path=model_path)
         # Only use the below line for Gradient Boosting 
         #self.train_car2vect(train_data=total_data, train_label=total_label, total_car_ident=total_car_ident_code, d_ident=d_ident, d_embed=self.d_embed, d_remain=d_remain, no_neuron=self.no_neuron, no_neuron_embed=self.no_neuron_embed, loss_func="rel_err", model_path=model_path)
 
@@ -2023,6 +2036,7 @@ class Tensor_NN (Dataset, Sklearn_model):
             raise ValueError ("Removal perentage is 0!")
         print ("Time for remove outliers from dataset: %.3f" % (time.time() - stime))
 
+        sys.exit (-1)
         # Train the car2vect model based on the new dataset
         # Firstly, create the necessary data for car2vect model
         ################################################

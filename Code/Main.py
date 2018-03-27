@@ -166,9 +166,9 @@ if __name__ == '__main__':
     ##################################
     if args.model_set == "sklearn":
         model = Sklearn_model (dataset_size)
-        #for reg_type in ["Linear", "Ridge", "Lasso", "DecisionTreeRegressor", "RandomForestRegressor", "AdaBoostRegressor", "GradientBoostingRegressor"]:
-        #    model.sklearn_regression(reg_type, train_data, train_label, test_data, test_label)
-        model.knn (train_data, train_label, test_data, test_label)
+        for reg_type in ["DecisionTreeRegressor"]:#"Linear", "Ridge", "Lasso", "DecisionTreeRegressor", "RandomForestRegressor", "AdaBoostRegressor", "GradientBoostingRegressor"]:
+            model.sklearn_regression(reg_type, train_data, train_label, test_data, test_label)
+        #model.knn (train_data, train_label, test_data, test_label)
 
     elif args.model_set == "DL":
         nn = Tensor_NN (args)
@@ -227,7 +227,7 @@ if __name__ == '__main__':
             nn.car2vect (train_data=train_data, train_label=train_label, test_data=test_data, test_label=test_label, total_car_ident=total_car_ident_code, total_act_adv_date=total_act_adv_date, total_sale_date=total_sale_date, d_ident=dataset.d_ident, d_embed=nn.d_embed, d_remain=dataset.d_remain, no_neuron=nn.no_neuron, no_neuron_embed=nn.no_neuron_embed, loss_func=nn.loss_func, model_path=model_path, y_predict_file_name=y_predict_file_name, mean_error_file_name=mean_error_file_name, x_ident_file_name=x_ident_file_name, x_embed_file_name=x_embed_file_name, retrain=-1) 
 
         elif nn.car_ident_flag == 1:
-            model_path = nn.model_dir + "/car2vect/test" #[{0}]{1}_{2}_car2vect_{3}_{4}_{5}_{6}".format (dataset_size, nn.model_name, args.label, nn.no_neuron, nn.no_neuron_embed, nn.d_embed, nn.loss_func)
+            model_path = nn.model_dir + "/rm_outliers_total_set_NN/car2vect/regressor{0}/{1}_{2}_{3}_car2vect_{4}x1_{5}x1_total_set".format (2, dataset_size, nn.model_name, nn.label, nn.no_neuron_embed, nn.no_neuron)
             if args.get_feature_importance_flag == True:
                 nn.get_features_importance_car2vect (train_data, train_label, test_data, test_label, total_car_ident_code, dataset.d_ident, dataset.d_remain, model_path, sorted_features, l_feature)
             else:
@@ -237,7 +237,7 @@ if __name__ == '__main__':
         else:
             model_path = nn.model_dir + "/baseline/[{0}]{1}_{2}_baseline_{3}_{4}_{5}".format (dataset_size, nn.model_name, args.label, nn.no_neuron, nn.no_hidden_layer, nn.loss_func)
             if args.get_feature_importance_flag == True:
-                nn.get_features_importance_baseline_NN (train_data=X_train, train_label=y_train, list_test_data=list_X_test, test_label=y_test, model_path=model_path, features=sorted_features) 
+                nn.get_features_importance_baseline_NN (train_data, train_label, test_data, test_label, model_path, sorted_features, l_feature) 
             else:
                 best_epoch = nn.baseline (train_data=train_data, train_label=train_label, test_data=test_data, test_label=test_label, total_car_ident=total_car_ident_code, total_act_adv_date=total_act_adv_date, total_sale_date=total_sale_date, no_neuron=nn.no_neuron, no_hidden_layer = nn.no_hidden_layer, loss_func=nn.loss_func, model_path=model_path, y_predict_file_name=y_predict_file_name, x_ident_file_name=x_ident_file_name, mean_error_file_name=mean_error_file_name)
 

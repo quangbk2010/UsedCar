@@ -326,7 +326,7 @@ class Dataset ():
         #    print (total_dataset[feature][:3])
 
         # Only keep the cars with car's age <= 10 years
-        total_dataset = total_dataset [total_dataset ["year_diff"] <= 10]
+        total_dataset = total_dataset [total_dataset ["year_diff"] <= 10] #HERE
         print ("10.", total_dataset.shape)
 
         if label == "sale_duration":
@@ -374,12 +374,15 @@ class Dataset ():
         for i in range (l2):
             l_feature.append (1)
 
+        #print (len (l_feature))
+        #sys.exit (-1)
+
         if car_ident_flag == 1:
             self.sorted_features = ["maker_code_","class_code_"] + self.sorted_features 
             self.sorted_features += self.car_ident
             l3 = len (self.car_ident)
             for i in range (l3):
-                l_feature.append (len (np.unique (total_dataset [self.car_ident [i]])))
+                l_feature.append (len (np.unique (total_dataset [self.car_ident [i]]))) # NOTE: We can see the list of maker_code, class_code here
                 if i == 0:
                     maker_len = l_feature[-1]
                 elif i == 1:
@@ -411,7 +414,7 @@ class Dataset ():
 
         rm_idx_file  = "./test_rm_idx.txt"
         outlier_file = "./test_outlier_items.xlsx"
-        if os.path.isfile (rm_idx_file) == True and ensemble_NN_flag == 0:
+        """if os.path.isfile (rm_idx_file) == True and ensemble_NN_flag == 0: #HERE
             # Remove outliers that the coresponding indexes are saved in a file
             with open (rm_idx_file) as f:
                 rm_idx = f.readlines()
@@ -425,7 +428,15 @@ class Dataset ():
 
             print ("######## Length of dataset before removing outlier:", len (total_dataset))
             total_dataset = total_dataset.drop (total_dataset.index [rm_idx])
-            print ("######## Length of dataset after removing outlier:", len (total_dataset))
+            print ("######## Length of dataset after removing outlier:", len (total_dataset))"""
+
+
+        #############
+        ## Use only n-samples from the dataset
+        #n_samples = 5000
+        #total_dataset = total_dataset.sample (n=n_samples)
+        #total_dataset = total_dataset [total_dataset ["class_code"] == 1101]
+        #############
 
         if dataset_type == "new":
             self.act_adv_date = np.array (total_dataset ["first_adv_date"] ).reshape ((-1,1))
@@ -434,6 +445,7 @@ class Dataset ():
         self.sale_date = np.array (total_dataset ["sale_date"]).reshape ((-1,1))
 
         print ("Time for Loading and preprocessing dataset: %.3f" % (time.time() - stime))
+
         self.total_dataset = total_dataset
         self.k_fold = k_fold
        
@@ -453,10 +465,6 @@ class Dataset ():
         #print (total_dataset ["sale_duration"][:5])
         #print (self.y_total_set[:5])
 
-        #print (min (self.y_total_set)) 
-        #print (max (self.y_total_set)) 
-        print (self.d_ident)
-        
     
     def get_total_dataset (self):
         return self.total_dataset
@@ -615,16 +623,20 @@ class Dataset ():
         print ("car_ident_codes", car_ident_codes.shape)
 
         print (features1)
-        X1 = np.array (dataset[features1])  
-        enc = OneHotEncoder(sparse = False)
-        X1 = enc.fit_transform (X1)
-        print ("X1.shape", X1.shape) 
+        if using_one_hot_flag == 1:
+            X1 = np.array (dataset[features1])  
+            enc = OneHotEncoder(sparse = False)
+            X1 = enc.fit_transform (X1)
+            print ("X1.shape", X1.shape) 
+        else:
+            X = np.array (dataset[self.features]) 
+            print ("X.shape", X.shape) 
+            return (car_ident_codes, X)
         
         print (self.features_not_need_encoding)
         X2 = np.array (dataset[self.features_not_need_encoding]) 
         X = np.concatenate ((X1, X2), axis = 1) 
         print ("X2.shape", X2.shape)
-
 
         return (car_ident_codes, X)
 
@@ -641,11 +653,11 @@ class Dataset ():
             + the result encoder
         
         """ 
-        X1 = np.array (dataset[self.car_ident + self.features_need_encoding])#["adv_month"] +  
+        X1 = np.array (dataset[self.car_ident + self.features_need_encoding])  
         X1 = enc.transform (X1)
         print ("X1.shape", X1.shape)
 
-        X2 = np.array (dataset[self.features_not_need_encoding])#["year_diff"] + 
+        X2 = np.array (dataset[self.features_not_need_encoding]) 
         X = np.concatenate ((X2, X1), axis = 1) 
         print ("X2.shape", X2.shape)
         return X
