@@ -2084,8 +2084,8 @@ class Tensor_NN (Dataset, Sklearn_model):
         print ("\n\n===========Train total set")
         # If comment the below line, you need to check the checkpoint file in regressor1 (it should be compatible with the dataset) 
         # Flexible rel_err.
-        self.epoch=20
-        self.train_car2vect(train_data=total_data, train_label=total_label, total_car_ident=total_car_ident_code, d_ident=d_ident, d_embed=self.d_embed, d_remain=d_remain, no_neuron=self.no_neuron, no_neuron_embed=self.no_neuron_embed, loss_func=self.loss_func, model_path=model_path)
+        #self.epoch=20
+        #self.train_car2vect(train_data=total_data, train_label=total_label, total_car_ident=total_car_ident_code, d_ident=d_ident, d_embed=self.d_embed, d_remain=d_remain, no_neuron=self.no_neuron, no_neuron_embed=self.no_neuron_embed, loss_func=self.loss_func, model_path=model_path)
         # Only use the below line for Gradient Boosting 
         #self.train_car2vect(train_data=total_data, train_label=total_label, total_car_ident=total_car_ident_code, d_ident=d_ident, d_embed=self.d_embed, d_remain=d_remain, no_neuron=self.no_neuron, no_neuron_embed=self.no_neuron_embed, loss_func="rel_err", model_path=model_path)
 
@@ -2182,7 +2182,7 @@ class Tensor_NN (Dataset, Sklearn_model):
             
             print ("\n\n===========Predictor2")
             self.epoch=50
-            best_epoch = self.car2vect (train_data=new_train_data, train_label=new_train_label, test_data=new_test_data, test_label=new_test_label, total_car_ident=new_total_car_ident_code, total_act_adv_date=new_total_act_adv_date, total_sale_date=new_total_sale_date, d_ident=d_ident, d_embed=self.d_embed, d_remain=d_remain, no_neuron=self.no_neuron, no_neuron_embed=self.no_neuron_embed, loss_func=self.loss_func, model_path=model_path, y_predict_file_name=y_predict_file_name_, mean_error_file_name=mean_error_file_name_, x_ident_file_name=x_ident_file_name_, x_embed_file_name=x_embed_file_name_, retrain=0) # if use retrain=1 -> initialize weights from the previous model, -1 if already have the trained model
+            best_epoch = self.car2vect (train_data=new_train_data, train_label=new_train_label, test_data=new_test_data, test_label=new_test_label, total_car_ident=new_total_car_ident_code, total_act_adv_date=new_total_act_adv_date, total_sale_date=new_total_sale_date, d_ident=d_ident, d_embed=self.d_embed, d_remain=d_remain, no_neuron=self.no_neuron, no_neuron_embed=self.no_neuron_embed, loss_func=self.loss_func, model_path=model_path, y_predict_file_name=y_predict_file_name_, mean_error_file_name=mean_error_file_name_, x_ident_file_name=x_ident_file_name_, x_embed_file_name=x_embed_file_name_, retrain=-1) # if use retrain=1 -> initialize weights from the previous model, -1 if already have the trained model
             print ("Best epoch: ", best_epoch)
 
             """#####################
