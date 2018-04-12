@@ -55,7 +55,7 @@ if __name__ == '__main__':
     parser.add_argument('--saved_period', type=int, default=100, help='save checkpoint per X epoch') # 200
     parser.add_argument('--output_dir', type=str, default = '../Results')
     parser.add_argument('--scale_label', type=int, default=0)
-    parser.add_argument('--use_gpu', type=bool, default=True)
+    #parser.add_argument('--use_gpu', type=bool, default=True)
 
     #hyper parameter
     parser.add_argument('--epoch', type=int, default = 10) #2000 # 100
@@ -76,7 +76,7 @@ if __name__ == '__main__':
 
     print ("2.", device_lib.list_local_devices())
     args = parser.parse_args()
-    if args.use_gpu == True:
+    if use_gpu == True:
         os.environ['CUDA_VISIBLE_DEVICES'] = args.gpu_idx
     else:
         os.environ['CUDA_VISIBLE_DEVICES'] = "-1"
@@ -247,6 +247,14 @@ if __name__ == '__main__':
 
         elif args.ensemble_NN_flag == 7:
             nn.retrain_car2vect_from_total_set (total_data=total_data, total_label=total_label, total_car_ident_code=total_car_ident_code, total_act_adv_date=total_act_adv_date, total_sale_date=total_sale_date, d_ident=dataset.d_ident, d_remain=dataset.d_remain, y_predict_file_name=y_predict_file_name, mean_error_file_name=mean_error_file_name, x_ident_file_name=x_ident_file_name, x_embed_file_name=x_embed_file_name, dataset_size=dataset_size, removal_percent=args.outliers_removal_percent, ensemble_flag=0, l_feature=l_feature, features=sorted_features)
+            running_time = time.time() - stime
+            print ("Time for running: %.3f" % (running_time))
+            line = np.zeros ((0, 4))
+            #content=np.array (["use_gpu", "epoch", "batch_size", "running_time"]).reshape (1, 4)
+            content = np.array ([use_gpu, args.epoch, args.batch_size, running_time]).reshape (1, 4)
+            line = np.concatenate ((line,content), axis = 0)
+            with open ("./test_outliers_rmval_time_{0}.txt".format (use_gpu), "ab") as file:
+                np.savetxt (file, line, fmt="%s\t%s\t%s\t%s")
 
         elif args.ensemble_NN_flag == 71:
             nn.retrain_car2vect_from_total_set (total_data=total_data, total_label=total_label, total_car_ident_code=total_car_ident_code, total_act_adv_date=total_act_adv_date, total_sale_date=total_sale_date, d_ident=dataset.d_ident, d_remain=dataset.d_remain, y_predict_file_name=y_predict_file_name, mean_error_file_name=mean_error_file_name, x_ident_file_name=x_ident_file_name, x_embed_file_name=x_embed_file_name, dataset_size=dataset_size, removal_percent=args.outliers_removal_percent, ensemble_flag=-1, l_feature=l_feature, features=sorted_features) # The 2 last attributes used for calculating features importance
@@ -299,9 +307,9 @@ if __name__ == '__main__':
                 print ("Time for running: %.3f" % (running_time))
                 line = np.zeros ((0, 4))
                 #content=np.array (["use_gpu", "epoch", "batch_size", "running_time"]).reshape (1, 4)
-                content = np.array ([args.use_gpu, args.epoch, args.batch_size, running_time]).reshape (1, 4)
+                content = np.array ([use_gpu, args.epoch, args.batch_size, running_time]).reshape (1, 4)
                 line = np.concatenate ((line,content), axis = 0)
-                with open ("./test_time_{0}.txt".format (args.use_gpu), "ab") as file:
+                with open ("./test_time_{0}.txt".format (use_gpu), "ab") as file:
                     np.savetxt (file, line, fmt="%s\t%s\t%s\t%s")
 
         else:

@@ -48,7 +48,9 @@ from scipy.stats import truncnorm
 
 # Tensorflow libraries
 # Determine whether use gpu or not
-os.environ['CUDA_VISIBLE_DEVICES'] = "-1"
+use_gpu = True
+if use_gpu == False:
+    os.environ['CUDA_VISIBLE_DEVICES'] = "-1"
 import tensorflow as tf
 import tensorflow.contrib.slim as slim
 from tensorflow.python.client import device_lib
