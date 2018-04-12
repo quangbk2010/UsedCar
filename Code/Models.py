@@ -1063,7 +1063,7 @@ class Tensor_NN (Dataset, Sklearn_model):
             if retrain == -1:
                 print ("=====Restore the trained model...")
                 # Apply the trained model onto the test data
-                pre_model_path = self.model_dir + "/rm_outliers_total_set_NN/car2vect/regressor{0}/{1}_{2}_{3}_car2vect_{4}x1_{5}x1_total_set_{6}".format (2, "new", self.model_name, self.label, self.no_neuron_embed, self.no_neuron, 2)
+                pre_model_path = self.model_dir + "/rm_outliers_total_set_NN/car2vect/regressor{0}/{1}_{2}_{3}_car2vect_{4}x1_{5}x1_total_set_{6}".format (2, "new", self.model_name, self.label, self.no_neuron_embed, self.no_neuron, 17)
                 meta_file = pre_model_path + ".meta"
                 ckpt_file = pre_model_path 
                 train_flag = 2
