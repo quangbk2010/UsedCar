@@ -7,6 +7,7 @@
 #######################
 #baseline NN# python Main.py --model_set DL --dataset_size full --ensemble_NN_flag 0 --loss_func rel_err --car_ident_flag 0 --no_neuron 1000 --no_hidden_layer 1 --epoch 30
 #car2vect NN# python Main.py --model_set DL --dataset_size full --ensemble_NN_flag 0 --loss_func rel_err --car_ident_flag 1 --no_neuron 1000 --no_neuron_embed 6000 --epoch 30
+#baseline for SD prediction: python Main.py  --model_set DL --dataset_size new --ensemble_NN_flag 0 --loss_func mse --car_ident_flag 0 --no_neuron 1000 --no_hidden_layer 1 --label sale_duration --epoch 10
 
 #######################
 # Test feature importance
@@ -31,8 +32,11 @@
 #Retrain the model after removing outliers from total dataset with car2vect, and apply Bagging# python Main.py --model_set DL --dataset_size full --ensemble_NN_flag 75 --loss_func rel_err --car_ident_flag 1 --no_neuron 1000 --no_neuron_embed 6000 --epoch 50 --outliers_removal_percent 1 --num_regressor 3 --sample_ratio 0.5
 
 #######################
-python Main.py --model_set DL --dataset_size full --ensemble_NN_flag 4 --car_ident_flag 0 --no_neuron 1000  --no_hidden_layer 2 --epoch 30 --num_regressor 3 --sample_ratio 0.5
+#python Main.py --model_set DL --dataset_size full --ensemble_NN_flag 4 --car_ident_flag 0 --no_neuron 1000  --no_hidden_layer 2 --epoch 30 --num_regressor 3 --sample_ratio 0.5
 
+#######################
+# Test uncertainty of model
+python Main.py --model_set DL --dataset_size new --ensemble_NN_flag 7 --no_neuron 6000 --no_neuron_embed 6000 --car_ident_flag 1 --outliers_removal_percent 5 --dropout 0.5
 #######################
 #banana2
 cd ~/UsedCar/Code/Dataframe/
