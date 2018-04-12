@@ -41,19 +41,32 @@ from sklearn.cluster import KMeans
 from sklearn.neighbors import KNeighborsRegressor
 
 # Scipy libraries
+import scipy
 from scipy import stats
 from scipy.stats.stats import pearsonr
 from scipy.stats import truncnorm
 
 # Tensorflow libraries
+# Determine whether use gpu or not
+use_gpu = True
+if use_gpu == False:
+    os.environ['CUDA_VISIBLE_DEVICES'] = "-1"
 import tensorflow as tf
 import tensorflow.contrib.slim as slim
+from tensorflow.python.client import device_lib
 
 # For plotting figures
 import matplotlib.pyplot as plt
 
 # Other libraries
 import codecs
+import tqdm 
+
+
+#print ("{0}, {1}, {2}, {3}".format (np.__version__, pd.__version__, scipy.__version__, tf.__version__))
+
+np.set_printoptions (threshold = np.nan)
+pd.set_option('display.max_columns', None)
 
 dataset_type = "new" # "old", "new"
 
@@ -72,9 +85,11 @@ if dataset_type == "old":
 else:
     #features = ["class_code","car_code","model_code","car_type","year","vehicle_mile","reg_year","year_diff"] # NOTE Try with KNN for price prediction #"maker_code",
     #features = ["day_diff","views","price","reg_year","class_code","vehicle_mile","car_type","trading_complex","model_code"] # NOTE Try with KNN for sales duration prediction 
-    #features = ["maker_code","class_code","car_code","model_code","grade_code","car_type","year","trans_mode","fuel_type","vehicle_mile","cylinder_disp","tolerance_history","sale_history","rental_history","no_severe_accident","no_severe_water_accident","no_moderate_water_accident","total_no_accident","views","no_message_contact","no_call_contact","option_navigation","option_sunLoop","option_smartKey","option_xenonLight","option_heatLineSheet","option_ventilationSheet","option_rearSensor","option_curtainAirbag","no_cover_side_recovery","no_cover_side_exchange","no_corrosive_part","no_structure_exchange","recovery_fee","branch","affiliate_code","region","trading_complex","min_price","max_price","refund","vain_effort","guarantee","selected_color","mortgage","tax_unpaid","interest","reg_year","reg_month","day_diff","adv_month"] # 51 features, price prediction, REMOVE: seller_id, trading_firm_id, input_color, ADD: adv_month,reg_year # NOTE: best until 2018-03-05, replaced year_diff by day_diff in 2018-03-12
+    features = ["maker_code","class_code","car_code","model_code","grade_code","car_type","year","trans_mode","fuel_type","vehicle_mile","cylinder_disp","tolerance_history","sale_history","rental_history","no_severe_accident","no_severe_water_accident","no_moderate_water_accident","total_no_accident","views","no_message_contact","no_call_contact","option_navigation","option_sunLoop","option_smartKey","option_xenonLight","option_heatLineSheet","option_ventilationSheet","option_rearSensor","option_curtainAirbag","no_cover_side_recovery","no_cover_side_exchange","no_corrosive_part","no_structure_exchange","recovery_fee","branch","affiliate_code","region","trading_complex","min_price","max_price","refund","vain_effort","guarantee","selected_color","mortgage","tax_unpaid","interest","reg_year","reg_month","day_diff","adv_month"] # 51 features, price prediction, REMOVE: seller_id, trading_firm_id, input_color, ADD: adv_month,reg_year # NOTE: best until 2018-03-05, replaced year_diff by day_diff in 2018-03-12
 
-    features = ["maker_code","class_code","car_code","model_code","grade_code","car_type","year","trans_mode","fuel_type","vehicle_mile","cylinder_disp","tolerance_history","sale_history","rental_history","no_severe_accident","no_severe_water_accident","no_moderate_water_accident","total_no_accident","views","no_message_contact","no_call_contact","option_navigation","option_sunLoop","option_smartKey","option_xenonLight","option_heatLineSheet","option_ventilationSheet","option_rearSensor","option_curtainAirbag","no_cover_side_recovery","no_cover_side_exchange","no_corrosive_part","no_structure_exchange","recovery_fee","branch","affiliate_code","region","trading_complex","min_price","max_price","refund","vain_effort","guarantee","selected_color","mortgage","tax_unpaid","interest","reg_year","reg_month", "day_diff", "adv_month","trading_firm_id","seller_id","price"] # 54 features, SD prediction, ADD: price, seller_id, trading_firm_id 
+    #features = ["maker_code","class_code","car_code","model_code","grade_code","car_type","year","trans_mode","fuel_type","vehicle_mile","cylinder_disp","tolerance_history","sale_history","rental_history","no_severe_accident","no_severe_water_accident","no_moderate_water_accident","total_no_accident","views","no_message_contact","no_call_contact","option_navigation","option_sunLoop","option_smartKey","option_xenonLight","option_heatLineSheet","option_ventilationSheet","option_rearSensor","option_curtainAirbag","no_cover_side_recovery","no_cover_side_exchange","no_corrosive_part","no_structure_exchange","recovery_fee","branch","affiliate_code","region","trading_complex","min_price","max_price","refund","vain_effort","guarantee","selected_color","mortgage","tax_unpaid","interest","reg_year","reg_month", "day_diff", "adv_month","trading_firm_id","seller_id","price"] # 54 features, SD prediction, ADD: price, seller_id, trading_firm_id 
+    #features = ["maker_code","class_code","car_code","model_code","grade_code","car_type","year","trans_mode","fuel_type","vehicle_mile","cylinder_disp","views","option_navigation","option_sunLoop","option_smartKey","option_xenonLight","option_heatLineSheet","option_ventilationSheet","option_rearSensor","option_curtainAirbag","no_cover_side_recovery","no_cover_side_exchange","no_corrosive_part","no_structure_exchange","region","trading_complex","selected_color","tax_unpaid","reg_year","reg_month","day_diff","adv_month","price"] # 33 features, SD prediction
+    #features = ["day_diff","reg_year","views","price","vehicle_mile","car_code","trading_complex","model_code","region","grade_code","reg_month","year","selected_color","adv_month"] # 14 features, SD prediction
 
 
 """ Using cross validation or not"""
@@ -152,5 +167,6 @@ if using_one_hot_flag == 0:
 else:
     feature_coding = "With onehot"
 
+print ("0.", device_lib.list_local_devices())
 
 
