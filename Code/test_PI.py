@@ -47,7 +47,7 @@ def determine_pred_interval (eta=10, percent_threshold=0.95):
 
 res_arr = np.empty ((0, 9))
 
-# Valdation step
+# Valdation step 
 for eta in [1, 5, 10]:
     for muy in [0.9]:#0.8, 0.85, 0.9, 0.95, 0.99]:
         res = determine_pred_interval (eta, muy)
