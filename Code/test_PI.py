@@ -49,7 +49,7 @@ res_arr = np.empty ((0, 9))
 
 # Valdation step
 for eta in [1, 5, 10]:
-    for muy in [0.8]:#, 0.85, 0.9, 0.95, 0.99]:
+    for muy in [0.85]:#0.8, 0.85, 0.9, 0.95, 0.99]:
         res = determine_pred_interval (eta, muy)
         #print (res)
         res_arr = np.concatenate ((res_arr, res), axis=0)
