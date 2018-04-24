@@ -25,7 +25,7 @@ def compute_cwc (data, gama1, gama2, eta=10, muy=0.95, alpha1=0, alpha2=0):
     return (gama1, gama2, eta, alpha1, alpha2, nmpiw, picp, muy, cwc)
 
 def determine_pred_interval (eta=10, percent_threshold=0.95):
-    data = pd.read_csv ("C:/Users/user/Google Drive/Code/Projects/UsedCar/Results/price.txt", sep="\t")
+    data = pd.read_csv ("../Results/price.txt", sep="\t")
     len_data = len (data)
     len1 = int (len_data / 2)
     #print (data.shape)
