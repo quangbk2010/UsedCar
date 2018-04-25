@@ -67,4 +67,4 @@ for eta in tqdm ([1, 5, 10]):
         res = determine_pred_interval (data1, eta, muy)
         #print (res)
         res_arr = np.concatenate ((res_arr, res), axis=0)
-np.savetxt ("./baseline_PIs_0.8.txt", res_arr, fmt="%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.4f\t%.4f\t%.2f\t%.7f")
+np.savetxt ("./baseline_PIs_0.9.txt", res_arr, fmt="%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.4f\t%.4f\t%.2f\t%.7f")
