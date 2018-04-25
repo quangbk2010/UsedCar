@@ -45,13 +45,13 @@ def determine_pred_interval (data1, eta=10, percent_threshold=0.95):
         for gama2 in np.arange (0.05, 0.07, 0.01):#np.arange (0.05, 0.3, 0.05):
             for alpha1 in np.arange (0, 1.1, 0.5):
                 for alpha2 in np.arange (0, 1.1, 0.5):"""
-    a = np.arange (0.01, 0.26, 0.01)
+    a = np.arange (0, 0.26, 0.01)
     b = np.arange (0, 5.1, 0.2)
 
-    for gama1 in  tqdm (a):# ([0.05, 0.07, 0.01]):#np.arange (0.05, 0.3, 0.05):
-        for gama2 in tqdm (a):# ([0.05, 0.07, 0.01]):#np.arange (0.05, 0.3, 0.05):
-            for alpha1 in tqdm (b):# ([0, 1.1, 0.5]):
-                for alpha2 in tqdm (b):# ([0, 1.1, 0.5]):
+    for gama1 in  tqdm (a):
+        for gama2 in tqdm (a):
+            for alpha1 in tqdm (b):
+                for alpha2 in tqdm (b):
                     res = np.vstack ([res, compute_cwc (data1, gama1, gama2, eta, muy, alpha1, alpha2)])
 
     res = res[res[:, -3] > muy]
