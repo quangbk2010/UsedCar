@@ -62,9 +62,9 @@ res_arr = np.empty ((0, 9))
 
 # Valdation step 
 data1, data2 = read_data ()
-for eta in tqdm ([5]): #1, 5, 10]):
+for eta in tqdm ([10]): #1, 5, 10]):
     for muy in [0.95]:#, 0.85, 0.9, 0.95, 0.99]:
         res = determine_pred_interval (data1, eta, muy)
         #print (res)
         res_arr = np.concatenate ((res_arr, res), axis=0)
-np.savetxt ("./baseline_PIs_2.txt", res_arr, fmt="%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.4f\t%.4f\t%.2f\t%.7f")
+np.savetxt ("./baseline_PIs_2_10.txt", res_arr, fmt="%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.4f\t%.4f\t%.2f\t%.7f")
