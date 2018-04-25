@@ -46,7 +46,7 @@ def determine_pred_interval (data1, eta=10, percent_threshold=0.95):
             for alpha1 in np.arange (0, 1.1, 0.5):
                 for alpha2 in np.arange (0, 1.1, 0.5):"""
     a = np.arange (0, 0.26, 0.01)
-    b = np.arange (0, 5.1, 0.2)
+    b = np.arange (4, 5.1, 0.2)
 
     for gama1 in  tqdm (a):
         for gama2 in tqdm (a):
@@ -62,9 +62,9 @@ res_arr = np.empty ((0, 9))
 
 # Valdation step 
 data1, data2 = read_data ()
-for eta in tqdm ([1, 5, 10]):
+for eta in tqdm ([1]): #1, 5, 10]):
     for muy in [0.95]:#, 0.85, 0.9, 0.95, 0.99]:
         res = determine_pred_interval (data1, eta, muy)
         #print (res)
         res_arr = np.concatenate ((res_arr, res), axis=0)
-np.savetxt ("./baseline_PIs.txt", res_arr, fmt="%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.4f\t%.4f\t%.2f\t%.7f")
+np.savetxt ("./baseline_PIs_2.txt", res_arr, fmt="%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.4f\t%.4f\t%.2f\t%.7f")
