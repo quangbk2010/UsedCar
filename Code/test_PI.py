@@ -15,7 +15,7 @@ def compute_cwc (data, gama1, gama2, eta=10, muy=0.95, alpha1=0, alpha2=0):
     R = np.max (data["price"]) - np.min (data["price"])
     data["lower"]  = data["pred_price"] * (1 - gama1) - alpha1 * data["std"]
     data["higher"] = data["pred_price"] * (1 + gama2) + alpha2 * data["std"]
-    mpiw = np.mean (data["pred_price"] * (gama1 + gama2))
+    mpiw = np.mean (data["pred_price"] * (gama1 + gama2) + (alpha1 + alpha2)*data["std"])
     no_in_range    = np.sum ((data["price"] > data["lower"]) & (data["price"] < data["higher"]))
     
     picp = no_in_range / len_data 
@@ -46,7 +46,7 @@ def determine_pred_interval (data1, eta=10, percent_threshold=0.95):
             for alpha1 in np.arange (0, 1.1, 0.5):
                 for alpha2 in np.arange (0, 1.1, 0.5):"""
     a = np.arange (0.01, 0.26, 0.01)
-    b = np.arange (0, 5.1, 0.5)
+    b = np.arange (0, 5.1, 0.2)
 
     for gama1 in  tqdm (a):# ([0.05, 0.07, 0.01]):#np.arange (0.05, 0.3, 0.05):
         for gama2 in tqdm (a):# ([0.05, 0.07, 0.01]):#np.arange (0.05, 0.3, 0.05):
