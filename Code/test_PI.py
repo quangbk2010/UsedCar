@@ -63,7 +63,7 @@ res_arr = np.empty ((0, 9))
 # Valdation step 
 data1, data2 = read_data ()
 for eta in tqdm ([1, 5, 10]):
-    for muy in [0.9]:#, 0.85, 0.9, 0.95, 0.99]:
+    for muy in [0.95]:#, 0.85, 0.9, 0.95, 0.99]:
         res = determine_pred_interval (data1, eta, muy)
         #print (res)
         res_arr = np.concatenate ((res_arr, res), axis=0)
