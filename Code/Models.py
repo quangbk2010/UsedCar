@@ -924,54 +924,6 @@ class Tensor_NN (Dataset, Sklearn_model):
 
             predicted_y, sum_se_val, sum_ae_val, sum_rel_err_val, sum_smape_val, arr_rel_err_val = sess.run([prediction, sum_se, sum_ae, sum_rel_err, sum_smape, arr_rel_err], feed_dict)
             return (predicted_y, sum_se_val, sum_ae_val, sum_rel_err_val, sum_smape_val, arr_rel_err_val)
-    def restore_model_car2vect_ (self, x_ident_, x_remain_, label, meta_file, ckpt_file, train_flag):
-        with tf.Session() as sess:
-            # Load meta graph and restore all variable values
-            s_time = time.time ()
-            saver = tf.train.import_meta_graph (meta_file)
-            saver.restore (sess, ckpt_file)
-            print ("Time for loading the trained model:", time.time() - s_time)
-
-            # Access and create placeholder variables, and create feedict to feed data 
-            graph = tf.get_default_graph ()
-            x_ident = graph.get_tensor_by_name ("x_ident:0")
-            x_remain = graph.get_tensor_by_name ("x_remain:0")
-            Y = graph.get_tensor_by_name ("Y:0")
-            feed_dict = {x_ident:x_ident_, x_remain:x_remain_, Y:label}
-
-            # Now, access the operators that we want to run
-            prediction = graph.get_tensor_by_name ("prediction:0")
-
-            # And feed data
-            if train_flag == 0:
-                rmse= graph.get_tensor_by_name ("rmse:0")
-                mae = graph.get_tensor_by_name ("mae:0")
-                relative_err = graph.get_tensor_by_name ("relative_err:0")
-                smape = graph.get_tensor_by_name ("smape:0")
-
-                predicted_y, rmse_val, mae_val, relative_err_val, smape_val = sess.run([prediction, rmse, mae, relative_err, smape], feed_dict)
-                return (predicted_y, rmse_val, mae_val, relative_err_val, smape_val)
-            elif train_flag == 1:
-                sum_se= graph.get_tensor_by_name ("sum_se:0")
-                sum_ae = graph.get_tensor_by_name ("sum_ae:0")
-                sum_rel_err = graph.get_tensor_by_name ("sum_rel_err:0")
-                arr_rel_err = graph.get_tensor_by_name ("arr_rel_err:0")
-                sum_smape = graph.get_tensor_by_name ("sum_smape:0")
-
-                predicted_y, sum_se_val, sum_ae_val, sum_rel_err_val, sum_smape_val, arr_rel_err_val = sess.run([prediction, sum_se, sum_ae, sum_rel_err, sum_smape, arr_rel_err], feed_dict)
-                return (predicted_y, sum_se_val, sum_ae_val, sum_rel_err_val, sum_smape_val, arr_rel_err_val)
-            else:
-                sum_se= graph.get_tensor_by_name ("sum_se:0")
-                sum_ae = graph.get_tensor_by_name ("sum_ae:0")
-                sum_rel_err = graph.get_tensor_by_name ("sum_rel_err:0")
-                arr_rel_err = graph.get_tensor_by_name ("arr_rel_err:0")
-                sum_smape = graph.get_tensor_by_name ("sum_smape:0")
-
-                s_time = time.time ()
-                predicted_y, sum_se_val, sum_ae_val, sum_rel_err_val, sum_smape_val, arr_rel_err_val = sess.run([prediction, sum_se, sum_ae, sum_rel_err, sum_smape, arr_rel_err], feed_dict)
-                print ("Time for predicting 1 batch:", time.time() - s_time)
-                sys.exit (-1)
-                return (predicted_y, sum_se_val, sum_ae_val, sum_rel_err_val, sum_smape_val, arr_rel_err_val)
 
 
     def restore_weights_car2vect (self, x_ident_, x_remain_, label, meta_file, ckpt_file):
@@ -1073,7 +1025,7 @@ class Tensor_NN (Dataset, Sklearn_model):
             if retrain == -1:
                 print ("=====Restore the trained model...")
                 # Apply the trained model onto the test data
-                pre_model_path = self.model_dir + "/rm_outliers_total_set_NN/car2vect/regressor{0}/{1}_{2}_{3}_car2vect_{4}x1_{5}x1_total_set_{6}".format (2, "new", self.model_name, self.label, self.no_neuron_embed, self.no_neuron, 9)
+                pre_model_path = self.model_dir + "/rm_outliers_total_set_NN/car2vect/regressor{0}/{1}_{2}_{3}_car2vect_{4}x1_{5}x1_total_set_{6}".format (2, "new", self.model_name, self.label, self.no_neuron_embed, self.no_neuron, 49)
                 meta_file = pre_model_path + ".meta"
                 ckpt_file = pre_model_path 
                 
@@ -2380,52 +2332,6 @@ class Tensor_NN (Dataset, Sklearn_model):
             smape_val = total_smape/len_data
 
             return (predicted_label, rmse_val, mae_val, avg_rel_err_val, smape_val, total_arr_rel_err)
-    def batch_computation_car2vect_  (self, no_batch, train_data, train_label, d_ident, d_remain, meta_file, ckpt_file, train_flag):
-        train_data_remain = train_data [:, 0:d_remain]
-        train_data_ident = train_data [:, d_remain:]
-        # devide the train set into smaller subsets, push them to the model and concatenate them later
-        total_se = 0
-        total_ae = 0
-        total_relative_err = 0
-        total_smape = 0
-        start_index = 0
-        end_index = 0
-        total_predicted_y = np.zeros ((0, 1))
-        total_arr_relative_err = np.zeros ((0, 1))
-        total_x_embed_val = np.zeros ((0, self.d_embed))
-        len_train = len(train_data)
-        batch_size = int (len_train / no_batch)
-        train_total_batch = int (np.ceil (float (len_train)/batch_size))
-        for i in range (train_total_batch):
-            if len_train - end_index < batch_size:
-                end_index = len_train
-            else:
-                end_index = (i+1) * batch_size
-
-            batch_x_ident = train_data_ident [start_index : end_index]
-            batch_x_remain = train_data_remain [start_index : end_index]
-            batch_y = train_label [start_index : end_index]
-
-            start_index = end_index
-
-            (predicted_y, train_sum_se_val, train_sum_ae_val, train_sum_relative_err_val, train_sum_smape_val, arr_relative_err_val) = self.restore_model_car2vect (batch_x_ident, batch_x_remain, batch_y, meta_file, ckpt_file, train_flag)
-            total_predicted_y = np.concatenate ((total_predicted_y, predicted_y))
-            total_arr_relative_err = np.concatenate ((total_arr_relative_err, arr_relative_err_val))
-            total_se += train_sum_se_val
-            total_ae += train_sum_ae_val
-            total_relative_err += train_sum_relative_err_val
-            total_smape += train_sum_smape_val
-
-        assert end_index == len_train   
-
-        predicted_train_label = total_predicted_y
-        train_rmse_val = np.sqrt (total_se/len_train)
-        train_mae_val = total_ae/len_train
-        train_relative_err_val = total_relative_err/len_train
-        train_smape_val = total_smape/len_train
-        #print (total_arr_relative_err.shape, np.max (total_arr_relative_err), np.min (total_arr_relative_err), np.average (total_arr_relative_err), train_relative_err_val)
-
-        return (predicted_train_label, train_rmse_val, train_mae_val, train_relative_err_val, train_smape_val, total_arr_relative_err)
     
     def gradient_boosting_NN_baseline_Tree (self, train_data, train_label, test_data, test_label, y_predict_file_name, mean_error_file_name, dataset_size):
         """
