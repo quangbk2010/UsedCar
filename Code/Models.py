@@ -1049,7 +1049,7 @@ class Tensor_NN (Dataset, Sklearn_model):
                 
                 if self.test_uncertainty == True:
                     ##### Test uncertainty
-                    N = tqdm.trange (50)
+                    N = tqdm (range (50))
                     np_pred_y = np.zeros ((test_label.shape[0],0))
                     for i in N:
                         #predicted_y, sum_se_val, sum_ae_val, sum_rel_err_val, sum_smape_val, arr_rel_err_val = sess.run([prediction, sum_se, sum_ae, sum_rel_err, sum_smape, arr_rel_err], feed_dict)
@@ -2104,7 +2104,7 @@ class Tensor_NN (Dataset, Sklearn_model):
         print ("\n\n===========Train total set")
         # If comment the below line, you need to check the checkpoint file in regressor1 (it should be compatible with the dataset) 
         # Flexible rel_err.
-        #self.epoch=20
+        self.epoch=20
         #self.train_car2vect(train_data=total_data, train_label=total_label, total_car_ident=total_car_ident_code, d_ident=d_ident, d_embed=self.d_embed, d_remain=d_remain, no_neuron=self.no_neuron, no_neuron_embed=self.no_neuron_embed, loss_func=self.loss_func, model_path=model_path)
         # Only use the below line for Gradient Boosting 
         #self.train_car2vect(train_data=total_data, train_label=total_label, total_car_ident=total_car_ident_code, d_ident=d_ident, d_embed=self.d_embed, d_remain=d_remain, no_neuron=self.no_neuron, no_neuron_embed=self.no_neuron_embed, loss_func="rel_err", model_path=model_path)

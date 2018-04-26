@@ -314,7 +314,7 @@ if __name__ == '__main__':
                 with open ("./test_time_{0}.txt".format (use_gpu), "ab") as file:
                     np.savetxt (file, line, fmt="%s\t%s\t%s\t%s")
             else:
-                best_epoch = nn.car2vect (train_data=train_data, train_label=train_label, test_data=test_data, test_label=test_label, total_car_ident=total_car_ident_code, total_act_adv_date=total_act_adv_date, total_sale_date=total_sale_date, d_ident=dataset.d_ident, d_embed=nn.d_embed, d_remain=dataset.d_remain, no_neuron=nn.no_neuron, no_neuron_embed=nn.no_neuron_embed, loss_func=nn.loss_func, model_path=model_path, y_predict_file_name=y_predict_file_name, mean_error_file_name=mean_error_file_name, x_ident_file_name=x_ident_file_name, x_embed_file_name=x_embed_file_name, retrain=-1) 
+                best_epoch = nn.car2vect (train_data=train_data, train_label=train_label, test_data=test_data, test_label=test_label, total_car_ident=total_car_ident_code, total_act_adv_date=total_act_adv_date, total_sale_date=total_sale_date, d_ident=dataset.d_ident, d_embed=nn.d_embed, d_remain=dataset.d_remain, no_neuron=nn.no_neuron, no_neuron_embed=nn.no_neuron_embed, loss_func=nn.loss_func, model_path=model_path, y_predict_file_name=y_predict_file_name, mean_error_file_name=mean_error_file_name, x_ident_file_name=x_ident_file_name, x_embed_file_name=x_embed_file_name, retrain=0) 
                 
 
         else:
