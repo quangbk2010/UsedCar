@@ -271,7 +271,6 @@ class Dataset ():
                 total_dataset = total_dataset.sort_values ("actual_advertising_date", ascending=True)
             else:
                 total_dataset = total_dataset.sort_values ("first_adv_date", ascending=True)
-            # use the information about advertising date: use year and month separately
            
             if dataset_type == "old":
                 adv_date = total_dataset ["actual_advertising_date"]

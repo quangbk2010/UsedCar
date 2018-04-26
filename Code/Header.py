@@ -48,7 +48,7 @@ from scipy.stats import truncnorm
 
 # Tensorflow libraries
 # Determine whether use gpu or not
-use_gpu = True
+use_gpu = True 
 if use_gpu == False:
     os.environ['CUDA_VISIBLE_DEVICES'] = "-1"
 import tensorflow as tf
@@ -61,6 +61,7 @@ import matplotlib.pyplot as plt
 # Other libraries
 import codecs
 import tqdm 
+from tqdm import tqdm
 
 
 #print ("{0}, {1}, {2}, {3}".format (np.__version__, pd.__version__, scipy.__version__, tf.__version__))

@@ -161,6 +161,9 @@ class Tensor_NN (Dataset, Sklearn_model):
         #from args
         self.gpu_idx = args.gpu_idx
 
+        self.test_uncertainty = args.test_uncertainty
+        self.test_pred_time = args.test_pred_time
+
         self.epoch = args.epoch
         self.batch_size = args.batch_size
         self.k_fold = args.k_fold
@@ -620,7 +623,7 @@ class Tensor_NN (Dataset, Sklearn_model):
     def build_car2vect_model (self, no_neuron, no_neuron_embed, d_ident, d_embed, d_remain):
         """
             - Args:
-                + no_neuron: the number of neuron n 'main' hiddenlayers.
+                + no_neuron: the number of neuron in 'main' hiddenlayers.
                 + no_neuron_embed: the number of neuron in 'embedding' hiddenlayers.
                 + d_ident: the dimension of the one-hot vector of a car identification (manufacture_code, ..., rating_code)
                 + d_remain: the dimension of the remaining features (after one-hot encoding)
@@ -894,8 +897,10 @@ class Tensor_NN (Dataset, Sklearn_model):
     def restore_model_car2vect (self, x_ident_, x_remain_, label, meta_file, ckpt_file, train_flag):
         with tf.Session() as sess:
             # Load meta graph and restore all variable values
+            s_time = time.time ()
             saver = tf.train.import_meta_graph (meta_file)
             saver.restore (sess, ckpt_file)
+            print ("Time for loading the trained model:", time.time() - s_time)
 
             # Access and create placeholder variables, and create feedict to feed data 
             graph = tf.get_default_graph ()
@@ -931,36 +936,11 @@ class Tensor_NN (Dataset, Sklearn_model):
                 sum_rel_err = graph.get_tensor_by_name ("sum_rel_err:0")
                 arr_rel_err = graph.get_tensor_by_name ("arr_rel_err:0")
                 sum_smape = graph.get_tensor_by_name ("sum_smape:0")
-                #N = 200
-                N = tqdm.trange (100)
-                np_pred_y = np.zeros ((label.shape[0],0))
-                #for i in range (N):
-                for i in N:
-                    predicted_y, sum_se_val, sum_ae_val, sum_rel_err_val, sum_smape_val, arr_rel_err_val = sess.run([prediction, sum_se, sum_ae, sum_rel_err, sum_smape, arr_rel_err], feed_dict)
-                    #print ("---iter:", i, predicted_y[:5])
-                    np_pred_y = np.concatenate ((np_pred_y, predicted_y), axis=1)
 
-                #print (np_pred_y[0])
-                prediction = np_pred_y.mean (axis=1)
-                uncertainty = np_pred_y.var (axis=1)
-                std = np_pred_y.std (axis=1)
-                print ("Label:", label[:10])
-                print ("Final prediction:", prediction[:10])
-                print ("Final uncertainty", uncertainty[:10])
-                print ("Final std", std[:10], min (std), max (std))
-                rmse, mae, rel_err, smape = get_err (prediction, label)
-                print ("Rel_err:", rel_err)
+                s_time = time.time ()
+                predicted_y, sum_se_val, sum_ae_val, sum_rel_err_val, sum_smape_val, arr_rel_err_val = sess.run([prediction, sum_se, sum_ae, sum_rel_err, sum_smape, arr_rel_err], feed_dict)
+                print ("Time for predicting 1 batch:", time.time() - s_time)
                 sys.exit (-1)
-
-                '''I'm here, why the rel_err is high: 84%"
-                
-                TODO: 
-                1. Train the model with dropout to find the best model (command in run.sh)
-                2. Based on the prediction and std, determine the range that contain ground truth with p% 
-                3. Determine how many % that pred_price <, > ground truth -> may help TODO-2.
-                4. Think the way to store the results more efficiently, that don't need to run many times
-                5. Also, need to run to see the effects of GPU, CPU, batch size'''
-
                 return (predicted_y, sum_se_val, sum_ae_val, sum_rel_err_val, sum_smape_val, arr_rel_err_val)
 
 
@@ -1066,11 +1046,51 @@ class Tensor_NN (Dataset, Sklearn_model):
                 pre_model_path = self.model_dir + "/rm_outliers_total_set_NN/car2vect/regressor{0}/{1}_{2}_{3}_car2vect_{4}x1_{5}x1_total_set_{6}".format (2, "new", self.model_name, self.label, self.no_neuron_embed, self.no_neuron, 17)
                 meta_file = pre_model_path + ".meta"
                 ckpt_file = pre_model_path 
-                train_flag = 2
-                (predicted_test_label, test_rmse_val, test_mae_val, test_relative_err_val, test_smape_val, test_arr_relative_err) = self.batch_computation_car2vect (5, test_data, test_label, d_ident, d_remain, meta_file, ckpt_file, train_flag)
+                
+                if self.test_uncertainty == True:
+                    ##### Test uncertainty
+                    N = tqdm.trange (50)
+                    np_pred_y = np.zeros ((test_label.shape[0],0))
+                    for i in N:
+                        #predicted_y, sum_se_val, sum_ae_val, sum_rel_err_val, sum_smape_val, arr_rel_err_val = sess.run([prediction, sum_se, sum_ae, sum_rel_err, sum_smape, arr_rel_err], feed_dict)
+                        (predicted_test_label, test_rmse_val, test_mae_val, test_relative_err_val, test_smape_val, test_arr_relative_err) = self.batch_computation_car2vect (5, test_data, test_label, d_ident, d_remain, meta_file, ckpt_file, 1)
+                        print ("---iter:", i, test_relative_err_val)
+                        np_pred_y = np.concatenate ((np_pred_y, predicted_test_label), axis=1)
+
+                    predicted_test_label = np_pred_y.mean (axis=1).reshape (-1, 1)
+                    uncertainty = np_pred_y.var (axis=1).reshape (-1, 1)
+                    std = np_pred_y.std (axis=1).reshape (-1, 1)
+                    print ("Label:", test_label[:10])
+                    print ("Final prediction:", predicted_test_label[:10])
+                    print ("Final uncertainty", uncertainty[:10])
+                    print ("Final std", std[:10], min (std), max (std))
+                    rel_err = get_relative_err (predicted_test_label, test_label)
+                    print ("Rel_err:", rel_err)
+                    #sys.exit (-1)
+
+                elif self.test_pred_time == True:
+                    ##### Test prediction time
+                    list_batch_size = [64]#1, 16, 64, 256, 512, 4096, 8192]
+                    len_list = len (list_batch_size)
+                    for batch_size in tqdm (list_batch_size, total=len_list):
+                        print ("batch_size:", batch_size)
+                        n_iter = len_test / batch_size
+                        s_time = time.time()
+                        (predicted_test_label, test_rmse_val, test_mae_val, test_relative_err_val, test_smape_val, test_arr_relative_err) = self.batch_computation_car2vect (n_iter, test_data, test_label, d_ident, d_remain, meta_file, ckpt_file, 2)
+                        pred_time = time.time() - s_time
+                        print ("pred_time:", pred_time)
+                        line = np.zeros ((0, 3))
+                        content = np.array ([use_gpu, args.batch_size, pred_time]).reshape (1, 3)
+                        line = np.concatenate ((line,content), axis = 0)
+                        with open ("./test_pred_time_{0}.txt".format (use_gpu), "ab") as file:
+                            np.savetxt (file, line, fmt="%s\t%s\t%s\t%s")
+                    sys.exit (-1)
+                else:
+                    (predicted_test_label, test_rmse_val, test_mae_val, test_relative_err_val, test_smape_val, test_arr_relative_err) = self.batch_computation_car2vect (5, test_data, test_label, d_ident, d_remain, meta_file, ckpt_file, 1)
+
                 # Save the identification and results into a file
-                result = np.concatenate ((test_car_ident, test_act_adv_date, test_sale_date, test_label, predicted_test_label),axis=1)
-                np.savetxt (x_ident_file_name + "_restored", result, fmt="%d\t%d\t%d\t%d\t%s\t%s\t%d\t%d\t%.2f")  
+                result = np.concatenate ((test_car_ident, test_act_adv_date, test_sale_date, test_label, predicted_test_label, std),axis=1)
+                np.savetxt (x_ident_file_name + "_restored", result, fmt="%d\t%d\t%d\t%d\t%s\t%s\t%d\t%d\t%.2f\t%.2f")  
 
                 return 0 
                 
@@ -2167,8 +2187,6 @@ class Tensor_NN (Dataset, Sklearn_model):
         print ("New test dataset:", new_test_data.shape, new_test_label.shape)
         print ("New test_car_ident:", new_test_car_ident.shape)
 
-        #return 0
-
         if ensemble_flag == 0:
             tf.reset_default_graph ()
             os.system ("mkdir -p ../checkpoint/rm_outliers_total_set_NN/car2vect/regressor2")
@@ -2182,7 +2200,8 @@ class Tensor_NN (Dataset, Sklearn_model):
             
             print ("\n\n===========Predictor2")
             self.epoch=50
-            best_epoch = self.car2vect (train_data=new_train_data, train_label=new_train_label, test_data=new_test_data, test_label=new_test_label, total_car_ident=new_total_car_ident_code, total_act_adv_date=new_total_act_adv_date, total_sale_date=new_total_sale_date, d_ident=d_ident, d_embed=self.d_embed, d_remain=d_remain, no_neuron=self.no_neuron, no_neuron_embed=self.no_neuron_embed, loss_func=self.loss_func, model_path=model_path, y_predict_file_name=y_predict_file_name_, mean_error_file_name=mean_error_file_name_, x_ident_file_name=x_ident_file_name_, x_embed_file_name=x_embed_file_name_, retrain=-1) # if use retrain=1 -> initialize weights from the previous model, -1 if already have the trained model
+            print (self.epoch)
+            best_epoch = self.car2vect (train_data=new_train_data, train_label=new_train_label, test_data=new_test_data, test_label=new_test_label, total_car_ident=new_total_car_ident_code, total_act_adv_date=new_total_act_adv_date, total_sale_date=new_total_sale_date, d_ident=d_ident, d_embed=self.d_embed, d_remain=d_remain, no_neuron=self.no_neuron, no_neuron_embed=self.no_neuron_embed, loss_func=self.loss_func, model_path=model_path, y_predict_file_name=y_predict_file_name_, mean_error_file_name=mean_error_file_name_, x_ident_file_name=x_ident_file_name_, x_embed_file_name=x_embed_file_name_, retrain=0) # if use retrain=1 -> initialize weights from the previous model, -1 if already have the trained model
             print ("Best epoch: ", best_epoch)
 
             """#####################
@@ -2320,7 +2339,8 @@ class Tensor_NN (Dataset, Sklearn_model):
         train_mae_val = total_ae/len_train
         train_relative_err_val = total_relative_err/len_train
         train_smape_val = total_smape/len_train
-        print (total_arr_relative_err.shape, np.max (total_arr_relative_err), np.min (total_arr_relative_err), np.average (total_arr_relative_err), train_relative_err_val)
+        #print (total_arr_relative_err.shape, np.max (total_arr_relative_err), np.min (total_arr_relative_err), np.average (total_arr_relative_err), train_relative_err_val)
+
         return (predicted_train_label, train_rmse_val, train_mae_val, train_relative_err_val, train_smape_val, total_arr_relative_err)
     
     def gradient_boosting_NN_baseline_Tree (self, train_data, train_label, test_data, test_label, y_predict_file_name, mean_error_file_name, dataset_size):

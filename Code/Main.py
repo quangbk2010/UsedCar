@@ -28,6 +28,8 @@ if __name__ == '__main__':
     parser.add_argument('--get_feature_importance_flag', type=bool, default = False) # the flag that decide whether evaluate the features importance or not
     parser.add_argument('--price_change_percent', type=float, default = 0.0) #"sale_duration" #"price"
     parser.add_argument('--test_uncertainty', type=bool, default = False) #"sale_duration" #"price"
+    parser.add_argument('--test_train_time', type=bool, default = False) #"sale_duration" #"price"
+    parser.add_argument('--test_pred_time', type=bool, default = False) #"sale_duration" #"price"
     parser.add_argument('--test_kb', type=bool, default = False) #"sale_duration" #"price"
 
 
@@ -249,12 +251,12 @@ if __name__ == '__main__':
             nn.retrain_car2vect_from_total_set (total_data=total_data, total_label=total_label, total_car_ident_code=total_car_ident_code, total_act_adv_date=total_act_adv_date, total_sale_date=total_sale_date, d_ident=dataset.d_ident, d_remain=dataset.d_remain, y_predict_file_name=y_predict_file_name, mean_error_file_name=mean_error_file_name, x_ident_file_name=x_ident_file_name, x_embed_file_name=x_embed_file_name, dataset_size=dataset_size, removal_percent=args.outliers_removal_percent, ensemble_flag=0, l_feature=l_feature, features=sorted_features)
             running_time = time.time() - stime
             print ("Time for running: %.3f" % (running_time))
-            line = np.zeros ((0, 4))
+            """line = np.zeros ((0, 4))
             #content=np.array (["use_gpu", "epoch", "batch_size", "running_time"]).reshape (1, 4)
             content = np.array ([use_gpu, args.epoch, args.batch_size, running_time]).reshape (1, 4)
             line = np.concatenate ((line,content), axis = 0)
-            with open ("./test_outliers_rmval_time_{0}.txt".format (use_gpu), "ab") as file:
-                np.savetxt (file, line, fmt="%s\t%s\t%s\t%s")
+            with open ("./test_time_{0}.txt".format (use_gpu), "ab") as file: #test_outliers_rmval_time_
+                np.savetxt (file, line, fmt="%s\t%s\t%s\t%s")"""
 
         elif args.ensemble_NN_flag == 71:
             nn.retrain_car2vect_from_total_set (total_data=total_data, total_label=total_label, total_car_ident_code=total_car_ident_code, total_act_adv_date=total_act_adv_date, total_sale_date=total_sale_date, d_ident=dataset.d_ident, d_remain=dataset.d_remain, y_predict_file_name=y_predict_file_name, mean_error_file_name=mean_error_file_name, x_ident_file_name=x_ident_file_name, x_embed_file_name=x_embed_file_name, dataset_size=dataset_size, removal_percent=args.outliers_removal_percent, ensemble_flag=-1, l_feature=l_feature, features=sorted_features) # The 2 last attributes used for calculating features importance
@@ -299,7 +301,7 @@ if __name__ == '__main__':
                 best_epoch = nn.car2vect (train_data=[], train_label=[], test_data=kb_income_test_data, test_label=kb_income_test_label, total_car_ident=kb_income_car_ident_code, total_act_adv_date=kb_income_act_adv_date, total_sale_date=kb_income_sale_date, d_ident=dataset.d_ident, d_embed=nn.d_embed, d_remain=dataset.d_remain, no_neuron=nn.no_neuron, no_neuron_embed=nn.no_neuron_embed, loss_func=nn.loss_func, model_path=model_path, y_predict_file_name="", mean_error_file_name="", x_ident_file_name=x_ident_file_name + "_import", x_embed_file_name="", retrain=-1) 
             elif args.test_uncertainty == True:
                 best_epoch = nn.car2vect (train_data=train_data, train_label=train_label, test_data=test_data, test_label=test_label, total_car_ident=total_car_ident_code, total_act_adv_date=total_act_adv_date, total_sale_date=total_sale_date, d_ident=dataset.d_ident, d_embed=nn.d_embed, d_remain=dataset.d_remain, no_neuron=nn.no_neuron, no_neuron_embed=nn.no_neuron_embed, loss_func=nn.loss_func, model_path=model_path, y_predict_file_name=y_predict_file_name, mean_error_file_name=mean_error_file_name, x_ident_file_name=x_ident_file_name, x_embed_file_name=x_embed_file_name, retrain=-1) 
-            else:
+            elif args.test_train_time == True:
                 print ("4.", device_lib.list_local_devices())
                 best_epoch = nn.car2vect (train_data=train_data, train_label=train_label, test_data=test_data, test_label=test_label, total_car_ident=total_car_ident_code, total_act_adv_date=total_act_adv_date, total_sale_date=total_sale_date, d_ident=dataset.d_ident, d_embed=nn.d_embed, d_remain=dataset.d_remain, no_neuron=nn.no_neuron, no_neuron_embed=nn.no_neuron_embed, loss_func=nn.loss_func, model_path=model_path, y_predict_file_name=y_predict_file_name, mean_error_file_name=mean_error_file_name, x_ident_file_name=x_ident_file_name, x_embed_file_name=x_embed_file_name, retrain=0) 
                 print ("Best epoch: ", best_epoch)
@@ -311,6 +313,9 @@ if __name__ == '__main__':
                 line = np.concatenate ((line,content), axis = 0)
                 with open ("./test_time_{0}.txt".format (use_gpu), "ab") as file:
                     np.savetxt (file, line, fmt="%s\t%s\t%s\t%s")
+            else:
+                best_epoch = nn.car2vect (train_data=train_data, train_label=train_label, test_data=test_data, test_label=test_label, total_car_ident=total_car_ident_code, total_act_adv_date=total_act_adv_date, total_sale_date=total_sale_date, d_ident=dataset.d_ident, d_embed=nn.d_embed, d_remain=dataset.d_remain, no_neuron=nn.no_neuron, no_neuron_embed=nn.no_neuron_embed, loss_func=nn.loss_func, model_path=model_path, y_predict_file_name=y_predict_file_name, mean_error_file_name=mean_error_file_name, x_ident_file_name=x_ident_file_name, x_embed_file_name=x_embed_file_name, retrain=-1) 
+                
 
         else:
             model_path = nn.model_dir + "/baseline/[{0}]{1}_{2}_baseline_{3}_{4}_{5}".format (dataset_size, nn.model_name, args.label, nn.no_neuron, nn.no_hidden_layer, nn.loss_func)
