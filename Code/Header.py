@@ -68,6 +68,7 @@ from tqdm import tqdm
 
 np.set_printoptions (threshold = np.nan)
 pd.set_option('display.max_columns', None)
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' #0: default-all logs shown, 1-INFO logs, 2-WARNING logs, 3-ERROR logs
 
 dataset_type = "new" # "old", "new"
 
