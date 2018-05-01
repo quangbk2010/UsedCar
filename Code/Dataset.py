@@ -367,7 +367,7 @@ class Dataset ():
                         axis=1
                     )
                 self.feature_need_scaled += self.new_feature_year_diff
-
+            
             #if data_type == "test":
             #    self.feature_need_scaled = ["year", "vehicle_mile", "cylinder_disp", "min_price", "max_price", "day_diff"]
             # Try to normalize after add more features like year_diff_i due to the effect of year_diff
@@ -481,6 +481,23 @@ class Dataset ():
         #print (np.unique (total_dataset [self.sorted_features [1]]))# NOTE: We can see the list of maker_code, class_code here
         #sys.exit (-1)
 
+        l = len (total_dataset)
+        l_train = int (l * 0.8 + 0.5)
+        list_features = ["maker_code", "class_code"] + self.features_need_encoding + self.features_not_need_encoding + self.car_ident + ["price"]
+        list_nominal_features = ["maker_code", "class_code"] + self.features_need_encoding + self.car_ident
+        train_df = total_dataset[list_features][:l_train]
+        test_df = total_dataset[list_features][l_train:]
+        print (train_df.shape, test_df.shape)
+        self.total_dataset[list_features].to_csv ("../Data/total.csv_", encoding='utf-8', index=False)
+        #train_df.to_csv ("../Data/train.csv_", encoding='utf-8', index=False)
+        #test_df.to_csv ("../Data/test.csv_", encoding='utf-8', index=False)
+        """self.total_dataset = total_dataset[:4]
+        print (self.total_dataset)
+        print (self.total_dataset.shape, total_dataset[list_nominal_features][:3].shape)
+        print (sum (total_dataset[list_nominal_features][:3].nunique().tolist()))
+        print (total_dataset[list_nominal_features][:3].nunique())
+        sys.exit (-1)"""
+
         if car_ident_flag == 1:
             if self.test_sales_month_effect == True:
                 (self.act_adv_date_total_set, self.car_ident_code_total_set, self.X_total_set, self.y_total_set, self.X_train_set, self.y_train_set, self.X_test_set, self.y_test_set, self.d_ident, self.d_remain, self.car_ident_code_test_set, self.list_test_X) = self.get_data_label_car_ident_2 (label)
@@ -496,6 +513,10 @@ class Dataset ():
         #print ("X[-1]: ", self.X_total_set[:, -1])
         #print (total_dataset ["sale_duration"][:5])
         #print (self.y_total_set[:5])
+        #print (self.X_train_set.shape)
+        #print (self.X_test_set.shape)
+        #print (self.X_total_set.shape)
+        #sys.exit (-1)
 
     
     def get_total_dataset (self):
@@ -728,6 +749,7 @@ class Dataset ():
         
         d_remain = X.shape[1] - d_ident
         print ("[get_data_matrix_car_ident] shape of prepared data:", X.shape, "d_remain", d_remain, "d_ident", d_ident, "X3", X3.shape)
+        #print ("[get_data_matrix_car_ident]: ", len (["maker_code","class_code"] + features1), len (self.features_not_need_encoding), len (self.car_ident))
         return (car_ident_codes, X, d_ident, d_remain, enc1, enc2)
 
    

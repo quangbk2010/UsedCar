@@ -1343,6 +1343,15 @@ class Tensor_NN (Dataset, Sklearn_model):
                     save_path = saver.save (sess, model_path + "_" + str (epoch)) #, global_step=global_step)
                     print('Model saved in file: %s' % save_path)
 
+                    ###########
+                    ## Test
+                    # SAVE THE MODEL WITH DIFFERENT FORMAT: save both structure and values in same file.
+                    builder = tf.saved_model.builder.SavedModelBuilder(model_path)
+                    builder.add_meta_graph_and_variables(sess,[tf.saved_model.tag_constants.SERVING])
+                    builder.save()
+                    sys.exit (-1)
+
+
                 if epoch_test_err_val < smallest_epoch_test_err_val:
                     smallest_epoch_test_err_val = epoch_test_err_val 
                     best_epoch = epoch 

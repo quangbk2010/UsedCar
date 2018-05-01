@@ -54,6 +54,7 @@ if use_gpu == False:
 import tensorflow as tf
 import tensorflow.contrib.slim as slim
 from tensorflow.python.client import device_lib
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' #0: default-all logs shown, 1-INFO logs, 2-WARNING logs, 3-ERROR logs
 
 # For plotting figures
 import matplotlib.pyplot as plt
