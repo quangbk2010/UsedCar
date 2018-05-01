@@ -1347,7 +1347,7 @@ class Tensor_NN (Dataset, Sklearn_model):
                     ## Test
                     # SAVE THE MODEL WITH DIFFERENT FORMAT: save both structure and values in same file.
                     print ("Here....")
-                    builder = tf.saved_model.builder.SavedModelBuilder(model_path + "/temp/")
+                    builder = tf.saved_model.builder.SavedModelBuilder("./temp/saved_model")
                     builder.add_meta_graph_and_variables(sess,[tf.saved_model.tag_constants.SERVING])
                     builder.save()
                     sys.exit (-1)
