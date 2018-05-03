@@ -288,12 +288,12 @@ class Dataset ():
                 total_dataset["adv_month"] = first_adv_date % 10000 // 100
                 first_adv_year = first_adv_date // 10000
 
-                """total_dataset["year_diff"] = first_adv_year - reg_year 
+                total_dataset["year_diff"] = first_adv_year - reg_year 
                 total_dataset["day_diff"]  = self.get_array_days_between (total_dataset, "first_registration", "first_adv_date")
                 # Only keep the cars with car's age <= 10 years
                 if data_type == "":
                     total_dataset = total_dataset [total_dataset ["year_diff"] <= 10] #HERE
-                    print ("10.", total_dataset.shape)"""
+                    print ("10.", total_dataset.shape)
 
 
             # Impute missing values from here
