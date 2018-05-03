@@ -116,6 +116,9 @@ if __name__ == '__main__':
     elif dataset_size == "new_small":
         input_no = 10
         dataset_excel_file = '../Data/Used_car_preprocess1_final_small.xlsx'
+    elif dataset_size == "new_adv_status":
+        input_no = 500000
+        dataset_excel_file = '../Data/Used_car_preprocess1_sold_and_deleted.xlsx'
     print ('Data set length:', input_no)
     print ("Label:", args.label)
 
