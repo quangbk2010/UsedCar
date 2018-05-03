@@ -281,8 +281,8 @@ class Dataset ():
                     total_dataset = total_dataset[reg_year.between (2000, 2018, inclusive=True)] 
                     print ("9.", total_dataset.shape)
 
-                #total_dataset["reg_year"] = reg_year
-                #total_dataset["reg_month"] = reg_date % 10000 // 100
+                total_dataset["reg_year"] = reg_year
+                total_dataset["reg_month"] = reg_date % 10000 // 100
 
                 first_adv_date = total_dataset["first_adv_date"]
                 total_dataset["adv_month"] = first_adv_date % 10000 // 100
