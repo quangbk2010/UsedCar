@@ -1350,7 +1350,6 @@ class Tensor_NN (Dataset, Sklearn_model):
                     builder = tf.saved_model.builder.SavedModelBuilder("../saved_model" + str (epoch)) # ben ngoai code folder
                     builder.add_meta_graph_and_variables(sess,[tf.saved_model.tag_constants.SERVING])
                     builder.save()
-                    sys.exit (-1)
 
 
                 if epoch_test_err_val < smallest_epoch_test_err_val:
@@ -2096,7 +2095,7 @@ class Tensor_NN (Dataset, Sklearn_model):
         # If comment the below line, you need to check the checkpoint file in regressor1 (it should be compatible with the dataset) 
         # Flexible rel_err.
         self.epoch=30
-        self.train_car2vect(train_data=total_data, train_label=total_label, total_car_ident=total_car_ident_code, d_ident=d_ident, d_embed=self.d_embed, d_remain=d_remain, no_neuron=self.no_neuron, no_neuron_embed=self.no_neuron_embed, loss_func=self.loss_func, model_path=model_path)
+        #self.train_car2vect(train_data=total_data, train_label=total_label, total_car_ident=total_car_ident_code, d_ident=d_ident, d_embed=self.d_embed, d_remain=d_remain, no_neuron=self.no_neuron, no_neuron_embed=self.no_neuron_embed, loss_func=self.loss_func, model_path=model_path)
         
         # Restore the trained model
         # When restore model with the whole dataset, it can cause the error: Resource exhausted 
