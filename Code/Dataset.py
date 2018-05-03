@@ -125,6 +125,7 @@ class Dataset ():
             else:
                 if label == "price":
                     self.features_need_encoding = ["maker_code","class_code","car_code","model_code","grade_code","car_type","trans_mode","fuel_type","branch","affiliate_code","region","trading_complex","refund","vain_effort","guarantee","selected_color","reg_month","adv_month","seller_id","trading_firm_id"]
+                    #self.features_need_encoding = ["maker_code","class_code","car_code","model_code","grade_code","car_type","trans_mode","fuel_type","selected_color","adv_month"]
                 else:
                     self.features_need_encoding = ["maker_code","class_code","car_code","model_code","grade_code","car_type","trans_mode","fuel_type","region","trading_complex","selected_color","reg_month","adv_month"]
 
@@ -140,6 +141,7 @@ class Dataset ():
             else:
                 if label == "price":
                     self.features_need_encoding = ["car_type","trans_mode","fuel_type","branch","affiliate_code","region","trading_complex","refund","vain_effort","guarantee","selected_color","reg_month","adv_month"] 
+                    #self.features_need_encoding = ["car_type","trans_mode","fuel_type","selected_color","adv_month"]
                 else:
                     self.features_need_encoding = ["car_type","trans_mode","fuel_type","branch","affiliate_code","region","trading_complex","refund","vain_effort","guarantee","selected_color","reg_month","adv_month","seller_id","trading_firm_id"] 
 
@@ -157,6 +159,7 @@ class Dataset ():
             feature_need_label = ["car_type", "trans_mode", "fuel_type", "city", "district", "dealer_name"]
         else:
             feature_need_label = ["car_type", "trans_mode", "fuel_type", "branch", "region","trading_complex","refund","vain_effort","guarantee","selected_color","seller_id","trading_firm_id"] # Sales prediction
+            #feature_need_label = ["car_type", "trans_mode", "fuel_type","selected_color"] # Sales prediction
         
         self.car_ident = ["maker_code","class_code","car_code","model_code","grade_code"]
 
@@ -172,7 +175,8 @@ class Dataset ():
 
         #print ("Length of features need encoding, no need, need scale coresponding are:", len (self.features_need_encoding), len (self.features_not_need_encoding), len (self.feature_need_scaled))
         
-        dataframe_file = "./Dataframe/[" + dataset_size + "]total_dataframe_Initial.h5" + data_type
+        dataframe_file_0 = "./Dataframe/[" + dataset_size + "]total_dataframe_0.h5" + data_type
+        dataframe_file = "./Dataframe/[" + dataset_size + "]total_dataframe_1.h5" + data_type
         dataframe_file_2 = "./Dataframe/[" + dataset_size + "]total_dataframe_2.h5" + data_type
         key = "df"
 
@@ -180,12 +184,22 @@ class Dataset ():
         self.min_price = 1.0
         self.max_price = 100.0
 
-        if os.path.isfile (dataframe_file) == False:
+        if os.path.isfile (dataframe_file_0) == False:
             print ("Load dataset from excel file")
-            total_dataset = pd.read_excel (dataset_excel_file, names = self.headers)#, converters = dtype_dict, header = 0, encoding='utf-8')
+            total_dataset = pd.read_excel (dataset_excel_file, names = self.headers)
+
+            print ("Store the dataframe into a hdf file")
+            total_dataset.to_hdf (dataframe_file_0, key)     
+
+            print ("Time for Loading dataset: %.3f" % (time.time() - stime))        
+        else:
+            print ("Reload dataset using HDF5 (Pytables)")
+            total_dataset = pd.read_hdf (dataframe_file_0, key)
+
+        if os.path.isfile (dataframe_file) == False:
+            print ("Load dataset from df0 to do some preprocessing")
+            #total_dataset = pd.read_excel (dataset_excel_file, names = self.headers)#, converters = dtype_dict, header = 0, encoding='utf-8')
             print (total_dataset.shape)
-            # Shuffle dataset (dataframe)
-            #total_dataset = total_dataset.reindex(np.random.permutation(total_dataset.index))
             
             # Remove the data points with sale_state == "advertising"
             if dataset_type == "old":
@@ -215,14 +229,6 @@ class Dataset ():
                 total_dataset = total_dataset[total_dataset[["price"]].applymap (np.isreal).all (1)]
                 print ("4.", total_dataset.shape)
 
-            #total_dataset = total_dataset[total_dataset["price"] >= 200] # 400]
-            #print ("4.1", total_dataset.shape)
-            #total_dataset = total_dataset[total_dataset["price"] < 9000]
-            #print ("4.2", total_dataset.shape)
-
-            # Remove outliers
-            #total_dataset = total_dataset[np.abs(total_dataset["price"] - total_dataset["price"].mean()) / total_dataset["price"].std() < 1]
-            #print ("4.3", total_dataset.shape)
             if label == "sale_duration":
                 sales_duration = self.get_sale_duration_array (total_dataset)
                 total_dataset ["sale_duration"] = sales_duration
@@ -234,27 +240,12 @@ class Dataset ():
             total_dataset = total_dataset[(total_dataset["maker_code"] == 101) | (total_dataset["maker_code"] == 102)]
             print ("5.", total_dataset.shape)
 
-            # Just keep10 most popular class_code 
-            #total_dataset = total_dataset[total_dataset["class_code"].isin ([1101, 1108, 1109, 1166, 1121, 1153, 1225, 1207, 1124, 1151])]
-            #print ("5.", total_dataset.shape)
-
-            # Just keep passenger cars
-            #total_dataset = total_dataset[(total_dataset["car_type"] == "Passenger car")]
-            #print ("6.", total_dataset.shape)
-
             # Replace missing grade_code with 0
             total_dataset["grade_code"] = total_dataset["grade_code"].fillna (0)
 
             # Drop all the data points with missing values
             total_dataset = total_dataset.dropna ()
             print ("7.", total_dataset.shape)
-
-            # Concatenate model_code with grade_code to create a new grade_code
-            #total_dataset["grade_code"] = total_dataset["model_code"].astype ("int").astype ("str") + total_dataset["grade_code"].astype ("int").astype ("str")
-
-            # Remove the items with missing actual_adv_date or missing sale_date 
-            #total_dataset = total_dataset[total_dataset["actual_advertising_date"].notnull() & total_dataset["sale_date"].notnull()]
-            #print ("7.", total_dataset.shape)
 
             # Remove the data points with sale duration <= 0
             if label == "sale_duration":
@@ -280,7 +271,6 @@ class Dataset ():
                 total_dataset["year_diff"] = adv_year - manufacture_year
 
             # Use the information about the first registration date
-            #if dataset_type == "new":
             else:
                 print ("===Add 4 more features: reg_year, reg_month, adv_month, year_diff!!")
                 reg_date = total_dataset ["first_registration"]
@@ -291,14 +281,19 @@ class Dataset ():
                     total_dataset = total_dataset[reg_year.between (2000, 2018, inclusive=True)] 
                     print ("9.", total_dataset.shape)
 
-                total_dataset["reg_year"] = reg_year
-                total_dataset["reg_month"] = reg_date % 10000 // 100
+                #total_dataset["reg_year"] = reg_year
+                #total_dataset["reg_month"] = reg_date % 10000 // 100
 
                 first_adv_date = total_dataset["first_adv_date"]
                 total_dataset["adv_month"] = first_adv_date % 10000 // 100
                 first_adv_year = first_adv_date // 10000
-                total_dataset["year_diff"] = first_adv_year - reg_year 
+
+                """total_dataset["year_diff"] = first_adv_year - reg_year 
                 total_dataset["day_diff"]  = self.get_array_days_between (total_dataset, "first_registration", "first_adv_date")
+                # Only keep the cars with car's age <= 10 years
+                if data_type == "":
+                    total_dataset = total_dataset [total_dataset ["year_diff"] <= 10] #HERE
+                    print ("10.", total_dataset.shape)"""
 
 
             # Impute missing values from here
@@ -309,17 +304,6 @@ class Dataset ():
 
             # There are some columns with string values (E.g. Car type) -> need to label it as numerical labels
             total_dataset = MultiColumnLabelEncoder(columns = feature_need_label).fit_transform(total_dataset)
-
-            # Standard scale dataset
-            #scaler = StandardScaler()  
-            #scaler = RobustScaler()
-            #total_dataset[self.feature_need_scaled] = scaler.fit_transform (total_dataset[self.feature_need_scaled])
-
-            # MinMax scale the price
-            # TODO: here we scale on the total dataset, but we need to scale separately on the train set and the test set
-            #scaler = MinMaxScaler(feature_range=(self.min_price, self.max_price))
-            #total_dataset["price"] = scaler.fit_transform (total_dataset["price"])
-
             print ("Store the dataframe into a hdf file")
             total_dataset.to_hdf (dataframe_file, key)       
             print ("Time for Loading dataset: %.3f" % (time.time() - stime))        
@@ -330,14 +314,6 @@ class Dataset ():
    
         # Shuffle dataset (dataframe)
         #total_dataset = total_dataset.reindex(np.random.permutation(total_dataset.index))
-
-        #for feature in features:
-        #    print (total_dataset[feature][:3])
-
-        # Only keep the cars with car's age <= 10 years
-        if data_type == "":
-            total_dataset = total_dataset [total_dataset ["year_diff"] <= 10] #HERE
-            print ("10.", total_dataset.shape)
 
         if label == "sale_duration":
             total_dataset["price_raw"] = total_dataset ["price"]
@@ -368,17 +344,11 @@ class Dataset ():
                     )
                 self.feature_need_scaled += self.new_feature_year_diff
             
-            #if data_type == "test":
-            #    self.feature_need_scaled = ["year", "vehicle_mile", "cylinder_disp", "min_price", "max_price", "day_diff"]
-            # Try to normalize after add more features like year_diff_i due to the effect of year_diff
-            #print ("====", self.feature_need_scaled)
-            #print ("====", [x for x in self.feature_need_scaled if x not in ["seller_id","trading_firm_id", "price"]])
+            
             if scaler == "":
                 scaler = RobustScaler()
-                #print (len (self.feature_need_scaled))#, total_dataset[self.feature_need_scaled][:1])
                 total_dataset[self.feature_need_scaled] = scaler.fit_transform (total_dataset[self.feature_need_scaled])
             else:
-                #print (len (self.feature_need_scaled))#, total_dataset[self.feature_need_scaled][:1])
                 total_dataset = total_dataset.fillna (0)
                 total_dataset[self.feature_need_scaled] = scaler.transform (total_dataset[self.feature_need_scaled])
                 
@@ -401,9 +371,6 @@ class Dataset ():
         for i in range (l2):
             l_feature.append (1)
 
-        #print (len (l_feature))
-        #sys.exit (-1)
-
         if car_ident_flag == 1: # phai bang 1, bang 0 de check a specific car
             self.sorted_features = ["maker_code_","class_code_"] + self.sorted_features 
             self.sorted_features += self.car_ident
@@ -419,12 +386,8 @@ class Dataset ():
         self.l_feature = l_feature
         if car_ident_flag == 1:
             print ("l1: {0}, l2: {1}, l3: {2}".format (l1, l2, l3))
-            #print ("l1: {0}, l2: {1}, l3: {2}".format (self.features_need_encoding, self.features_not_need_encoding, self.car_ident))
         else:
             print ("l1: {0}, l2: {1}".format (l1, l2))
-            #print ("l1: {0}, l2: {1}".format (self.features_need_encoding, self.features_not_need_encoding))
-        #print ("l_feature: len:", len (l_feature))
-        #print ("l_feature:", l_feature)
 
         ############################
         ###NOTE: Test the affects of price on sales duration
@@ -433,10 +396,7 @@ class Dataset ():
             p = 10.0
             len_total_set = len (total_dataset)    
             len_train  = int (0.5 + len_total_set * self.data_training_percentage)
-            #print (total_dataset ["price"][-5:-1])
             total_dataset ["price"][len_train:] *= (1 + p/100.0)
-            #print (total_dataset ["price"][-5:-1])
-            #sys.exit (-1)
             scaler = RobustScaler()
             total_dataset["price"] = scaler.fit_transform (total_dataset["price"])
 
@@ -460,9 +420,27 @@ class Dataset ():
             total_dataset = total_dataset.drop (total_dataset.index [rm_idx])
             print ("######## Length of dataset after removing outlier:", len (total_dataset))
 
-        # Test removing SD < 30
-        #if label == "sale_duration":
-        #    total_dataset = total_dataset [total_dataset ["sale_duration"] <= 150]
+        """print ("Saving data into csv file to use in java program...")
+        list_features = ["maker_code", "class_code"] + self.features_need_encoding + self.features_not_need_encoding + self.car_ident + ["price"]
+        total_dataset[list_features].to_csv ("../Data/total.csv_beforeImpute", encoding='utf-8', index=False)"""
+
+
+        # Impute missing values from here
+        if data_type == "":
+            total_dataset = DataFrameImputer().fit_transform (total_dataset)
+        else:
+            total_dataset["grade_code"] = pd.to_numeric(total_dataset["grade_code"], errors='coerce').fillna(0)
+
+        # There are some columns with string values (E.g. Car type) -> need to label it as numerical labels
+        total_dataset = MultiColumnLabelEncoder(columns = feature_need_label).fit_transform(total_dataset)
+
+        if scaler == "":
+            """print ("Saving data into csv file to use in java program...")
+            list_features = ["maker_code", "class_code"] + self.features_need_encoding + self.features_not_need_encoding + self.car_ident + ["price"]
+            total_dataset[list_features].to_csv ("../Data/total.csv_beforeScale", encoding='utf-8', index=False)"""
+            scaler = RobustScaler()
+            total_dataset[self.feature_need_scaled] = scaler.fit_transform (total_dataset[self.feature_need_scaled])
+        self.scaler = scaler
 
 
         if dataset_type == "new":
@@ -481,21 +459,17 @@ class Dataset ():
         #print (np.unique (total_dataset [self.sorted_features [1]]))# NOTE: We can see the list of maker_code, class_code here
         #sys.exit (-1)
 
-        l = len (total_dataset)
-        l_train = int (l * 0.8 + 0.5)
+        
+        """print ("Saving data into csv file to use in java program...")
         list_features = ["maker_code", "class_code"] + self.features_need_encoding + self.features_not_need_encoding + self.car_ident + ["price"]
+        total_dataset[list_features].to_csv ("../Data/total.csv_beforeEncode", encoding='utf-8', index=False)"""
+        """list_features = ["maker_code", "class_code"] + self.features_need_encoding + self.features_not_need_encoding + self.car_ident + ["price"]
         list_nominal_features = ["maker_code", "class_code"] + self.features_need_encoding + self.car_ident
-        train_df = total_dataset[list_features][:l_train]
-        test_df = total_dataset[list_features][l_train:]
-        print (train_df.shape, test_df.shape)
-        self.total_dataset[list_features].to_csv ("../Data/total.csv_", encoding='utf-8', index=False)
-        #train_df.to_csv ("../Data/train.csv_", encoding='utf-8', index=False)
-        #test_df.to_csv ("../Data/test.csv_", encoding='utf-8', index=False)
-        """self.total_dataset = total_dataset[:4]
-        print (self.total_dataset)
-        print (self.total_dataset.shape, total_dataset[list_nominal_features][:3].shape)
-        print (sum (total_dataset[list_nominal_features][:3].nunique().tolist()))
-        print (total_dataset[list_nominal_features][:3].nunique())
+        self.total_dataset = total_dataset[:4]
+        print (self.total_dataset[list_features])
+        #print (self.total_dataset.shape, total_dataset[list_nominal_features][:3].shape)
+        #print (sum (total_dataset[list_nominal_features][:3].nunique().tolist()))
+        #print (total_dataset[list_nominal_features][:3].nunique())
         sys.exit (-1)"""
 
         if car_ident_flag == 1:
@@ -516,7 +490,15 @@ class Dataset ():
         #print (self.X_train_set.shape)
         #print (self.X_test_set.shape)
         #print (self.X_total_set.shape)
-        #sys.exit (-1)
+        """print ("Saving data into csv file to use in java program...")
+        len_train = int (len (self.total_dataset) * 0.8 + 0.5)
+        x1 = self.X_total_set[len_train:len_train+3, :]
+        x2 = self.y_total_set[len_train:len_train+3, :]
+        x = np.concatenate ((x1, x2), axis=1)
+        print (x.shape)
+        fmt = "%.2f," * 2515 + "%.2f"
+        np.savetxt ("../Data/test.csv_encoded", x, fmt=fmt)
+        sys.exit (-1)"""
 
     
     def get_total_dataset (self):

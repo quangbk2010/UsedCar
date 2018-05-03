@@ -13,10 +13,17 @@ from Dataset import *
 from Models import *
 
 if __name__ == '__main__':
+
+    device_list = device_lib.list_local_devices()
+    print ("\n\n\n============================")
+    print ("=== Device list")
+    for x in device_list:
+        print (x.name)
+    print ("============================")
+
     stime = time.time()
     parser = argparse.ArgumentParser()
 
-    print ("1.", device_lib.list_local_devices())
     parser.add_argument('--label', type=str, default = 'price') #"sale_duration" #"price"
     parser.add_argument('--model_set', type=str, default = 'DL') # "Sklearn" or "DL"
     parser.add_argument('--dataset_size', type=str, default = 'new') # new, "full", or "partial", or "small"
@@ -76,14 +83,12 @@ if __name__ == '__main__':
     parser.add_argument('--loss_func', type=str, default = "rel_err") #rel_err, mae, rmse, smape 
     ######################## end configuration for DL
 
-    print ("2.", device_lib.list_local_devices())
     args = parser.parse_args()
     if use_gpu == True:
         os.environ['CUDA_VISIBLE_DEVICES'] = args.gpu_idx
     else:
         os.environ['CUDA_VISIBLE_DEVICES'] = "-1"
 
-    print ("3.", device_lib.list_local_devices())
     if not os.path.exists(args.model_dir):
         os.makedirs(args.model_dir)
 
