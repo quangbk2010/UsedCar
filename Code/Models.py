@@ -640,9 +640,9 @@ class Tensor_NN (Dataset, Sklearn_model):
         he_init = tf.contrib.layers.variance_scaling_initializer ()
         output1 = slim.fully_connected (x_ident, no_neuron_embed, scope='hidden_embed1', activation_fn=tf.nn.relu, weights_initializer=he_init) #None) #
         output1_ = slim.dropout (output1, self.dropout, scope='dropout1')
-        #output2 = slim.fully_connected (output1_, no_neuron_embed, scope='hidden_embed2', activation_fn=tf.nn.relu)
-        #output2_ = slim.dropout (output2, self.dropout, scope='dropout2')
-        x_embed = slim.fully_connected (output1_, d_embed, scope='output_embed', activation_fn=None, weights_initializer=he_init) #, activation_fn=tf.nn.relu)#, activation_fn=None) # 3-dimension of embeding NN
+        output2 = slim.fully_connected (output1_, no_neuron_embed, scope='hidden_embed2', activation_fn=tf.nn.relu)
+        output2_ = slim.dropout (output2, self.dropout, scope='dropout2')
+        x_embed = slim.fully_connected (output2_, d_embed, scope='output_embed', activation_fn=None, weights_initializer=he_init) #, activation_fn=tf.nn.relu)#, activation_fn=None) # 3-dimension of embeding NN
         #x_embed = slim.fully_connected (output1, d_embed, scope='output_embed', activation_fn=tf.nn.relu) # 3-dimension of embeding NN
         #x_embed = slim.fully_connected (output1, d_embed, scope='output_embed') # seperate the activation function to another step to use batch normalization.
         #x_embed = self.batch_norm (x_embed, phase_train) # batch normalization
@@ -656,9 +656,9 @@ class Tensor_NN (Dataset, Sklearn_model):
 
         output3 = slim.fully_connected(input3, no_neuron, scope='hidden_main1', activation_fn=tf.nn.relu, weights_initializer=he_init)
         output3_ = slim.dropout (output3, self.dropout, scope='dropout3')
-        #output4 = slim.fully_connected(output3_, no_neuron, scope='hidden_main_2', activation_fn=tf.nn.relu)
-        #output4_ = slim.dropout (output4, self.dropout, scope='dropout3')
-        prediction = slim.fully_connected(output3_, 1, scope='output_main', activation_fn=tf.nn.relu, weights_initializer=he_init) #tf.nn.relu) #None) # 1-dimension of output NOTE: only remove relu activation function in the last layer if using Gradient Boosting, because the differece can be negative (default activation function of fully_connected is relu))
+        output4 = slim.fully_connected(output3_, no_neuron, scope='hidden_main_2', activation_fn=tf.nn.relu)
+        output4_ = slim.dropout (output4, self.dropout, scope='dropout3')
+        prediction = slim.fully_connected(output4_, 1, scope='output_main', activation_fn=tf.nn.relu, weights_initializer=he_init) #tf.nn.relu) #None) # 1-dimension of output NOTE: only remove relu activation function in the last layer if using Gradient Boosting, because the differece can be negative (default activation function of fully_connected is relu))
         tf.identity (prediction, name="prediction")
 
         return x_ident, x_remain, Y, x_embed, prediction, phase_train
@@ -1254,8 +1254,8 @@ class Tensor_NN (Dataset, Sklearn_model):
                 else:
                     test_label_scaled = test_label
 
-                """#################################################
-                # If we use 2 hidden layers, each has >= 10000 units -> resource exhausted, then we should divide it into batches and test on seperate one, and then calculate the average.
+                #################################################
+                """# If we use 2 hidden layers, each has >= 10000 units -> resource exhausted, then we should divide it into batches and test on seperate one, and then calculate the average.
                 total_se = 0
                 total_ae = 0
                 total_relative_err = 0
@@ -1346,10 +1346,10 @@ class Tensor_NN (Dataset, Sklearn_model):
                     ###########
                     ## Test
                     # SAVE THE MODEL WITH DIFFERENT FORMAT: save both structure and values in same file.
-                    print ("Here....")
+                    """print ("Here....")
                     builder = tf.saved_model.builder.SavedModelBuilder("../saved_model" + str (epoch)) # ben ngoai code folder
                     builder.add_meta_graph_and_variables(sess,[tf.saved_model.tag_constants.SERVING])
-                    builder.save()
+                    builder.save()"""
 
 
                 if epoch_test_err_val < smallest_epoch_test_err_val:
