@@ -598,8 +598,8 @@ class Dataset ():
         return data_array.T
     
     def get_days_between(self, d1, d2):
-        if np.isnan(d1) or np.isnan(d2):
-            return (-1)
+        #if np.isnan(d1) or np.isnan(d2):
+        #    return (-1)
         str_d1 = str (int (d1))
         str_d2 = str (int (d2))
         try:
