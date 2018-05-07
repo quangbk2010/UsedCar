@@ -163,7 +163,7 @@ class Dataset ():
             total_dataset["adv_month"] = first_adv_date % 10000 // 100
             first_adv_year = first_adv_date // 10000
             #total_dataset["year_diff"] = first_adv_year - reg_year 
-            #total_dataset["year_diff"] = first_adv_year - total_dataset["year"] 
+            total_dataset["year_diff"] = first_adv_year - total_dataset["year"] 
             total_dataset["day_diff"]  = self.get_array_days_between (total_dataset, "first_registration", "first_adv_date")
             ###############################
 
