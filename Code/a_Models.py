@@ -172,7 +172,8 @@ class Tensor_NN (Dataset):
 
         rmse = tf.sqrt (tf.reduce_mean(tf.squared_difference(prediction, Y)), name = "rmse")
         mae = tf.reduce_mean (tf.abs (prediction - Y), name = "mae")
-        rel_err = tf.multiply (tf.reduce_mean (tf.divide (tf.abs (prediction - Y), tf.maximum (Y, prediction))), 100, name = "rel_err") 
+        #rel_err = tf.multiply (tf.reduce_mean (tf.divide (tf.abs (prediction - Y), tf.maximum (Y, prediction))), 100, name = "rel_err") 
+        rel_err = tf.multiply (tf.reduce_mean (tf.divide (tf.abs (prediction - Y), Y)), 100, name = "rel_err") 
         smape = tf.multiply (tf.reduce_mean (tf.divide (tf.abs (prediction - Y), tf.abs (Y) + tf.abs (prediction) )), 100, name = "smape")
 
         
