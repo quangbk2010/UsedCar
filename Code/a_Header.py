@@ -39,7 +39,7 @@ import scipy
 use_gpu = True 
 if use_gpu == True:
     #os.environ['CUDA_VISIBLE_DEVICES'] = "0" # 0-only use GPU0, 1-only use GPU1 (but when check in device_lib the name of existing device, it still be GPU:0, check nvidia-smi -> to see the difference)
-    pass #Use all GPUs
+    pass #Use all GPUs (also need to specify in Main file to use all)
 else:
     os.environ['CUDA_VISIBLE_DEVICES'] = "-1"
 import tensorflow as tf

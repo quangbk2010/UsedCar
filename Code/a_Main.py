@@ -42,12 +42,12 @@ if __name__ == '__main__':
     parser.add_argument('--test_label_file', type=str, default='Test_label.xls')
     parser.add_argument('--train_rate', type=float, default=0.8)
     parser.add_argument('--valid_rate', type=float, default=0.1)
-    parser.add_argument('--best_epoch', type=int, default=49, help='The best epoch corresponding to the best model with smallest error on validation set') 
-    parser.add_argument('--restored_epoch', type=int, default=4, help="The epoch corresponding to the saved model for removing outliers") 
+    parser.add_argument('--best_epoch', type=int, default=49, help='The best epoch corresponding to the best model with smallest error on validation set.') 
+    parser.add_argument('--restored_epoch', type=int, default=4, help="The epoch corresponding to the saved model for removing outliers.\nIf this value is negative, then train from scratch.") 
 
     # Hyper parameter
-    parser.add_argument('--epoch1', type=int, default=20) 
-    parser.add_argument('--epoch2', type=int, default=50) 
+    parser.add_argument('--epoch1', type=int, default=20, help='The number of epochs used to remove outliers.')
+    parser.add_argument('--epoch2', type=int, default=50, help='The number of epochs used to train the model.')
     parser.add_argument('--dropout', type=float, default=1)
     parser.add_argument('--batch_size', type=int, default=256)
     parser.add_argument('--learning_rate', type=float, default=0.00125)
@@ -64,7 +64,8 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
     if use_gpu == True:
-        os.environ['CUDA_VISIBLE_DEVICES'] = args.gpu_idx
+        #os.environ['CUDA_VISIBLE_DEVICES'] = args.gpu_idx
+        pass
     else:
         os.environ['CUDA_VISIBLE_DEVICES'] = "-1"
 

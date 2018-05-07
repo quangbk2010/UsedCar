@@ -283,14 +283,14 @@ class Tensor_NN (Dataset):
                 #if (epoch + 1) % 1 == 0:
                 if (epoch_test_err_val < threshold_err) or (epoch == nu_epoch - 1):
                     print (epoch_test_err_val, threshold_err)
-                    """np.savetxt (x_embed_file_name_ + "_" + str (epoch), x_embed_val, fmt="%.2f\t%.2f\t%.2f")
+                    np.savetxt (x_embed_file_name_ + "_" + str (epoch), x_embed_val, fmt="%.2f\t%.2f\t%.2f")
                     np.savetxt (y_predict_file_name_ + "_" + str (epoch), line, fmt="%.2f\t%.2f")
                     save_path = saver.save (sess, model_path + "_" + str (epoch)) #, global_step=global_step)
-                    print('Model saved in file: %s' % save_path)"""
+                    print('Model saved in file: %s' % save_path)
 
                     ###########
                     ## Test
-                    # SAVE THE MODEL INTO .pb formart
+                    # SAVE THE MODEL INTO .pb formart, recently used only for java
                     builder = tf.saved_model.builder.SavedModelBuilder(model_path + str (epoch))
                     builder.add_meta_graph_and_variables(sess,[tf.saved_model.tag_constants.SERVING])
                     save_path = builder.save()
@@ -527,9 +527,9 @@ class Tensor_NN (Dataset):
         if epoch < 0:
             print ("=== Train from scratch")
             self.train_car2vec (total_data, total_label, total_car_ident_code, d_ident, self.d_embed, d_remain, self.no_neuron, self.no_neuron_embed, self.loss_func, model_path, self.epoch1)
-        print ("=== Restore the trained model")
         meta_file = model_path + "_" + str (self.epoch1-1) + ".meta"
         ckpt_file = model_path + "_" + str (self.epoch1-1)
+        print ("=== Restore the trained model from: %s" % (meta_file))
 
         # Devide the train set into smaller subsets (Eg. 5 subsets), push them to the model and concatenate the predictions later
         (predicted_total_label, total_rmse_val, total_mae_val, total_rel_err_val, total_smape_val, total_arr_rel_err) = self.batch_computation_car2vec (5, total_data, total_label, d_ident, d_remain, meta_file, ckpt_file, 1)
