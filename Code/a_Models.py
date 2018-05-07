@@ -528,7 +528,7 @@ class Tensor_NN (Dataset):
         if epoch < 0:
             print ("=== Train from scratch")
             self.train_car2vec (total_data, total_label, total_car_ident_code, d_ident, self.d_embed, d_remain, self.no_neuron, self.no_neuron_embed, self.loss_func, model_path, self.epoch1)
-            self.restored_epoch = self.epoch1
+            self.restored_epoch = self.epoch1-1
 
         meta_file = model_path + "_" + str (self.restored_epoch) + ".meta"
         ckpt_file = model_path + "_" + str (self.restored_epoch)
