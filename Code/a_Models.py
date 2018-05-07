@@ -387,9 +387,9 @@ class Tensor_NN (Dataset):
             train_label_shuffled = train_set_shuffled [:, d_data:d_data+1]
             train_car_ident_shuffled = train_set_shuffled [:, d_data+1:]
 
-            print ("len train_data_ident: %.2f" % (train_data_ident_shuffled.shape))
-            print ("len train_data_remain: %.2f" % (train_data_remain_shuffled.shape))
-            print ("len train_label: %d" % (train_label_shuffled.shape))
+            print ("len train_data_ident: ", (train_data_ident_shuffled.shape))
+            print ("len train_data_remain: ", (train_data_remain_shuffled.shape))
+            print ("len train_label: ", (train_label_shuffled.shape))
 
             len_train = len(train_data)
             train_total_batch = int (np.ceil (float (len_train)/self.batch_size))
