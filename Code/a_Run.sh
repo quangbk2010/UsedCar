@@ -1,7 +1,7 @@
 #!/bin/bash
 
 if [ "$1" == "rm_outlier" ]; then
-    if [ -f "./test_rm_idx.txt" ]
+    if [ -f "./test_rm_idx.txt" ]; then
         rm "./test_rm_idx.txt"
     elif [ "$#" -eq 3 ]; then
         echo "======================================================================================"
