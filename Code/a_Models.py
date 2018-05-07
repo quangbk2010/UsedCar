@@ -528,8 +528,8 @@ class Tensor_NN (Dataset):
             print ("=== Train from scratch")
             self.train_car2vec (total_data, total_label, total_car_ident_code, d_ident, self.d_embed, d_remain, self.no_neuron, self.no_neuron_embed, self.loss_func, model_path, self.epoch1)
         print ("=== Restore the trained model")
-        meta_file = model_path + "_" + str (epoch-1) + ".meta"
-        ckpt_file = model_path + "_" + str (epoch-1)
+        meta_file = model_path + "_" + str (self.epoch1-1) + ".meta"
+        ckpt_file = model_path + "_" + str (self.epoch1-1)
 
         # Devide the train set into smaller subsets (Eg. 5 subsets), push them to the model and concatenate the predictions later
         (predicted_total_label, total_rmse_val, total_mae_val, total_rel_err_val, total_smape_val, total_arr_rel_err) = self.batch_computation_car2vec (5, total_data, total_label, d_ident, d_remain, meta_file, ckpt_file, 1)
