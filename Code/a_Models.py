@@ -165,7 +165,8 @@ class Tensor_NN (Dataset):
         # Declare error functions
         sum_se = tf.reduce_sum (tf.squared_difference(prediction, Y), name = "sum_se")
         sum_ae = tf.reduce_sum (tf.abs (prediction - Y), name = "sum_ae")
-        sum_rel_err = tf.multiply (tf.reduce_sum (tf.divide (tf.abs (prediction - Y), tf.maximum (Y, prediction))), 100, name = "sum_rel_err")
+        #sum_rel_err = tf.multiply (tf.reduce_sum (tf.divide (tf.abs (prediction - Y), tf.maximum (Y, prediction))), 100, name = "sum_rel_err")
+        sum_rel_err = tf.multiply (tf.reduce_sum (tf.divide (tf.abs (prediction - Y), Y)), 100, name = "sum_rel_err")
         sum_smape = tf.multiply (tf.reduce_sum (tf.divide (tf.abs (prediction - Y), tf.abs (Y) + tf.abs (prediction) )), 100, name = "sum_smape")
 
         arr_rel_err = tf.multiply (tf.divide (tf.abs (prediction - Y), Y), 100, name = "arr_rel_err")
@@ -356,8 +357,10 @@ class Tensor_NN (Dataset):
         # Declare error functions
         sum_se = tf.reduce_sum (tf.squared_difference(prediction, Y), name = "sum_se")
         sum_ae = tf.reduce_sum (tf.abs (prediction - Y), name = "sum_ae")
-        sum_rel_err = tf.multiply (tf.reduce_sum (tf.divide (tf.abs (prediction - Y), tf.maximum (Y, prediction))), 100, name = "sum_rel_err")
-        arr_rel_err = tf.multiply (tf.divide (tf.abs (prediction - Y), tf.maximum (Y, prediction)), 100, name = "arr_rel_err")
+        #sum_rel_err = tf.multiply (tf.reduce_sum (tf.divide (tf.abs (prediction - Y), tf.maximum (Y, prediction))), 100, name = "sum_rel_err")
+        #arr_rel_err = tf.multiply (tf.divide (tf.abs (prediction - Y), tf.maximum (Y, prediction)), 100, name = "arr_rel_err")
+        sum_rel_err = tf.multiply (tf.reduce_sum (tf.divide (tf.abs (prediction - Y), Y)), 100, name = "sum_rel_err")
+        arr_rel_err = tf.multiply (tf.divide (tf.abs (prediction - Y), Y), 100, name = "arr_rel_err")
         sum_smape = tf.multiply (tf.reduce_sum (tf.divide (tf.abs (prediction - Y), tf.abs (Y) + tf.abs (prediction) )), 100, name = "sum_smape")
         rmse = tf.sqrt (tf.reduce_mean(tf.squared_difference(prediction, Y)), name = "rmse")
         mae = tf.reduce_mean (tf.abs (prediction - Y), name = "mae")
