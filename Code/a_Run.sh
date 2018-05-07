@@ -3,7 +3,7 @@
 if [ "$1" == "rm_outlier" ]; then
     if [ -f "./test_rm_idx.txt" ]
         rm "./test_rm_idx.txt"
-    if [ "$#" -eq 3 ]; then
+    elif [ "$#" -eq 3 ]; then
         echo "======================================================================================"
         echo "=== If \$3 < 0, then train the model from scratch with the total dataset"
         echo "=== Otherwise, restore the pre-trained model with restored_epoch \$3"
