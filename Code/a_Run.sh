@@ -4,6 +4,12 @@ if [ "$1" == "rm_outlier" ]; then
     if [ -f "./test_rm_idx.txt" ]; then
         rm "./test_rm_idx.txt"
     fi
+    echo -e "\nStructure: <rm_outlier> <\"outlier_removal_percent\"> [\"restored_epoch\"]  [\"no_neuron\"] [\"no_neuron_embed\"]\n"
+    if [ "$#" -eq 5 ]; then
+        echo "==================================================================="
+        echo "===  Specify the size of the model: no_neuron and no_neuron_embed"
+        echo "==================================================================="
+        python a_Main.py --mode rm_outlier --outliers_removal_percent $2 --no_neuron $3 --no_neuron_embed $4
     if [ "$#" -eq 3 ]; then
         echo "======================================================================================"
         echo "=== If \$3 < 0, then train the model from scratch with the total dataset"
@@ -16,7 +22,7 @@ if [ "$1" == "rm_outlier" ]; then
         echo "==================================================================="
         python a_Main.py --mode rm_outlier --outliers_removal_percent $2
     else
-        echo -e "\n!!! We need at least 2 arguments: <rm_outlier> [\"restored_epoch\"] <\"outlier_removal_percent\">\n"
+        echo -e "\n!!! We need at least 2 arguments: <rm_outlier> <\"outlier_removal_percent\"> [\"restored_epoch\"] \n"
         echo "If restored_epoch < 0, then train from scratch."
     fi
 
