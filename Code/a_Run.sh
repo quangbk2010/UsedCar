@@ -9,7 +9,7 @@ if [ "$1" == "rm_outlier" ]; then
         echo "==================================================================="
         echo "===  Specify the size of the model: no_neuron and no_neuron_embed"
         echo "==================================================================="
-        python a_Main.py --mode rm_outlier --outliers_removal_percent $2 --no_neuron $3 --no_neuron_embed $4
+        python a_Main.py --mode rm_outlier --outliers_removal_percent $2 --restored_epoch $3 --no_neuron $4 --no_neuron_embed $5
     if [ "$#" -eq 3 ]; then
         echo "======================================================================================"
         echo "=== If \$3 < 0, then train the model from scratch with the total dataset"
