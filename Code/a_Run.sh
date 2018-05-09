@@ -27,10 +27,15 @@ if [ "$1" == "rm_outlier" ]; then
     fi
 
 elif [ "$1" == "train" ]; then
-    python a_Main.py --mode train
+    if [ "$#" -eq 3 ]; then
+        python a_Main.py --mode train --no_neuron $2 --no_neuron_embed $3
+    else
+        python a_Main.py --mode train
 
 elif [ "$1" == "test" ]; then
-    if [ "$#" -eq 2 ]; then
+    if [ "$#" -eq 4 ]; then
+        python a_Main.py --mode test --best_epoch $2 --no_neuron $3 --no_neuron_embed $4
+    elif [ "$#" -eq 2 ]; then
         python a_Main.py --mode test --best_epoch $2 
     else
         echo "=================================================="
