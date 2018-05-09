@@ -31,6 +31,7 @@ elif [ "$1" == "train" ]; then
         python a_Main.py --mode train --no_neuron $2 --no_neuron_embed $3
     else
         python a_Main.py --mode train
+    fi
 
 elif [ "$1" == "test" ]; then
     if [ "$#" -eq 4 ]; then
