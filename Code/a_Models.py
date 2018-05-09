@@ -92,7 +92,7 @@ class Tensor_NN (Dataset):
 
         # And feed data
         if train_flag == 0:
-            rmse= graph.get_tensor_by_name ("rmse:0")
+            rmse = graph.get_tensor_by_name ("rmse:0")
             mae = graph.get_tensor_by_name ("mae:0")
             rel_err = graph.get_tensor_by_name ("rel_err:0")
             smape = graph.get_tensor_by_name ("smape:0")
@@ -100,7 +100,7 @@ class Tensor_NN (Dataset):
             predicted_y, rmse_val, mae_val, rel_err_val, smape_val = sess.run([prediction, rmse, mae, rel_err, smape], feed_dict)
             return (predicted_y, rmse_val, mae_val, rel_err_val, smape_val)
         else:
-            sum_se= graph.get_tensor_by_name ("sum_se:0")
+            sum_se = graph.get_tensor_by_name ("sum_se:0")
             sum_ae = graph.get_tensor_by_name ("sum_ae:0")
             sum_rel_err = graph.get_tensor_by_name ("sum_rel_err:0")
             arr_rel_err = graph.get_tensor_by_name ("arr_rel_err:0")

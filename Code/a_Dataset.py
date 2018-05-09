@@ -78,7 +78,7 @@ class Dataset ():
 
         # Determine some features need one hot encode
         #self.features_need_encoding = ["car_type","trans_mode","fuel_type","branch","affiliate_code","region","trading_complex","refund","vain_effort","guarantee","selected_color","reg_month","adv_month"] 
-        self.features_need_encoding = ["car_type","trans_mode","fuel_type","selected_color","adv_month","reg_month"]
+        self.features_need_encoding = ["car_type","trans_mode","fuel_type","selected_color","adv_month"]#,"reg_month"]
 
         # Add more features to the dataset (before encoding it) to validate the effects of adv_month
         #feature_need_label = ["car_type", "trans_mode", "fuel_type", "branch", "region","trading_complex","refund","vain_effort","guarantee","selected_color","seller_id","trading_firm_id"] 
@@ -149,7 +149,7 @@ class Dataset ():
             ###############################
             # Use the information about the first registration date
             reg_date = total_dataset ["first_registration"]
-            #reg_year = reg_date // 10000
+            reg_year = reg_date // 10000
 
             # Remove the data points with maker_year < 2000, > 2018 
             #total_dataset = total_dataset[reg_year.between (2000, 2018, inclusive=True)] 
@@ -157,14 +157,14 @@ class Dataset ():
             print ("8.{0}".format(total_dataset.shape))
 
             #total_dataset["reg_year"] = reg_year
-            total_dataset["reg_month"] = reg_date % 10000 // 100
+            #total_dataset["reg_month"] = reg_date % 10000 // 100
 
             first_adv_date = total_dataset["first_adv_date"]
             total_dataset["adv_month"] = first_adv_date % 10000 // 100
             first_adv_year = first_adv_date // 10000
             #total_dataset["year_diff"] = first_adv_year - reg_year 
             total_dataset["year_diff"] = first_adv_year - total_dataset["year"] 
-            total_dataset["day_diff"]  = self.get_array_days_between (total_dataset, "first_registration", "first_adv_date")
+            #total_dataset["day_diff"]  = self.get_array_days_between (total_dataset, "first_registration", "first_adv_date")
             ###############################
 
 
@@ -227,14 +227,14 @@ class Dataset ():
         #################################################
         ### Save prediction results
         """len_total_df = len (total_dataset)
-        len_train_df = int (len_total_df * 0.9 + 0.5)
-        #print (len_total_df, len_train_df, len_total_df - len_train_df)
-        test_data_df = total_dataset[full_features][len_train_df:]
+        len_train_df = int (len_total_df * 0.8 + 0.5)
+        len_valid_df = int (len_total_df * 0.9 + 0.5)
+        #test_data_df = total_dataset[full_features][len_train_df:]
+        test_data_df = total_dataset[features][len_train_df:len_valid_df]
         test_data_df = test_data_df
         #print (test_data_df)
 
         test_res_df = pd.read_csv ("../aResult/[Test] Predicted price.txt", sep="\t", names=["Price", "Pred_price", "Rel_err"])
-        test_res_df = test_res_df
         test_data_df.index = test_res_df.index
         res_df = test_data_df
         for c in ["Price", "Pred_price", "Rel_err"]:
@@ -242,9 +242,9 @@ class Dataset ():
 
         #print (res_df)
         #res_df.to_csv ("../aResult/[Test] Results.csv", sep=",", encoding="utf-8", index=False)
-        res_df.to_excel ("../aResult/[Test] Results.xlsx", encoding="utf-8", index=False)
-        sys.exit (-1)"""
-        #################################################
+        res_df.to_excel ("../aResult/[Test] Results_rm_features.xlsx", encoding="utf-8", index=False)
+        sys.exit (-1)
+        #################################################"""
 
         self.total_dataset = total_dataset
 

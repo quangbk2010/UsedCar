@@ -128,14 +128,21 @@ if __name__ == '__main__':
             len_train   = int (0.5 + len_dataset * args.train_rate)
             len_vald    = int (0.5 + len_dataset * (args.train_rate+args.valid_rate))
             
-            train_data  = total_data  [:len_train] 
-            train_label = total_label [:len_train]
-            vald_data   = total_data  [len_train:len_vald]
-            vald_label  = total_label [len_train:len_vald]
+            #train_data  = total_data  [:len_train] 
+            #train_label = total_label [:len_train]
+            #vald_data   = total_data  [len_train:len_vald]
+            #vald_label  = total_label [len_train:len_vald]
+            #tv_car_ident_code = car_ident_code[:len_vald]
+            #tv_act_adv_date   = act_adv_date[:len_vald]
+            #tv_sale_date      = sale_date[:len_vald]
 
-            tv_car_ident_code = car_ident_code[:len_vald]
-            tv_act_adv_date   = act_adv_date[:len_vald]
-            tv_sale_date      = sale_date[:len_vald]
+            train_data  = total_data  [:len_vald] 
+            train_label = total_label [:len_vald]
+            vald_data   = total_data  [len_vald:]
+            vald_label  = total_label [len_vald:]
+            tv_car_ident_code = car_ident_code
+            tv_act_adv_date   = act_adv_date
+            tv_sale_date      = sale_date
 
 
             print ("train_data: {0}".format (train_data.shape))
@@ -151,9 +158,13 @@ if __name__ == '__main__':
             ###############################################################################
             ## Need to have the test seperated with train and validation set (enc, scaler)
             ###############################################################################
-
             test_data  = total_data [len_vald:]
             test_label = total_label [len_vald:]
+
+            #test_data  = total_data [len_train:len_vald]
+            #test_label = total_label [len_train:len_vald]
+            #test_data  = total_data [len_train:]
+            #test_label = total_label [len_train:]
             print ("test_data: {0}".format (test_data.shape))
             print ("test_label: {0}".format (test_label.shape))
 
