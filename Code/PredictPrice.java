@@ -9,10 +9,10 @@ import java.io.File;
 import java.io.IOException;
 import java.util.*;
 
-import jxl.Cell;
-import jxl.Sheet;
-import jxl.Workbook;
-import jxl.read.biff.BiffException;
+//import jxl.Cell;
+//import jxl.Sheet;
+//import jxl.Workbook;
+//import jxl.read.biff.BiffException;
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.InputStreamReader;
@@ -151,7 +151,9 @@ public class PredictPrice {
         NumericToNominal convert = new NumericToNominal();
         options [0] = "-R";
         // TODO: replace in the case of different test set structure. Eg. remove features
-        options [1] = "1-15,49-53";
+        // the column indexes that contain categorical features (note: with Instances object, index of Attributes start by 1)
+        //options [1] = "1-15,49-53"; // 51 features
+        options [1] = "1-7,31-35"; // 33 features
         convert.setOptions (options); // Can use: convert.setAttributeRange ("1-15,49-53");
         convert.setInputFormat (this.trainInst);
         this.trainInst = Filter.useFilter (this.trainInst, convert);
@@ -173,13 +175,14 @@ public class PredictPrice {
                     this.testInst.instance(i).setValue(j, newData[i][j]);
                 }
                 // TODO: replace in the case of different test set structure. Eg. remove features
-                if ((j >= 2 && j <= 5) || (j >= 7 && j <= 12)) {
+                // the column indexes that contain String features (note: with the index start by 0)
+                //if ((j >= 2 && j <= 5) || (j >= 7 && j <= 12)) { //51 features
+                if (j >= 2 && j <= 5) { // 33 features
                     //System.out.println ("---" + i + ", " + j + ": " + newData[i][j] + "--" + this.testInst.instance(i).value(j)); 
                     this.testInst.instance(i).setValue(j, newData[i][j]);
                 }
             }
         }
-        //this.printInstances ("here", this.testInst, 10, 53); 
         this.printInstances ("here", this.testInst, 10, this.len_cols); 
     }
 
@@ -194,7 +197,9 @@ public class PredictPrice {
         for (int i = 0; i < this.len_rows; i++) {
             for (int j = 0; j < this.len_cols; j++) {
                 // TODO: replace in the case of different test set structure. Eg. remove features
-                if (j > 14 && j < 48) {
+                // the column indexes that contain numerical features (note: with the index start by 0)
+                //if (j > 14 && j < 48) { //51 features
+                if (j > 6 && j < 30) { //38 features
                     x = (this.testInst.instance(i).value(j) - this.median[j]);
                     if (this.IQR[j] != 0) {
                         x /= this.IQR[j];
@@ -244,7 +249,8 @@ public class PredictPrice {
         double diff, relErr = 0;
         for (int i = 0; i < len; i ++) {
             diff = prediction[i] - actual[i];
-            relErr += Math.abs (diff) / Math.max (actual[i], prediction[i]) * 100;
+            //relErr += Math.abs (diff) / Math.max (actual[i], prediction[i]) * 100;
+            relErr += Math.abs (diff) / actual[i] * 100;
         }
         relErr = relErr/len;
         return relErr;
@@ -276,9 +282,10 @@ public class PredictPrice {
 
         // The hash_code file and the input file must be encoded as UTF-8 (in python, use to_csv() function with encoding parameter to specify) (NOTE: don't modify these 2 files manually, otherwise the format of the file will be broken)
         hashCode.setInputFile (hashReplaceFile);
-        this.hm2 = hashCode.hashMap_2 (1, 53); // Work
+        // TODO: replace in the case of different test set structure. Eg. have label column or not
+        //this.hm2 = hashCode.hashMap_2 (1, 53); // Work: 51 features, have label column
         //this.hm2 = hashCode.hashMap_2 (1, len_cols); // If there are no label column at the end
-        //this.hm2 = hashCode.hashMap_2 (1, len_cols-1); // If there are the label column at the end
+        this.hm2 = hashCode.hashMap_2 (1, len_cols-1); // If there are the label column at the end
 
         for (int i = 0; i < len_rows; i++) {
             for (int j = 0; j < len_cols; j++) {
@@ -301,23 +308,35 @@ public class PredictPrice {
         return newData;
     }
 
-    public int[][] RepStrToCatValues (String hashStringFile, String[][] data, int len_rows, int len_cols) {
+    public int[][] RepStrToCatValues (String hashStringFile, String[][] data, int len_rows, int len_cols) throws Exception {
         int[][] newData = new int [len_rows][len_cols];
         this.hm = new HashMap<>();
         CSVReader hashCode = new CSVReader ();
 
         // The hash_code file and the input file must be encoded as UTF-8 (in python, use to_csv() function with encoding parameter to specify) (NOTE: don't modify these 2 files manually, otherwise the format of the file will be broken)
         hashCode.setInputFile (hashStringFile);
+
+        int[] size = new int[2];
+        size = hashCode.getNuRowCol();
+        System.out.println (size[0] + ", " + size[1]);
+        //len_rows = size[0];// No
+        //len_cols = size[1];
+        //System.exit (-1);
+
         // TODO: if the train set is changed, the hash code may change, need to update this file, and the number of hash codes (Eg. 185)
-        this.hm = hashCode.hashMap (185, 54); // Work
+        //this.hm = hashCode.hashMap (185, 54); // Work
+        //this.hm = hashCode.hashMap (185, 53); // Work
         //this.hm = hashCode.hashMap (185, len_cols);
+        //this.hm = hashCode.hashMap (12, len_cols); // 12 is the number of lines in the file that maps from String to categorical features, it depends on the training file
+        this.hm = hashCode.hashMap (size[0], 35);//len_cols); 
 
         for (int i = 0; i < len_rows; i++) {
             for (int j = 0; j < len_cols; j++) {
 
                 //System.out.println (i + ", " + j + ": " + data[i][j]);
                 // TODO: replace in the case of different test set structure. Eg. remove features
-                if ((j >= 2 && j <= 5) || (j >= 7 && j <= 12)) {
+                //if ((j >= 2 && j <= 5) || (j >= 7 && j <= 12)) {
+                if (j >= 2 && j <= 5) {
                     try {
                         if (this.hm.containsKey (data[i][j])) {
                             newData[i][j] = this.hm.get (data[i][j]);
@@ -329,10 +348,7 @@ public class PredictPrice {
                     } catch (Exception e) {
                         e.printStackTrace ();
                     }
-                    // Just for testing
-                    if (i >= 111038 && i <= 111047 && j == 2) {
-                        System.out.println (i + ", " + j + ": " + data[i][j] + "- " + newData[i][j]);
-                    }
+                    
                 }
                 
                 else {
@@ -426,9 +442,11 @@ public class PredictPrice {
         // Robust scale: numeric attributes
         this.robustScale ();
         this.printInstances ("After scaling: ", this.testInst, 10, this.len_cols); 
+        System.out.println ("After scaling: " + this.len_rows + "," +  this.len_cols);
         
         // One hot encode the nominal attributes
         this.oneHotEncode ();
+        System.out.println ("After encoding: " + this.len_rows + "," +  this.len_cols);
 
         System.out.println ("Test: " + this.len_rows + ", " + this.len_cols);
         return testLabelArr;
@@ -446,6 +464,8 @@ public class PredictPrice {
         float[][] test_remain_arr = new float [this.len_rows][this.d_remain];
 
         test_arr = this.asArray (this.testInst);
+        //System.out.println (this.len_rows + "," +  this.len_cols + "," +  this.d_ident + "," +  this.d_remain);
+        //System.exit (-1);
         
         // Seperate data into ident and remain parts
         for (int i = 0; i < this.len_rows; i++) {
@@ -495,21 +515,45 @@ public class PredictPrice {
 
         PredictPrice obj1 = new PredictPrice();
         System.out.println("Using TensorFlow, Weka");
-        String trainFile = "./total.csv_beforeImpute"; 
+
+        // Use 51 features, add 2 more features: maker_code, class_code as the first columns -> use 53 features. The last column is price -> have 54 columns overall.
+        /*String trainFile = "./total.csv_beforeImpute"; 
         String testFile = "./test.csv";
         String hashStringFile = "./hash_code1.csv"; 
         String hashReplaceFile = "./hash_code2.csv";
         int lenTest = 27759;
         int lenFeatures = 54; 
+        int lenIdent = 1920, lenRemain = 595;*/
+
+        // Use 33 features
+        /*String trainFile = "./total.csv_beforeImpute_33features"; 
+        String testFile = "./test.csv_33";
+        String hashStringFile = "./hash_string_33.csv"; 
+        String hashReplaceFile = "./hash_replace_33.csv";
+        int lenTest = 22525;//
+        int lenFeatures = 36; 
         int valdFlag = 1;
-        float[] testLabelArr = new float[lenTest];
+        int lenIdent = 5638, lenRemain = 512;*/
+
+        // Flexiblely
+        String trainFile = args[0];//"./total.csv_beforeImpute_33features"; 
+        String testFile = args[1];//"./test.csv_33";
+        String hashStringFile = args[2];//"./hash_string_33.csv"; 
+        String hashReplaceFile = args[3];//"./hash_replace_33.csv";
+        int lenTest = Integer.parseInt (args[4]);//22525;//
+        int lenFeatures = Integer.parseInt (args[5]);//36; 
+        int valdFlag = Integer.parseInt (args[6]);//1;
+        int lenIdent = Integer.parseInt (args[7]), lenRemain = Integer.parseInt (args[8]); // 5638, 512
+
+        float[] testLabelArr;// = new float[lenTest];
 
         // Load and preprocess the test data
         testLabelArr = obj1.prepTest (trainFile, testFile, hashStringFile, hashReplaceFile, lenTest, lenFeatures, valdFlag);
 
+
         
-        String modelFile = "./";
-        int lenIdent = 1920, lenRemain = 595;
+        //String modelFile = "./";
+        String modelFile = "./saved_model_33_features/final_car2vec_10000x1_10000x138/";
         float[] testPredLabelArr = new float[obj1.len_rows];
 
         // Load the pre-trained model and give the prediction based on data of the test file
@@ -527,6 +571,31 @@ class CSVReader {
 
     public void setInputFile (String inputFile) {
         this.inputFile = inputFile;
+    }
+    public int[] getNuRowCol() throws Exception {
+        String line = "";
+        String cvsSplitBy = ",";
+        int len = 0, lenString = 0;
+        int[] size = new int[2];
+
+        try (BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream(this.inputFile), "UTF-8"))) {
+            while ((line = br.readLine()) != null) {
+                // use comma as separator
+                if (len == 0) {
+                    String[] s = line.split (cvsSplitBy);
+                    lenString = s.length;
+                }
+
+                len ++;
+            }
+            size[0] = len;
+            size[1] = lenString;
+            return size;
+        } 
+        catch (IOException e) {
+            e.printStackTrace();
+            return null;
+        }
     }
 
     public String[] getStr () {
@@ -553,7 +622,9 @@ class CSVReader {
 
         for (int i = 0; i < noRowsHash; i++) {
             for (int j = 0; j < noCols; j++) {
-                if ((j >= 2 && j <= 5) || (j >= 7 && j <= 12)) {
+                // TODO: replace in the case of different test set structure. Eg. remove features
+                //if ((j >= 2 && j <= 5) || (j >= 7 && j <= 12)) {
+                if (j >= 2 && j <= 5) {
                     if (this.strArr[i][j] == null || this.strArr[i][j].equals ("")) {
                         //System.out.println (i + ", " + j + ": " + this.strArr[i][j]);
                         continue;
